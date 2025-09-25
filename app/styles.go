@@ -59,3 +59,4 @@ var RA3 = RA(R3)
 
 var GROWH = clay.Sizing{Width: clay.SizingGrow(1, 0)}
 var GROWV = clay.Sizing{Height: clay.SizingGrow(1, 0)}
+var GROWALL = clay.Sizing{Width: clay.SizingGrow(1, 0), Height: clay.SizingGrow(1, 0)}

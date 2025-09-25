@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/bvisness/flowshell/clay"
+	"github.com/bvisness/flowshell/util"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -78,9 +79,11 @@ func UINode(node *Node) {
 		}, func() {
 			clay.TEXT("Node", clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
 			UISpacerH()
-			clay.CLAY(clay.ID("PlayButton"), clay.EL{
-				Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingFixed(float32(ImgPlay.Width)), Height: clay.SizingFixed(float32(ImgPlay.Height))}},
-				Image:  clay.ImageElementConfig{ImageData: ImgPlay},
+			UIButton(clay.ID("PlayButton"), clay.EL{Layout: clay.LAY{Padding: PA1}}, func() {
+				clay.CLAY_AUTO_ID(clay.EL{
+					Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingFixed(float32(ImgPlay.Width)), Height: clay.SizingFixed(float32(ImgPlay.Height))}},
+					Image:  clay.ImageElementConfig{ImageData: ImgPlay},
+				})
 			})
 		})
 		clay.CLAY(clay.ID("NodeBody"), clay.EL{
@@ -89,6 +92,14 @@ func UINode(node *Node) {
 			UITextBox(clay.ID("Cmd"), &node.Cmd.Cmd, clay.EL{Layout: clay.LAY{Sizing: GROWH}})
 		})
 	})
+}
+
+func UIButton(id clay.ElementID, decl clay.ElementDeclaration, children ...func()) {
+	clay.CLAY_LATE(id, func() clay.ElementDeclaration {
+		decl.CornerRadius = RA1
+		decl.BackgroundColor = util.Tern(clay.Hovered(), clay.Color{255, 255, 255, 20}, clay.Color{})
+		return decl
+	}, children...)
 }
 
 func UITextBox(id clay.ElementID, str *string, decl clay.ElementDeclaration) {

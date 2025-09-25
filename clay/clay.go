@@ -1113,6 +1113,10 @@ func EndLayout() []RenderCommand {
 	return res
 }
 
+func Hovered() bool {
+	return bool(C.Clay_Hovered())
+}
+
 type MeasureTextFunction func(str string, config *TextElementConfig, userData any) Dimensions
 
 func SetMeasureTextFunction(measureTextFunction MeasureTextFunction, userData any) {
@@ -1153,11 +1157,18 @@ func clayMeasureTextCallback(text C.Clay_StringSlice, config *C.Clay_TextElement
 	return dimensions.C()
 }
 
-type UIResult int
-
 func CLAY(id ElementID, decl ElementDeclaration, children ...func()) {
 	C.Clay__OpenElementWithId(id.C())
 	C.Clay__ConfigureOpenElement(decl.C())
+	for _, f := range children {
+		f()
+	}
+	C.Clay__CloseElement()
+}
+
+func CLAY_LATE(id ElementID, decl func() ElementDeclaration, children ...func()) {
+	C.Clay__OpenElementWithId(id.C())
+	C.Clay__ConfigureOpenElement(decl().C())
 	for _, f := range children {
 		f()
 	}
@@ -1197,7 +1208,7 @@ func CacheString(str string) String {
 }
 
 func ClearCachedStrings() {
-
+	// TODO: uh, who knows?
 }
 
 func hashString(key string, seed uint32) ElementID {
