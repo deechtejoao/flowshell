@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -13,31 +14,8 @@ const MenuMaxWidth = 0 // no max
 
 const NodeMinWidth = 360
 
-var node = &Node{
-	ID:   1,
-	Pos:  V2{100, 100},
-	Name: "Run Process",
-
-	InputPorts: nil,
-	OutputPorts: []NodePort{
-		{
-			Name: "Stdout",
-			Type: FlowType{Kind: FSKindBytes},
-		},
-		{
-			Name: "Stderr",
-			Type: FlowType{Kind: FSKindBytes},
-		},
-		{
-			Name: "Combined Stdout/Stderr",
-			Type: FlowType{Kind: FSKindBytes},
-		},
-	},
-
-	Action: &CmdAction{
-		CmdString: "curl https://bvisness.me/about/",
-	},
-}
+var node1 = NewRunProcessNode("curl https://bvisness.me/about/")
+var node2 = NewListFilesNode(".")
 
 var ImgPlay rl.Texture2D
 
@@ -48,18 +26,19 @@ func loadImages() {
 var UICursor rl.MouseCursor
 
 func ui() {
+	node1.Pos = V2{10, 10}
+	node2.Pos = V2{400, 10}
+
 	clay.CLAY(clay.ID("Background"), clay.EL{
 		Layout:          clay.LAY{Sizing: GROWALL},
 		BackgroundColor: Night,
-		Border: clay.BorderElementConfig{
-			Width: clay.BorderWidth{BetweenChildren: 1},
-			Color: Gray,
-		},
+		Border:          clay.BorderElementConfig{Width: BTW, Color: Gray},
 	}, func() {
 		clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 			Layout: clay.LAY{Sizing: GROWALL},
 		}, func() {
-			UINode(node)
+			// UINode(node1)
+			UINode(node2)
 		})
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
 			return clay.EL{
@@ -74,28 +53,25 @@ func ui() {
 				},
 			}
 		}, func() {
-			result := node.Action.Result()
+			result := node2.Action.Result()
 			if result.Err == nil {
-				for i, output := range result.Outputs {
-					port := node.OutputPorts[i]
+				for outputIndex, output := range result.Outputs {
+					port := node2.OutputPorts[outputIndex]
 					if port.Type.Kind != output.Type.Kind {
 						panic(fmt.Errorf("mismatched types: expected %v, got %v", port.Type.Kind, output.Type.Kind))
 					}
 
-					clay.TEXT(port.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
-					switch output.Type.Kind {
-					case FSKindBytes:
-						if len(output.BytesValue) == 0 {
-							clay.TEXT("<no data>", clay.TextElementConfig{FontID: JetBrainsMono, FontSize: F3, TextColor: LightGray})
-						} else {
-							clay.TEXT(string(output.BytesValue), clay.TextElementConfig{FontID: JetBrainsMono, FontSize: F3, TextColor: White})
+					clay.TEXT(port.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
+					clay.CLAY_LATE(clay.IDI("Output", outputIndex), func() clay.EL {
+						return clay.EL{
+							Clip: clay.ClipElementConfig{Horizontal: true, ChildOffset: clay.GetScrollOffset()},
 						}
-					default:
-						clay.TEXT("Unknown data type", clay.TextElementConfig{FontSize: F3, TextColor: White})
-					}
+					}, func() {
+						UIFlowValue(&output)
+					})
 				}
 			} else {
-				clay.TEXT(result.Err.Error(), clay.TextElementConfig{FontSize: F3, TextColor: Red})
+				clay.TEXT(result.Err.Error(), clay.TextElementConfig{TextColor: Red})
 			}
 		})
 	})
@@ -177,6 +153,59 @@ func UINode(node *Node) {
 	})
 }
 
+func UIFlowValue(v *FlowValue) {
+	switch v.Type.Kind {
+	case FSKindBytes:
+		if len(v.BytesValue) == 0 {
+			clay.TEXT("<no data>", clay.TextElementConfig{FontID: JetBrainsMono, TextColor: LightGray})
+		} else {
+			clay.TEXT(string(v.BytesValue), clay.TextElementConfig{FontID: JetBrainsMono, TextColor: White})
+		}
+	case FSKindInt64:
+		var str string
+		if v.Type.WellKnownType == FSWKTTimestamp {
+			str = time.Unix(v.Int64Value, 0).Format(time.RFC1123)
+		} else if v.Type.Unit == FSUnitBytes {
+			str = FormatBytes(v.Int64Value)
+		} else {
+			str = fmt.Sprintf("%d", v.Int64Value)
+		}
+		clay.TEXT(str, clay.TextElementConfig{TextColor: White})
+	case FSKindTable:
+		clay.CLAY(clay.ID("Table"), clay.EL{
+			Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
+			Border: clay.BorderElementConfig{Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1, BetweenChildren: 1}, Color: Gray},
+		}, func() {
+			clay.CLAY(clay.ID("TableHeader"), clay.EL{
+				Border: clay.BorderElementConfig{Width: BTW, Color: Gray},
+			}, func() {
+				for _, field := range v.Type.ContainedType.Fields {
+					clay.CLAY_AUTO_ID(clay.EL{
+						Layout: clay.LAY{Padding: PVH(S2, S3)},
+					}, func() {
+						clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
+					})
+				}
+			})
+			for i, row := range v.TableValue {
+				clay.CLAY(clay.IDI("TableRow", i), clay.EL{
+					Border: clay.BorderElementConfig{Width: BTW, Color: Gray},
+				}, func() {
+					for _, field := range row {
+						clay.CLAY_AUTO_ID(clay.EL{
+							Layout: clay.LAY{Padding: PVH(S2, S3)},
+						}, func() {
+							UIFlowValue(field.Value)
+						})
+					}
+				})
+			}
+		})
+	default:
+		clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
+	}
+}
+
 type UIButtonConfig struct {
 	El clay.ElementDeclaration
 
@@ -239,6 +268,20 @@ func UITooltip(msg string) {
 	}, func() {
 		clay.TEXT(msg, clay.TextElementConfig{TextColor: White})
 	})
+}
+
+func FormatBytes(n int64) string {
+	if n < 1_000 {
+		return fmt.Sprintf("%d B", n)
+	} else if n < 1_000_000 {
+		return fmt.Sprintf("%.1f KB", float32(n)/1_000)
+	} else if n < 1_000_000_000 {
+		return fmt.Sprintf("%.1f MB", float32(n)/1_000_000)
+	} else if n < 1_000_000_000_000 {
+		return fmt.Sprintf("%.1f GB", float32(n)/1_000_000_000)
+	} else {
+		return fmt.Sprintf("%.1f TB", float32(n)/1_000_000_000_000)
+	}
 }
 
 func clayExample() {

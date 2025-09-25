@@ -37,6 +37,7 @@ func PD(t, r, b, l uint16, padding clay.Padding) clay.Padding {
 }
 
 var BA = clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}
+var BTW = clay.BorderWidth{BetweenChildren: 1}
 
 const F1 = 12
 const F2 = 16
