@@ -10,6 +10,9 @@ void clayErrorCallback_cgo(Clay_ErrorData errorText);
 typedef Clay_Dimensions (*Clay_MeasureTextFunc)(Clay_StringSlice text, Clay_TextElementConfig *config, void *userData);
 Clay_Dimensions clayMeasureTextCallback_cgo(Clay_StringSlice text, Clay_TextElementConfig *config, void *userData);
 
+typedef void (*Clay_OnHoverCallback)(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
+void clayOnHoverCallback_cgo(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
+
 Clay_SizingAxis Clay_SetSizingAxisMinMax(Clay_SizingAxis in, Clay_SizingMinMax minMax);
 Clay_SizingAxis Clay_SetSizingAxisPercent(Clay_SizingAxis in, float percent);
 void Clay_SetContextErrorHandler(Clay_Context* ctx, Clay_ErrorHandler eh);
@@ -24,6 +27,7 @@ import "C"
 
 import (
 	"image/color"
+	"runtime/cgo"
 	"unsafe"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -106,10 +110,39 @@ type Vector2 struct {
 
 type V2 = Vector2
 
+func (r Vector2) Plus(b Vector2) Vector2 {
+	return Vector2{
+		X: r.X + b.X,
+		Y: r.Y + b.Y,
+	}
+}
+
+func (r Vector2) Minus(b Vector2) Vector2 {
+	return Vector2{
+		X: r.X - b.X,
+		Y: r.Y - b.Y,
+	}
+}
+
+func (r Vector2) Times(b float32) Vector2 {
+	return Vector2{
+		X: r.X * b,
+		Y: r.Y * b,
+	}
+}
+
 func (r Vector2) C() C.Clay_Vector2 {
 	return C.Clay_Vector2{
 		x: C.float(r.X),
 		y: C.float(r.Y),
+	}
+}
+
+// awful name
+func Vector22Go(r C.Clay_Vector2) Vector2 {
+	return Vector2{
+		X: float32(r.x),
+		Y: float32(r.y),
 	}
 }
 
@@ -186,6 +219,15 @@ func (r ElementID) C() C.Clay_ElementId {
 		offset: C.uint32_t(r.Offset),
 		baseId: C.uint32_t(r.BaseID),
 		// stringId: String2ClayString(r.StringID), // TODO? Can we just do all string hashes on the Go side?
+	}
+}
+
+func ElementID2Go(r C.Clay_ElementId) ElementID {
+	return ElementID{
+		ID:       uint32(r.id),
+		Offset:   uint32(r.offset),
+		BaseID:   uint32(r.baseId),
+		StringID: C.GoStringN(r.stringId.chars, r.stringId.length),
 	}
 }
 
@@ -928,6 +970,45 @@ func RenderCommand2Go(r C.Clay_RenderCommand) RenderCommand {
 	}
 }
 
+// Represents the current state of interaction with clay this frame.
+type PointerDataInteractionState uint8
+
+const (
+	// A left mouse click, or touch occurred this frame.
+	PointerDataPressedThisFrame PointerDataInteractionState = iota
+	// The left mouse button click or touch happened at some point in the past,
+	// and is still currently held down this frame.
+	PointerDataPressed
+	// The left mouse button click or touch was released this frame.
+	PointerDataReleasedThisFrame
+	// The left mouse button click or touch is not currently down / was released
+	// at some point in the past.
+	PointerDataReleased
+)
+
+// Information on the current state of pointer interactions this frame.
+type PointerData struct {
+	// The position of the mouse / touch / pointer relative to the root of the
+	// layout.
+	Position Vector2
+	// Represents the current state of interaction with clay this frame.
+	// CLAY_POINTER_DATA_PRESSED_THIS_FRAME - A left mouse click, or touch
+	// occurred this frame. CLAY_POINTER_DATA_PRESSED - The left mouse button
+	// click or touch happened at some point in the past, and is still currently
+	// held down this frame. CLAY_POINTER_DATA_RELEASED_THIS_FRAME - The left
+	// mouse button click or touch was released this frame.
+	// CLAY_POINTER_DATA_RELEASED - The left mouse button click or touch is not
+	// currently down / was released at some point in the past.
+	State PointerDataInteractionState
+}
+
+func PointerData2Go(r C.Clay_PointerData) PointerData {
+	return PointerData{
+		Position: Vector22Go(r.position),
+		State:    PointerDataInteractionState(r.state),
+	}
+}
+
 type EL = ElementDeclaration
 type ElementDeclaration struct {
 	// Controls various settings that affect the size and position of an element,
@@ -1115,6 +1196,26 @@ func EndLayout() []RenderCommand {
 
 func Hovered() bool {
 	return bool(C.Clay_Hovered())
+}
+
+type OnHoverFunc func(elementID ElementID, pointerData PointerData, userData any)
+type registeredOnHover struct {
+	Func     OnHoverFunc
+	UserData any
+}
+
+func OnHover(f OnHoverFunc, userData any) {
+	registeredFuncHandle := cgo.NewHandle(registeredOnHover{
+		Func:     f,
+		UserData: userData,
+	})
+	C.Clay_OnHover(C.Clay_OnHoverCallback(C.clayOnHoverCallback_cgo), C.intptr_t(registeredFuncHandle))
+}
+
+//export clayOnHoverCallback
+func clayOnHoverCallback(elementId C.Clay_ElementId, pointerData C.Clay_PointerData, userData C.intptr_t) {
+	registeredFunc := cgo.Handle(userData).Value().(registeredOnHover)
+	registeredFunc.Func(ElementID2Go(elementId), PointerData2Go(pointerData), registeredFunc.UserData)
 }
 
 type MeasureTextFunction func(str string, config *TextElementConfig, userData any) Dimensions

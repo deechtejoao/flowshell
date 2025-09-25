@@ -50,7 +50,11 @@ void clayErrorCallback_cgo(Clay_ErrorData errorText) {
 }
 
 Clay_Dimensions clayMeasureTextCallback_cgo(Clay_StringSlice text, Clay_TextElementConfig *config, void *userData) {
-	clayMeasureTextCallback(text, config, userData);
+	return clayMeasureTextCallback(text, config, userData);
+}
+
+void clayOnHoverCallback_cgo(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData) {
+	clayOnHoverCallback(elementId, pointerData, userData);
 }
 */
 import "C"
