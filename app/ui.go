@@ -14,20 +14,27 @@ const MenuMaxWidth = 0 // no max
 
 const NodeMinWidth = 360
 
-var node1 = NewRunProcessNode("curl https://bvisness.me/about/")
-var node2 = NewListFilesNode(".")
+var nodes = []*Node{
+	NewRunProcessNode("curl https://bvisness.me/about/"),
+	NewListFilesNode("."),
+}
 
-var ImgPlay rl.Texture2D
+var selectedNodeID = 0
 
-func loadImages() {
-	ImgPlay = rl.LoadTexture("assets/play.png")
+func GetSelectedNode() (*Node, bool) {
+	for _, node := range nodes {
+		if node.ID == selectedNodeID {
+			return node, true
+		}
+	}
+	return nil, false
 }
 
 var UICursor rl.MouseCursor
 
 func ui() {
-	node1.Pos = V2{10, 10}
-	node2.Pos = V2{400, 10}
+	nodes[0].Pos = V2{10, 10}
+	nodes[1].Pos = V2{400, 10}
 
 	clay.CLAY(clay.ID("Background"), clay.EL{
 		Layout:          clay.LAY{Sizing: GROWALL},
@@ -37,8 +44,9 @@ func ui() {
 		clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 			Layout: clay.LAY{Sizing: GROWALL},
 		}, func() {
-			UINode(node1)
-			UINode(node2)
+			for _, node := range nodes {
+				UINode(node)
+			}
 		})
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
 			return clay.EL{
@@ -49,29 +57,26 @@ func ui() {
 				},
 				Clip: clay.ClipElementConfig{
 					Vertical:    true,
+					Horizontal:  true,
 					ChildOffset: clay.GetScrollOffset(),
 				},
 			}
 		}, func() {
-			result := node2.Action.Result()
-			if result.Err == nil {
-				for outputIndex, output := range result.Outputs {
-					port := node2.OutputPorts[outputIndex]
-					if port.Type.Kind != output.Type.Kind {
-						panic(fmt.Errorf("mismatched types: expected %v, got %v", port.Type.Kind, output.Type.Kind))
-					}
-
-					clay.TEXT(port.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
-					clay.CLAY_LATE(clay.IDI("Output", outputIndex), func() clay.EL {
-						return clay.EL{
-							Clip: clay.ClipElementConfig{Horizontal: true, ChildOffset: clay.GetScrollOffset()},
+			if selectedNode, ok := GetSelectedNode(); ok {
+				result := selectedNode.Action.Result()
+				if result.Err == nil {
+					for outputIndex, output := range result.Outputs {
+						port := selectedNode.OutputPorts[outputIndex]
+						if port.Type.Kind != output.Type.Kind {
+							panic(fmt.Errorf("mismatched types: expected %v, got %v", port.Type.Kind, output.Type.Kind))
 						}
-					}, func() {
+
+						clay.TEXT(port.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
 						UIFlowValue(&output)
-					})
+					}
+				} else {
+					clay.TEXT(result.Err.Error(), clay.TextElementConfig{TextColor: Red})
 				}
-			} else {
-				clay.TEXT(result.Err.Error(), clay.TextElementConfig{TextColor: Red})
 			}
 		})
 	})
@@ -107,10 +112,16 @@ func UINode(node *Node) {
 			Sizing:          clay.Sizing{Width: clay.SizingFit(NodeMinWidth, 0)},
 		},
 		BackgroundColor: DarkGray,
-		Border: clay.BorderElementConfig{
-			Color: Gray,
-			Width: BA,
-		},
+		Border: util.Tern(selectedNodeID == node.ID,
+			clay.BorderElementConfig{
+				Color: Blue,
+				Width: BA2,
+			},
+			clay.BorderElementConfig{
+				Color: Gray,
+				Width: BA,
+			},
+		),
 		CornerRadius: RA2,
 	}, func() {
 		clay.CLAY_AUTO_ID(clay.EL{ // Node header
@@ -121,6 +132,13 @@ func UINode(node *Node) {
 			},
 			BackgroundColor: Charcoal,
 		}, func() {
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+				// TODO: Hook into global system for mouse events
+				if pointerData.State == clay.PointerDataReleasedThisFrame {
+					selectedNodeID = node.ID
+				}
+			}, nil)
+
 			clay.TEXT(node.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
 			UISpacerH()
 			if node.Running {
@@ -221,6 +239,8 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 		config.El.CornerRadius = RA1
 		config.El.BackgroundColor = util.Tern(clay.Hovered(), clay.Color{255, 255, 255, 20}, clay.Color{})
 
+		return config.El
+	}, func() {
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
 			UICursor = rl.MouseCursorPointingHand
 
@@ -236,8 +256,10 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 			}
 		}, nil)
 
-		return config.El
-	}, children...)
+		for _, f := range children {
+			f()
+		}
+	})
 }
 
 func UITextBox(id clay.ElementID, str *string, decl clay.ElementDeclaration) {
