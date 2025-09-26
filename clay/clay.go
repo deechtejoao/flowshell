@@ -1259,7 +1259,21 @@ func clayMeasureTextCallback(text C.Clay_StringSlice, config *C.Clay_TextElement
 	return dimensions.C()
 }
 
+// A magic sentinel ID recognized by these bindings as being intended to
+// generate a new automatic ID. Since this seems to only be possible through
+// macros like CLAY_AUTO_ID, which open a new element, we have back-doored it.
+var AUTO_ID = ElementID{
+	ID:     0xFFFFFFFF,
+	Offset: 0xFFFFFFFF,
+	BaseID: 0xFFFFFFFF,
+}
+
 func CLAY(id ElementID, decl ElementDeclaration, children ...func()) {
+	if id == AUTO_ID {
+		CLAY_AUTO_ID(decl, children...)
+		return
+	}
+
 	C.Clay__OpenElementWithId(id.C())
 	C.Clay__ConfigureOpenElement(decl.C())
 	for _, f := range children {
@@ -1269,6 +1283,11 @@ func CLAY(id ElementID, decl ElementDeclaration, children ...func()) {
 }
 
 func CLAY_LATE(id ElementID, decl func() ElementDeclaration, children ...func()) {
+	if id == AUTO_ID {
+		CLAY_AUTO_ID_LATE(decl, children...)
+		return
+	}
+
 	C.Clay__OpenElementWithId(id.C())
 	C.Clay__ConfigureOpenElement(decl().C())
 	for _, f := range children {
@@ -1280,6 +1299,15 @@ func CLAY_LATE(id ElementID, decl func() ElementDeclaration, children ...func())
 func CLAY_AUTO_ID(decl ElementDeclaration, children ...func()) {
 	C.Clay__OpenElement()
 	C.Clay__ConfigureOpenElement(decl.C())
+	for _, f := range children {
+		f()
+	}
+	C.Clay__CloseElement()
+}
+
+func CLAY_AUTO_ID_LATE(decl func() ElementDeclaration, children ...func()) {
+	C.Clay__OpenElement()
+	C.Clay__ConfigureOpenElement(decl().C())
 	for _, f := range children {
 		f()
 	}

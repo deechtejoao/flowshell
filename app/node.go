@@ -116,7 +116,7 @@ type RunProcessActionRuntimeState struct {
 }
 
 func (c *RunProcessAction) UI(n *Node) {
-	UITextBox(clay.ID("Cmd"), &c.CmdString, clay.EL{Layout: clay.LAY{Sizing: GROWH}})
+	UITextBox(clay.AUTO_ID, &c.CmdString, clay.EL{Layout: clay.LAY{Sizing: GROWH}})
 }
 
 func (c *RunProcessAction) Run(n *Node) <-chan struct{} {
@@ -211,6 +211,7 @@ func (c *ListFilesAction) UI(n *Node) {
 func (c *ListFilesAction) Run(n *Node) <-chan struct{} {
 	done := make(chan struct{})
 
+	c.rows = nil
 	c.err = nil
 
 	go func() {

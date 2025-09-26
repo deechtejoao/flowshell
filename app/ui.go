@@ -37,7 +37,7 @@ func ui() {
 		clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 			Layout: clay.LAY{Sizing: GROWALL},
 		}, func() {
-			// UINode(node1)
+			UINode(node1)
 			UINode(node2)
 		})
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
@@ -113,7 +113,7 @@ func UINode(node *Node) {
 		},
 		CornerRadius: RA2,
 	}, func() {
-		clay.CLAY(clay.ID("NodeHeader"), clay.EL{
+		clay.CLAY_AUTO_ID(clay.EL{ // Node header
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				Padding:        PD(1, 0, 0, 0, PVH(S1, S2)),
@@ -121,12 +121,12 @@ func UINode(node *Node) {
 			},
 			BackgroundColor: Charcoal,
 		}, func() {
-			clay.TEXT("Node", clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
+			clay.TEXT(node.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
 			UISpacerH()
 			if node.Running {
 				clay.TEXT("Running...", clay.TextElementConfig{TextColor: White})
 			}
-			UIButton(clay.ID("PlayButton"),
+			UIButton(clay.AUTO_ID, // Play button
 				UIButtonConfig{
 					El: clay.EL{Layout: clay.LAY{Padding: PA1}},
 					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
@@ -145,7 +145,7 @@ func UINode(node *Node) {
 				},
 			)
 		})
-		clay.CLAY(clay.ID("NodeBody"), clay.EL{
+		clay.CLAY_AUTO_ID(clay.EL{ // Node body
 			Layout: clay.LAY{Sizing: GROWH, Padding: PA2},
 		}, func() {
 			node.Action.UI(node)
@@ -261,7 +261,11 @@ func UISpacerH() {
 
 func UITooltip(msg string) {
 	clay.CLAY(clay.ID("Tooltip"), clay.EL{
-		Floating:        clay.FloatingElementConfig{AttachTo: clay.AttachToRoot, Offset: clay.V2(rl.GetMousePosition()).Plus(clay.V2{0, 28})},
+		Floating: clay.FloatingElementConfig{
+			AttachTo: clay.AttachToRoot,
+			Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{0, 28}),
+			ZIndex:   1000,
+		},
 		Layout:          clay.LAY{Padding: PA1},
 		BackgroundColor: DarkGray,
 		Border:          clay.BorderElementConfig{Color: Gray, Width: BA},
