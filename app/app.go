@@ -24,6 +24,7 @@ func Main() {
 
 	loadImages()
 
+	clay.SetMaxElementCount(1 << 18)
 	arena := clay.CreateArenaWithCapacity(uintptr(clay.MinMemorySize()))
 	clay.Initialize(
 		arena,
