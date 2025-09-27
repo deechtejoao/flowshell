@@ -113,8 +113,32 @@ func ui() {
 	UICursor = rl.MouseCursorDefault
 }
 
+func afterLayout() {
+	for _, node := range nodes {
+		node.UpdatePortPositions()
+	}
+}
+
+func renderOverlays() {
+	for _, wire := range wires {
+		rl.DrawLineBezier(
+			rl.Vector2(wire.StartNode.OutputPortPositions[wire.StartPort]),
+			rl.Vector2(wire.EndNode.InputPortPositions[wire.EndPort]),
+			1,
+			LightGray.RGBA(),
+		)
+	}
+
+	for _, node := range nodes {
+		node.UpdatePortPositions() // TODO: Do sooner to capture click and drag on ports?
+		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
+			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
+		}
+	}
+}
+
 func UINode(node *Node) {
-	clay.CLAY(clay.IDI("Node", node.ID), clay.EL{
+	clay.CLAY(node.ClayID(), clay.EL{
 		Floating: clay.FloatingElementConfig{
 			AttachTo: clay.AttachToParent,
 			Offset:   clay.Vector2(node.Pos),
@@ -185,6 +209,24 @@ func UINode(node *Node) {
 		}, func() {
 			node.Action.UI(node)
 		})
+	})
+}
+
+func UIInputPort(n *Node, port int) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildAlignment: YCENTER},
+	}, func() {
+		PortAnchor(n, false, port)
+		clay.TEXT(n.InputPorts[port].Name, clay.TextElementConfig{TextColor: White})
+	})
+}
+
+func UIOutputPort(n *Node, port int) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildAlignment: YCENTER},
+	}, func() {
+		clay.TEXT(n.OutputPorts[port].Name, clay.TextElementConfig{TextColor: White})
+		PortAnchor(n, true, port)
 	})
 }
 
@@ -327,6 +369,14 @@ func UITooltip(msg string) {
 	}, func() {
 		clay.TEXT(msg, clay.TextElementConfig{TextColor: White})
 	})
+}
+
+func PortAnchorID(node *Node, isOutput bool, port int) clay.ElementID {
+	return clay.ID(fmt.Sprintf("N%d%s%d", node.ID, util.Tern(isOutput, "O", "I"), port))
+}
+
+func PortAnchor(node *Node, isOutput bool, port int) {
+	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{})
 }
 
 func FormatBytes(n int64) string {

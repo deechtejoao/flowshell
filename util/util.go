@@ -19,3 +19,10 @@ func Map[T1, T2 any](s []T1, f func(v T1) T2) []T2 {
 	}
 	return res
 }
+
+func Must1B[T any](v T, ok bool) T {
+	if !ok {
+		panic("expected ok")
+	}
+	return v
+}

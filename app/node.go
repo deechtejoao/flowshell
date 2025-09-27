@@ -24,8 +24,10 @@ type Node struct {
 	Pos  V2
 	Name string
 
-	InputPorts  []NodePort
-	OutputPorts []NodePort
+	InputPorts          []NodePort
+	OutputPorts         []NodePort
+	InputPortPositions  []V2
+	OutputPortPositions []V2
 
 	Action NodeAction
 	Valid  bool
@@ -39,6 +41,10 @@ type Node struct {
 
 func (n *Node) String() string {
 	return fmt.Sprintf("Node#%d(%s)", n.ID, n.Name)
+}
+
+func (n *Node) ClayID() clay.ElementID {
+	return clay.IDI("Node", n.ID)
 }
 
 type NodePort struct {
@@ -124,6 +130,25 @@ func (n *Node) GetOutputValue(port int) (FlowValue, bool) {
 	return n.Result.Outputs[port], true
 }
 
+func (n *Node) UpdatePortPositions() {
+	n.InputPortPositions = make([]V2, len(n.InputPorts))
+	n.OutputPortPositions = make([]V2, len(n.OutputPorts))
+
+	bboxNode := util.Must1B(clay.GetElementData(n.ClayID())).BoundingBox
+	for i := range n.InputPorts {
+		if portData, ok := clay.GetElementData(PortAnchorID(n, false, i)); ok {
+			bboxPort := portData.BoundingBox
+			n.InputPortPositions[i] = V2{bboxNode.X, bboxPort.Y}
+		}
+	}
+	for i := range n.OutputPorts {
+		if portData, ok := clay.GetElementData(PortAnchorID(n, true, i)); ok {
+			bboxPort := portData.BoundingBox
+			n.OutputPortPositions[i] = V2{bboxNode.X + bboxNode.Width, bboxPort.Y}
+		}
+	}
+}
+
 type NodeAction interface {
 	Validate(n *Node)
 	UI(n *Node)
@@ -200,7 +225,27 @@ func (c *RunProcessAction) Validate(n *Node) {
 }
 
 func (c *RunProcessAction) UI(n *Node) {
-	UITextBox(clay.AUTO_ID, &c.CmdString, clay.EL{Layout: clay.LAY{Sizing: GROWH}})
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{
+			LayoutDirection: clay.TopToBottom,
+			Sizing:          GROWH,
+			ChildGap:        S2,
+		},
+	}, func() {
+		UITextBox(clay.AUTO_ID, &c.CmdString, clay.EL{Layout: clay.LAY{Sizing: GROWH}})
+
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{
+				LayoutDirection: clay.TopToBottom,
+				Sizing:          GROWH,
+				ChildAlignment:  XRIGHT,
+			},
+		}, func() {
+			UIOutputPort(n, 0)
+			UIOutputPort(n, 1)
+			UIOutputPort(n, 2)
+		})
+	})
 }
 
 func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
@@ -388,6 +433,29 @@ func (c *LinesAction) Validate(n *Node) {
 }
 
 func (l *LinesAction) UI(n *Node) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY_AUTO_ID(clay.EL{ // inputs
+			Layout: clay.LAY{
+				LayoutDirection: clay.TopToBottom,
+				Sizing:          GROWH,
+				ChildAlignment:  clay.ChildAlignment{Y: clay.AlignYCenter},
+			},
+		}, func() {
+			UIInputPort(n, 0)
+		})
+		clay.CLAY_AUTO_ID(clay.EL{ // outputs
+			Layout: clay.LAY{
+				LayoutDirection: clay.TopToBottom,
+				Sizing:          GROWH,
+				ChildAlignment:  clay.ChildAlignment{X: clay.AlignXRight, Y: clay.AlignYCenter},
+			},
+		}, func() {
+			UIOutputPort(n, 0)
+		})
+	})
+
 	// TODO: Checkbox for carriage returns
 }
 
@@ -403,7 +471,7 @@ func (l *LinesAction) Run(n *Node) <-chan NodeActionResult {
 
 		text, ok := n.GetInputValue(0)
 		if !ok {
-			panic(fmt.Errorf("node %s: no text input, should have been caught by validation"))
+			panic(fmt.Errorf("node %s: no text input, should have been caught by validation", n))
 		}
 		linesStrs := util.Tern(l.IncludeCarriageReturns, CRLFSplit, LFSplit).Split(string(text.BytesValue), -1)
 		lines := util.Map(linesStrs, func(line string) FlowValue { return StringValue(line) })

@@ -911,6 +911,18 @@ func RenderData2Go(r C.Clay_RenderData, ty RenderCommandType) RenderData {
 	}
 }
 
+type ElementData struct {
+	BoundingBox BoundingBox
+	Found       bool
+}
+
+func ElementData2Go(r C.Clay_ElementData) ElementData {
+	return ElementData{
+		BoundingBox: BoundingBox2Go(r.boundingBox),
+		Found:       bool(r.found),
+	}
+}
+
 // Used by renderers to determine specific handling for each render command.
 type RenderCommandType uint8
 
@@ -1194,6 +1206,11 @@ func EndLayout() []RenderCommand {
 		res[i] = RenderCommand2Go(*C.Clay_RenderCommandArray_Get(&cmds, C.int32_t(i)))
 	}
 	return res
+}
+
+func GetElementData(id ElementID) (ElementData, bool) {
+	res := ElementData2Go(C.Clay_GetElementData(id.C()))
+	return res, res.Found
 }
 
 func Hovered() bool {

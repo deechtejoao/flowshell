@@ -61,9 +61,12 @@ func frame() {
 	}
 	commands := clay.EndLayout()
 
+	afterLayout()
+
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
 	renderClayCommands(commands)
+	renderOverlays()
 	rl.EndDrawing()
 }
 
