@@ -27,10 +27,8 @@ type Node struct {
 	Pos  V2
 	Name string
 
-	InputPorts          []NodePort
-	OutputPorts         []NodePort
-	InputPortPositions  []V2
-	OutputPortPositions []V2
+	InputPorts  []NodePort
+	OutputPorts []NodePort
 
 	Action NodeAction
 	Valid  bool
@@ -40,6 +38,10 @@ type Node struct {
 
 	ResultAvailable bool
 	Result          NodeActionResult
+
+	InputPortPositions  []V2
+	OutputPortPositions []V2
+	DragRect            rl.Rectangle
 }
 
 func (n *Node) String() string {
@@ -48,6 +50,14 @@ func (n *Node) String() string {
 
 func (n *Node) ClayID() clay.ElementID {
 	return clay.IDI("Node", n.ID)
+}
+
+func (n *Node) DragHandleClayID() clay.ElementID {
+	return clay.IDI("NodeDragHandle", n.ID)
+}
+
+func (n *Node) DragKey() string {
+	return fmt.Sprintf("Node#%d", n.ID)
 }
 
 type NodePort struct {
@@ -150,7 +160,8 @@ func (n *Node) GetOutputValue(port int) (FlowValue, bool) {
 	return n.Result.Outputs[port], true
 }
 
-func (n *Node) UpdatePortPositions() {
+// Update cached positions and rectangles and so on based on layout
+func (n *Node) UpdateLayoutInfo() {
 	n.InputPortPositions = make([]V2, len(n.InputPorts))
 	n.OutputPortPositions = make([]V2, len(n.OutputPorts))
 
@@ -167,6 +178,8 @@ func (n *Node) UpdatePortPositions() {
 			n.OutputPortPositions[i] = V2{bboxNode.X + bboxNode.Width, bboxPort.Y}
 		}
 	}
+
+	n.DragRect = rl.Rectangle(util.Must1B(clay.GetElementData(n.DragHandleClayID())).BoundingBox)
 }
 
 type NodeAction interface {
@@ -265,7 +278,7 @@ func (c *LoadFileAction) UI(n *Node) {
 			UITextBox(clay.AUTO_ID, &c.path, clay.EL{
 				Layout: clay.LAY{Sizing: GROWH},
 			})
-			UISpacer(W2)
+			UISpacer(clay.AUTO_ID, W2)
 			UIOutputPort(n, 0)
 		})
 

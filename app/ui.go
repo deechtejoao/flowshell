@@ -22,6 +22,13 @@ var nodes = []*Node{
 	NewLoadFileNode("go.mod"),
 }
 
+func init() {
+	nodes[0].Pos = V2{10, 10}
+	nodes[1].Pos = V2{400, 10}
+	nodes[2].Pos = V2{400, 200}
+	nodes[3].Pos = V2{10, 200}
+}
+
 var wires = []*Wire{
 	{
 		StartNode: nodes[0], StartPort: 0,
@@ -60,14 +67,22 @@ func beforeLayout() {
 			nodes = append(nodes, n)
 		}
 	}
+
+	for _, n := range nodes {
+		drag.TryStartDrag(n, n.DragRect, n.Pos)
+
+		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
+			n.Pos = drag.NewObjPosition()
+			if done {
+				if canceled {
+					n.Pos = drag.ObjStart
+				}
+			}
+		}
+	}
 }
 
 func ui() {
-	nodes[0].Pos = V2{10, 10}
-	nodes[1].Pos = V2{400, 10}
-	nodes[2].Pos = V2{400, 200}
-	nodes[3].Pos = V2{10, 200}
-
 	// Sweep the graph, validating all nodes
 	// TODO: TOPOSORT
 	for _, node := range nodes {
@@ -127,7 +142,7 @@ func ui() {
 
 func afterLayout() {
 	for _, node := range nodes {
-		node.UpdatePortPositions()
+		node.UpdateLayoutInfo()
 	}
 }
 
@@ -142,7 +157,6 @@ func renderOverlays() {
 	}
 
 	for _, node := range nodes {
-		node.UpdatePortPositions() // TODO: Do sooner to capture click and drag on ports?
 		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
 			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
 		}
@@ -189,7 +203,7 @@ func UINode(node *Node) {
 			}, nil)
 
 			clay.TEXT(node.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
-			UISpacer(GROWH)
+			UISpacer(node.DragHandleClayID(), GROWALL)
 			if node.Running {
 				clay.TEXT("Running...", clay.TextElementConfig{TextColor: White})
 			}
@@ -488,8 +502,8 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 	})
 }
 
-func UISpacer(sizing clay.Sizing) {
-	clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{Sizing: sizing}})
+func UISpacer(id clay.ElementID, sizing clay.Sizing) {
+	clay.CLAY(id, clay.EL{Layout: clay.LAY{Sizing: sizing}})
 }
 
 func UIImage(id clay.ElementID, img rl.Texture2D, decl clay.EL) {

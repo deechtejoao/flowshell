@@ -49,6 +49,7 @@ func Main() {
 }
 
 func frame() {
+	drag.Update()
 	beforeLayout()
 
 	clay.SetLayoutDimensions(clay.D{windowWidth, windowHeight})
