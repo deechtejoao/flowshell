@@ -1,6 +1,6 @@
 module github.com/bvisness/flowshell
 
-go 1.23.4
+go 1.23
 
 require github.com/gen2brain/raylib-go/raylib v0.55.1
 

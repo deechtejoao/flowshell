@@ -35,7 +35,9 @@ func LoadFont(font Font, size int) rl.Font {
 		return cached
 	}
 
-	rlfont := rl.LoadFontEx(fontFiles[font], int32(size), nil)
+	dpi := rl.GetWindowScaleDPI()
+
+	rlfont := rl.LoadFontEx(fontFiles[font], int32(size*int(dpi.X)), nil)
 	fontCache[desc] = rlfont
 
 	return rlfont

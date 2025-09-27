@@ -105,7 +105,7 @@ func ui() {
 			return clay.EL{
 				Layout: clay.LAY{
 					LayoutDirection: clay.TopToBottom,
-					Sizing:          clay.Sizing{Width: clay.SizingFixed(600), Height: clay.SizingGrow(1, 0)},
+					Sizing:          clay.Sizing{Width: clay.SizingFixed(windowWidth * 0.30), Height: clay.SizingGrow(1, 0)},
 					Padding:         PA2,
 				},
 				Clip: clay.ClipElementConfig{

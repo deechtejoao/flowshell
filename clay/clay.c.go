@@ -44,6 +44,7 @@ Clay_CustomRenderData Clay_GetRenderDataCustom(Clay_RenderData d) {
 
 extern void clayErrorCallback(Clay_ErrorData);
 extern Clay_Dimensions clayMeasureTextCallback(Clay_StringSlice, Clay_TextElementConfig*, void*);
+extern void clayOnHoverCallback(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
 
 void clayErrorCallback_cgo(Clay_ErrorData errorText) {
 	clayErrorCallback(errorText);
