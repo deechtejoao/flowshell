@@ -79,19 +79,33 @@ func (w *Wire) Type() FlowType {
 func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 	if n.Running {
 		fmt.Printf("Node %s is already running; starting another done-er\n", n)
-		go func(done chan struct{}) {
-			// oh the hacks
-			for {
-				if n.Running {
-					time.Sleep(1 * time.Millisecond)
-				} else {
-					break
+
+		done := n.done
+		if done == nil {
+			// This is possible since we race with n.Running. If this happens, just
+			// send a new channel that is already complete.
+			//
+			// TODO: I've not yet seen this happen.
+			fmt.Printf("Node %s lost the race with n.Running...we're just done\n", n)
+			go func() {
+				done <- struct{}{}
+			}()
+			return done
+		} else {
+			go func() {
+				// oh the hacks
+				for {
+					if n.Running {
+						time.Sleep(1 * time.Millisecond)
+					} else {
+						break
+					}
 				}
-			}
-			done <- struct{}{}
-			fmt.Printf("Node %s is no longer running, extra done-er is done\n", n)
-		}(n.done)
-		return n.done
+				done <- struct{}{}
+				fmt.Printf("Node %s is no longer running, extra done-er is done\n", n)
+			}()
+		}
+		return done
 	}
 
 	fmt.Printf("Running node %s\n", n)
