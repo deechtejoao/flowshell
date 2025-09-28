@@ -29,6 +29,7 @@ var nodeTypes = []NodeType{
 	{"List Files", func() *Node { return NewListFilesNode(".") }},
 	{"Lines", func() *Node { return NewLinesNode() }},
 	{"Load File", func() *Node { return NewLoadFileNode("") }},
+	{"Save File", func() *Node { return NewSaveFileNode("") }},
 	{"Trim Spaces", func() *Node { return NewTrimSpacesNode() }},
 	{"Min", func() *Node { return NewAggregateNode("Min") }},
 	{"Max", func() *Node { return NewAggregateNode("Max") }},
@@ -171,7 +172,36 @@ func beforeLayout() {
 			}
 		}
 	}
+
+	// Resizing output window
+	{
+		outputWindowRect := rl.Rectangle{
+			X:      float32(rl.GetScreenWidth()) - OutputWindowWidth - OutputWindowDragWidth/2,
+			Y:      0,
+			Width:  OutputWindowDragWidth,
+			Height: float32(rl.GetScreenHeight()),
+		}
+		drag.TryStartDrag(OutputWindowDragKey, outputWindowRect, V2{OutputWindowWidth, 0})
+
+		resizing, done, canceled := drag.State(OutputWindowDragKey)
+		if resizing {
+			if done {
+				if canceled {
+					OutputWindowWidth = drag.ObjStart.X
+				}
+			} else {
+				OutputWindowWidth = float32(rl.GetScreenWidth()) - float32(rl.GetMouseX())
+			}
+		}
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), outputWindowRect) || resizing {
+			UICursor = rl.MouseCursorResizeEW
+		}
+	}
 }
+
+const OutputWindowDragKey = "OUTPUT_WINDOW"
+const OutputWindowDragWidth = 8
 
 const NewWireDragKey = "NEW_WIRE"
 const PortDragRadius = 5
@@ -180,6 +210,8 @@ var NewWireSourceNode *Node
 var NewWireSourcePort int
 
 var NewNodeName string
+
+var OutputWindowWidth float32 = windowWidth * 0.30
 
 func ui() {
 	// Sweep the graph, validating all nodes
@@ -293,7 +325,7 @@ func ui() {
 			return clay.EL{
 				Layout: clay.LAY{
 					LayoutDirection: clay.TopToBottom,
-					Sizing:          clay.Sizing{Width: clay.SizingFixed(windowWidth * 0.30), Height: clay.SizingGrow(1, 0)},
+					Sizing:          clay.Sizing{Width: clay.SizingFixed(OutputWindowWidth), Height: clay.SizingGrow(1, 0)},
 					Padding:         PA2,
 				},
 				Clip: clay.ClipElementConfig{
