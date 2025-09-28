@@ -464,12 +464,16 @@ type UITextBoxConfig struct {
 
 func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig) {
 	if IsFocused(id) {
-		for r := rl.GetCharPressed(); r != 0; r = rl.GetCharPressed() {
-			*str = *str + string(rune(r))
-		}
-		if rl.IsKeyPressed(rl.KeyBackspace) || rl.IsKeyPressedRepeat(rl.KeyBackspace) {
-			if len(*str) > 0 {
-				*str = (*str)[:len(*str)-1]
+		if config.Disabled {
+			UIFocus = nil
+		} else {
+			for r := rl.GetCharPressed(); r != 0; r = rl.GetCharPressed() {
+				*str = *str + string(rune(r))
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) || rl.IsKeyPressedRepeat(rl.KeyBackspace) {
+				if len(*str) > 0 {
+					*str = (*str)[:len(*str)-1]
+				}
 			}
 		}
 	}
