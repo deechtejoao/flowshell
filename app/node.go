@@ -296,7 +296,7 @@ func (c *LoadFileAction) UI(n *Node) {
 			},
 		}, func() {
 			PortAnchor(n, false, 0)
-			UITextBox(clay.AUTO_ID, &c.path, UITextBoxConfig{
+			UITextBox(clay.IDI("LoadFilePath", n.ID), &c.path, UITextBoxConfig{
 				El: clay.EL{
 					Layout: clay.LAY{Sizing: GROWH},
 				},
@@ -461,7 +461,7 @@ func (c *RunProcessAction) UI(n *Node) {
 			ChildGap:        S2,
 		},
 	}, func() {
-		UITextBox(clay.AUTO_ID, &c.CmdString, UITextBoxConfig{
+		UITextBox(clay.IDI("RunProcessCmd", n.ID), &c.CmdString, UITextBoxConfig{
 			El: clay.EL{Layout: clay.LAY{Sizing: GROWH}},
 		})
 
@@ -574,7 +574,7 @@ func (c *ListFilesAction) UI(n *Node) {
 		},
 	}, func() {
 		PortAnchor(n, false, 0)
-		UITextBox(clay.AUTO_ID, &c.Dir, UITextBoxConfig{
+		UITextBox(clay.IDI("ListFilesDir", n.ID), &c.Dir, UITextBoxConfig{
 			El:       clay.EL{Layout: clay.LAY{Sizing: GROWH}},
 			Disabled: n.InputIsWired(0),
 		})

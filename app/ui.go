@@ -59,6 +59,11 @@ func NodeInputs(n *Node) []*Node {
 }
 
 var UICursor rl.MouseCursor
+var UIFocus *clay.ElementID
+
+func IsFocused(id clay.ElementID) bool {
+	return UIFocus != nil && id.ID == UIFocus.ID
+}
 
 func beforeLayout() {
 	if rl.IsFileDropped() {
@@ -458,17 +463,44 @@ type UITextBoxConfig struct {
 }
 
 func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig) {
-	config.El.Border = clay.BorderElementConfig{Width: BA, Color: Gray}
-	config.El.Layout.Padding = PVH(S1, S2)
-	config.El.BackgroundColor = DarkGray
+	if IsFocused(id) {
+		for r := rl.GetCharPressed(); r != 0; r = rl.GetCharPressed() {
+			*str = *str + string(rune(r))
+		}
+		if rl.IsKeyPressed(rl.KeyBackspace) || rl.IsKeyPressedRepeat(rl.KeyBackspace) {
+			if len(*str) > 0 {
+				*str = (*str)[:len(*str)-1]
+			}
+		}
+	}
 
 	clay.CLAY_LATE(id, func() clay.EL {
+		config.El.Border = clay.B{Width: BA, Color: Gray}
+		config.El.Layout.Padding = PVH(S1, S2)
+		config.El.Layout.ChildAlignment.Y = clay.AlignYCenter
+		config.El.BackgroundColor = DarkGray
+		config.El.Clip = clay.CLIP{Horizontal: true}
+
 		if clay.Hovered() {
 			UICursor = rl.MouseCursorIBeam
 		}
+
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			if pointerData.State == clay.PointerDataReleasedThisFrame {
+				UIFocus = &elementID
+			}
+		}, nil)
+
 		return config.El
 	}, func() {
-		clay.TEXT(*str, clay.TextElementConfig{TextColor: util.Tern(config.Disabled, LightGray, White)})
+		clay.TEXT(*str, clay.T{TextColor: util.Tern(config.Disabled, LightGray, White)})
+		if IsFocused(id) {
+			UISpacer(clay.AUTO_ID, WH(1, 16))
+			clay.CLAY_AUTO_ID(clay.EL{
+				Layout:          clay.LAY{Sizing: WH(2, 16)},
+				BackgroundColor: White,
+			})
+		}
 	})
 }
 

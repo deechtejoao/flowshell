@@ -319,6 +319,7 @@ type ChildAlignment struct {
 	X LayoutAlignmentX // Controls alignment of children along the x axis.
 	Y LayoutAlignmentY // Controls alignment of children along the y axis.
 }
+type CA = ChildAlignment
 
 func (r ChildAlignment) C() C.Clay_ChildAlignment {
 	return C.Clay_ChildAlignment{
@@ -710,6 +711,7 @@ type ClipElementConfig struct {
 	// Used primarily for scrolling containers.
 	ChildOffset Vector2
 }
+type CLIP = ClipElementConfig
 
 func (r ClipElementConfig) C() C.Clay_ClipElementConfig {
 	return C.Clay_ClipElementConfig{
