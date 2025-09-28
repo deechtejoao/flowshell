@@ -1257,6 +1257,10 @@ func SetDebugModeEnabled(enabled bool) {
 	C.Clay_SetDebugModeEnabled(C.bool(enabled))
 }
 
+func IsDebugModeEnabled() bool {
+	return bool(C.Clay_IsDebugModeEnabled())
+}
+
 func SetMaxElementCount(maxElementCount int32) {
 	C.Clay_SetMaxElementCount(C.int32_t(maxElementCount))
 }

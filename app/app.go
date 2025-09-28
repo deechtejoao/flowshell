@@ -43,7 +43,6 @@ func Main() {
 		dims := rl.MeasureTextEx(font, str, float32(fontSize), float32(config.LetterSpacing))
 		return clay.Dimensions{Width: dims.X, Height: dims.Y}
 	}, nil)
-	clay.SetDebugModeEnabled(true)
 
 	rl.SetExitKey(0)
 	for !rl.WindowShouldClose() {
@@ -54,6 +53,10 @@ func Main() {
 func frame() {
 	drag.Update()
 	beforeLayout()
+
+	if rl.IsKeyPressed(rl.KeyF9) {
+		clay.SetDebugModeEnabled(!clay.IsDebugModeEnabled())
+	}
 
 	clay.SetLayoutDimensions(clay.D{windowWidth, windowHeight})
 	clay.SetPointerState(
