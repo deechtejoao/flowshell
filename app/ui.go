@@ -69,8 +69,8 @@ func beforeLayout() {
 	}
 
 	for _, n := range nodes {
+		// Node drag and drop
 		drag.TryStartDrag(n, n.DragRect, n.Pos)
-
 		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
 			n.Pos = drag.NewObjPosition()
 			if done {
@@ -79,8 +79,56 @@ func beforeLayout() {
 				}
 			}
 		}
+
+		// Starting new wires
+		for i, outputPortPos := range n.OutputPortPositions {
+			portRect := rl.Rectangle{
+				X:      outputPortPos.X - PortDragRadius,
+				Y:      outputPortPos.Y - PortDragRadius,
+				Width:  PortDragRadius * 2,
+				Height: PortDragRadius * 2,
+			}
+			if drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
+				NewWireSourceNode = n
+				NewWireSourcePort = i
+			}
+		}
+	}
+
+	// Dropping new wires
+	if draggingNewWire, done, canceled := drag.State(NewWireDragKey); draggingNewWire {
+		if done && !canceled {
+			// Loop over nodes to find any you may have dropped on
+			for _, node := range nodes {
+				for port, portPos := range node.InputPortPositions {
+					portRect := rl.Rectangle{
+						X:      portPos.X - PortDragRadius,
+						Y:      portPos.Y - PortDragRadius,
+						Width:  PortDragRadius * 2,
+						Height: PortDragRadius * 2,
+					}
+
+					if rl.CheckCollisionPointRec(rl.GetMousePosition(), portRect) && node != NewWireSourceNode {
+						// Delete existing wires into that port
+						wires = slices.DeleteFunc(wires, func(wire *Wire) bool {
+							return wire.EndNode == node && wire.EndPort == port
+						})
+						wires = append(wires, &Wire{
+							StartNode: NewWireSourceNode, EndNode: node,
+							StartPort: NewWireSourcePort, EndPort: port,
+						})
+					}
+				}
+			}
+		}
 	}
 }
+
+const NewWireDragKey = "NEW_WIRE"
+const PortDragRadius = 5
+
+var NewWireSourceNode *Node
+var NewWireSourcePort int
 
 func ui() {
 	// Sweep the graph, validating all nodes
@@ -147,10 +195,19 @@ func afterLayout() {
 }
 
 func renderOverlays() {
+	// Render wires
 	for _, wire := range wires {
 		rl.DrawLineBezier(
 			rl.Vector2(wire.StartNode.OutputPortPositions[wire.StartPort]),
 			rl.Vector2(wire.EndNode.InputPortPositions[wire.EndPort]),
+			1,
+			LightGray.RGBA(),
+		)
+	}
+	if draggingNewWire, _, _ := drag.State(NewWireDragKey); draggingNewWire {
+		rl.DrawLineBezier(
+			rl.Vector2(NewWireSourceNode.OutputPortPositions[NewWireSourcePort]),
+			rl.GetMousePosition(),
 			1,
 			LightGray.RGBA(),
 		)
