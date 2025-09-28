@@ -95,11 +95,17 @@ func IsFocused(id clay.ElementID) bool {
 }
 
 func beforeLayout() {
+	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && selectedNodeID != 0 {
+		nodes = slices.DeleteFunc(nodes, func(n *Node) bool { return n.ID == selectedNodeID })
+		selectedNodeID = 0
+	}
+
 	if rl.IsFileDropped() {
 		for i, filename := range rl.LoadDroppedFiles() {
 			n := NewLoadFileNode(filename)
 			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{20, 20}.Times(float32(i))))
 			nodes = append(nodes, n)
+			selectedNodeID = n.ID
 		}
 	}
 
@@ -112,6 +118,13 @@ func beforeLayout() {
 				if canceled {
 					n.Pos = drag.ObjStart
 				}
+			}
+		}
+
+		// Selected node keyboard shortcuts
+		if selectedNodeID == n.ID {
+			if rl.IsKeyPressed(rl.KeyR) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+				n.Run(rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift))
 			}
 		}
 
@@ -273,6 +286,14 @@ func ui() {
 					},
 				}, func() {
 					textboxID := clay.ID("NewNodeName")
+					shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
+
+					// Before UI: defocus textbox
+					if shortcut && IsFocused(textboxID) {
+						UIFocus = nil
+						shortcut = false
+					}
+
 					UIButton(clay.ID("NewNode"), UIButtonConfig{
 						El: clay.EL{
 							Layout: clay.LAY{
@@ -290,6 +311,13 @@ func ui() {
 						clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
 					})
 					if IsFocused(textboxID) {
+						addNodeFromMatch := func(nt NodeType) {
+							newNode := nt.Create()
+							newNode.Pos = V2{200, 200}
+							nodes = append(nodes, newNode)
+							selectedNodeID = newNode.ID
+						}
+
 						UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
 							El: clay.ElementDeclaration{
 								Layout: clay.LAY{
@@ -299,9 +327,7 @@ func ui() {
 							OnSubmit: func(val string) {
 								matches := SearchNodeTypes(val)
 								if len(matches) > 0 {
-									newNode := matches[0].Create()
-									newNode.Pos = V2{200, 200}
-									nodes = append(nodes, newNode)
+									addNodeFromMatch(matches[0])
 								}
 								UIFocus = nil
 							},
@@ -323,10 +349,16 @@ func ui() {
 							}, func() {
 								matches := SearchNodeTypes(NewNodeName)
 								for i := len(matches) - 1; i >= 0; i-- {
-									clay.CLAY_AUTO_ID(clay.EL{
-										Layout: clay.LAY{
-											Padding: PVH(S2, S3),
-											Sizing:  GROWH,
+									UIButton(clay.AUTO_ID, UIButtonConfig{
+										El: clay.EL{
+											Layout: clay.LAY{
+												Padding: PVH(S2, S3),
+												Sizing:  GROWH,
+											},
+										},
+										OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+											addNodeFromMatch(matches[i])
+											UIFocus = nil
 										},
 									}, func() {
 										clay.TEXT(matches[i].Name, clay.T{
@@ -338,6 +370,12 @@ func ui() {
 								}
 							})
 						})
+					}
+
+					// After UI: focus textbox
+					if shortcut && !IsFocused(textboxID) {
+						UIFocus = &textboxID
+						shortcut = false
 					}
 				})
 			})
