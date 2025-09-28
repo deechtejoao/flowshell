@@ -218,11 +218,12 @@ func afterLayout() {
 func renderOverlays() {
 	// Render wires
 	for _, wire := range wires {
+		color := util.Tern(wire.StartNode.ResultAvailable && wire.StartNode.Result.Err != nil, Red, LightGray)
 		rl.DrawLineBezier(
 			rl.Vector2(wire.StartNode.OutputPortPositions[wire.StartPort]),
 			rl.Vector2(wire.EndNode.InputPortPositions[wire.EndPort]),
 			1,
-			LightGray.RGBA(),
+			color.RGBA(),
 		)
 	}
 	if draggingNewWire, _, _ := drag.State(NewWireDragKey); draggingNewWire {
@@ -242,6 +243,22 @@ func renderOverlays() {
 }
 
 func UINode(node *Node) {
+	border := clay.B{
+		Color: Gray,
+		Width: BA,
+	}
+	if node.Result.Err != nil {
+		border = clay.B{
+			Color: Red,
+			Width: BA2,
+		}
+	} else if selectedNodeID == node.ID {
+		border = clay.B{
+			Color: Blue,
+			Width: BA2,
+		}
+	}
+
 	clay.CLAY(node.ClayID(), clay.EL{
 		Floating: clay.FloatingElementConfig{
 			AttachTo: clay.AttachToParent,
@@ -253,17 +270,8 @@ func UINode(node *Node) {
 			Sizing:          clay.Sizing{Width: clay.SizingFit(NodeMinWidth, 0)},
 		},
 		BackgroundColor: DarkGray,
-		Border: util.Tern(selectedNodeID == node.ID,
-			clay.BorderElementConfig{
-				Color: Blue,
-				Width: BA2,
-			},
-			clay.BorderElementConfig{
-				Color: Gray,
-				Width: BA,
-			},
-		),
-		CornerRadius: RA2,
+		Border:          border,
+		CornerRadius:    RA2,
 	}, func() {
 		clay.CLAY_AUTO_ID(clay.EL{ // Node header
 			Layout: clay.LAY{
