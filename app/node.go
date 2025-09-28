@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -77,18 +78,33 @@ func (w *Wire) Type() FlowType {
 
 func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 	if n.Running {
+		fmt.Printf("Node %s is already running; starting another done-er\n", n)
+		go func(done chan struct{}) {
+			// oh the hacks
+			for {
+				if n.Running {
+					time.Sleep(1 * time.Millisecond)
+				} else {
+					break
+				}
+			}
+			done <- struct{}{}
+			fmt.Printf("Node %s is no longer running, extra done-er is done\n", n)
+		}(n.done)
 		return n.done
 	}
 
+	fmt.Printf("Running node %s\n", n)
 	n.Running = true
 	n.ResultAvailable = false
-	n.done = make(chan struct{}, 1)
+	n.done = make(chan struct{})
 
 	go func() {
 		// Wait on input ports
 		var inputRuns []<-chan struct{}
 		for _, inputNode := range NodeInputs(n) {
 			if rerunInputs || !inputNode.ResultAvailable {
+				fmt.Printf("Node %s wants node %s to run\n", n, inputNode)
 				inputRuns = append(inputRuns, inputNode.Run(rerunInputs))
 			}
 		}
@@ -108,6 +124,8 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 				return
 			}
 		}
+
+		fmt.Printf("Node %s: all inputs are done\n", n)
 
 		// Run action
 		res := <-n.Action.Run(n)
