@@ -130,10 +130,7 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 
 		// If any inputs have errors, stop.
 		for _, inputNode := range NodeInputs(n) {
-			if !inputNode.ResultAvailable {
-				panic(fmt.Errorf("input node %s should have had a result", inputNode))
-			}
-			if inputNode.Result.Err != nil {
+			if !inputNode.ResultAvailable || inputNode.Result.Err != nil {
 				n.Running = false
 				n.done <- struct{}{}
 				n.done = nil
