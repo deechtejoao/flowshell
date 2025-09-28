@@ -198,10 +198,31 @@ func beforeLayout() {
 			UICursor = rl.MouseCursorResizeEW
 		}
 	}
+
+	// Panning
+	{
+		if background, ok := clay.GetElementData(clay.ID("Background")); ok {
+			if drag.TryStartDrag(PanDragKey, rl.Rectangle(background.BoundingBox), V2{}) {
+				LastPanMousePosition = rl.GetMousePosition()
+			}
+			if panning, _, _ := drag.State(PanDragKey); panning {
+				mousePos := rl.GetMousePosition()
+				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
+				for _, n := range nodes {
+					n.Pos = rl.Vector2Add(n.Pos, delta)
+				}
+				LastPanMousePosition = mousePos
+			}
+		}
+	}
 }
 
 const OutputWindowDragKey = "OUTPUT_WINDOW"
 const OutputWindowDragWidth = 8
+
+const PanDragKey = "PAN"
+
+var LastPanMousePosition V2
 
 const NewWireDragKey = "NEW_WIRE"
 const PortDragRadius = 5
