@@ -33,6 +33,7 @@ var nodeTypes = []NodeType{
 	{"Min", func() *Node { return NewAggregateNode("Min") }},
 	{"Max", func() *Node { return NewAggregateNode("Max") }},
 	{"Mean (Average)", func() *Node { return NewAggregateNode("Mean") }},
+	{"Concatenate Tables (Combine Rows)", func() *Node { return NewConcatTablesNode() }},
 }
 
 func SearchNodeTypes(search string) []NodeType {
