@@ -87,6 +87,11 @@ func NodeInputs(n *Node) []*Node {
 	return res
 }
 
+func DeleteNode(id int) {
+	nodes = slices.DeleteFunc(nodes, func(node *Node) bool { return node.ID == id })
+	wires = slices.DeleteFunc(wires, func(wire *Wire) bool { return wire.StartNode.ID == id || wire.EndNode.ID == id })
+}
+
 var UICursor rl.MouseCursor
 var UIFocus *clay.ElementID
 
@@ -96,7 +101,7 @@ func IsFocused(id clay.ElementID) bool {
 
 func beforeLayout() {
 	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && selectedNodeID != 0 {
-		nodes = slices.DeleteFunc(nodes, func(n *Node) bool { return n.ID == selectedNodeID })
+		DeleteNode(selectedNodeID)
 		selectedNodeID = 0
 	}
 
