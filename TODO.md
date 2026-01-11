@@ -23,7 +23,7 @@
 - [x] "Minify" HTML
 
 ## Critical Issues
-- [ ] Error Handling Scopes: The `Run` method uses `panic` inside goroutines for logical errors. Use `recover()` or propagate errors. `app/node.go`
+- [x] Error Handling Scopes: The `Run` method uses `panic` inside goroutines for logical errors. Use `recover()` or propagate errors. `app/node.go`
 - [ ] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
 
 ## Architecture Improvements
