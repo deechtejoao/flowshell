@@ -78,6 +78,7 @@ func frame() {
 	renderClayCommands(commands)
 	renderOverlays()
 	rl.EndDrawing()
+	clay.ClearCachedStrings()
 }
 
 func handleClayErrors(errorData clay.ErrorData) {
