@@ -13,3 +13,11 @@
 - [x] Snapping
 - [ ] Writeup
 - [ ] Serialization
+- [x] Benchmark data analysis: pick columns, min/max/mean across columns, concat rows, add columns, transpose? The list goes on
+  - [x] Min/Max/Mean
+  - [x] Concat Tables
+  - [x] Transpose
+  - [x] Select Columns
+  - [x] Extract Column (Table -> List)
+  - [x] Add Column (Math?)
+- [x] "Minify" HTML
