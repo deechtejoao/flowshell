@@ -47,6 +47,8 @@ var nodeTypes = []NodeType{
 	{"Filter Empty", func() *Node { return NewFilterEmptyNode() }},
 	{"Sort", func() *Node { return NewSortNode() }},
 	{"Select Columns", func() *Node { return NewSelectColumnsNode() }},
+	{"Extract Column", func() *Node { return NewExtractColumnNode() }},
+	{"Add Column", func() *Node { return NewAddColumnNode() }},
 	{"Transpose", func() *Node { return NewTransposeNode() }},
 	{"Minify HTML", func() *Node { return NewMinifyHTMLNode() }},
 }

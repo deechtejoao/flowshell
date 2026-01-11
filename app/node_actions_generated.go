@@ -3,8 +3,10 @@
 package app
 
 var allNodeActions = [...]NodeActionMeta{
+	{Tag: "AddColumnAction", Alloc: func() NodeAction { return &AddColumnAction{} }},
 	{Tag: "AggregateAction", Alloc: func() NodeAction { return &AggregateAction{} }},
 	{Tag: "ConcatTablesAction", Alloc: func() NodeAction { return &ConcatTablesAction{} }},
+	{Tag: "ExtractColumnAction", Alloc: func() NodeAction { return &ExtractColumnAction{} }},
 	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
 	{Tag: "LinesAction", Alloc: func() NodeAction { return &LinesAction{} }},
 	{Tag: "ListFilesAction", Alloc: func() NodeAction { return &ListFilesAction{} }},
@@ -19,12 +21,20 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "ValueAction", Alloc: func() NodeAction { return &ValueAction{} }},
 }
 
+func (a *AddColumnAction) Tag() string {
+	return "AddColumnAction"
+}
+
 func (a *AggregateAction) Tag() string {
 	return "AggregateAction"
 }
 
 func (a *ConcatTablesAction) Tag() string {
 	return "ConcatTablesAction"
+}
+
+func (a *ExtractColumnAction) Tag() string {
+	return "ExtractColumnAction"
 }
 
 func (a *FilterEmptyAction) Tag() string {
