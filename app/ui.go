@@ -38,7 +38,7 @@ var nodeTypes = []NodeType{
 	{"List Files", func() *Node { return NewListFilesNode(".") }},
 	{"Lines", func() *Node { return NewLinesNode() }},
 	{"Load File", func() *Node { return NewLoadFileNode("") }},
-	{"Save File", func() *Node { return NewSaveFileNode("") }},
+	{"Save File", func() *Node { return NewSaveFileNode() }},
 	{"Trim Spaces", func() *Node { return NewTrimSpacesNode() }},
 	{"Min", func() *Node { return NewAggregateNode("Min") }},
 	{"Max", func() *Node { return NewAggregateNode("Max") }},

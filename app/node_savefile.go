@@ -1,106 +1,97 @@
 package app
 
 import (
-	"bytes"
 	"encoding/csv"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/bvisness/flowshell/clay"
-	"github.com/bvisness/flowshell/util"
 )
 
 // GEN:NodeAction
 type SaveFileAction struct {
-	path   string
-	format UIDropdown
+	Path   string
+	Format string // "raw", "csv", "json"
 }
 
-func NewSaveFileNode(path string) *Node {
-	formatDropdown := UIDropdown{
-		Options: saveFileFormatOptions,
-	}
-
+func NewSaveFileNode() *Node {
 	return &Node{
 		ID:   NewNodeID(),
 		Name: "Save File",
 
-		InputPorts: []NodePort{
-			{
-				Name: "Path",
-				Type: FlowType{Kind: FSKindBytes},
-			},
-			{
-				Name: "Data",
-				Type: FlowType{Kind: FSKindAny},
-			},
-		},
-		OutputPorts: []NodePort{{
+		InputPorts: []NodePort{{
 			Name: "Data",
 			Type: FlowType{Kind: FSKindAny},
 		}},
+		OutputPorts: []NodePort{}, // No output, just side effect? Or return path/success?
 
 		Action: &SaveFileAction{
-			path:   path,
-			format: formatDropdown,
+			Path:   "output.txt",
+			Format: "raw",
 		},
 	}
-}
-
-var saveFileFormatOptions = []UIDropdownOption{
-	{Name: "Raw bytes", Value: "raw"},
-	{Name: "CSV", Value: "csv"},
-	{Name: "JSON", Value: "json"},
 }
 
 var _ NodeAction = &SaveFileAction{}
 
+func (c *SaveFileAction) Serialize(s *Serializer) bool {
+	SStr(s, &c.Path)
+	SStr(s, &c.Format)
+	return s.Ok()
+}
+
 func (c *SaveFileAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
-
-	data, dataWired := n.GetInputWire(1)
-	if dataWired {
-		n.OutputPorts[0].Type = data.Type()
-	} else {
-		n.OutputPorts[0].Type = FlowType{Kind: FSKindAny}
-		n.Valid = false
-	}
+	// Could validate path validity here
 }
 
 func (c *SaveFileAction) UI(n *Node) {
 	clay.CLAY_AUTO_ID(clay.EL{
 		Layout: clay.LAY{
+			Sizing:         GROWH,
+			ChildAlignment: YCENTER,
 			LayoutDirection: clay.TopToBottom,
-			Sizing:          GROWH,
-			ChildGap:        S2,
+			ChildGap:       S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
-			Layout: clay.LAY{
-				Sizing:         GROWH,
-				ChildAlignment: YCENTER,
-			},
-		}, func() {
-			PortAnchor(n, false, 0)
-			UITextBox(clay.IDI("LoadFilePath", n.ID), &c.path, UITextBoxConfig{
+		// Input Port
+		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildAlignment: YCENTER, Sizing: GROWH}}, func() {
+			UIInputPort(n, 0)
+			clay.TEXT("Data", clay.TextElementConfig{TextColor: White})
+		})
+
+		// Path Input
+		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
+			clay.TEXT("Path:", clay.TextElementConfig{TextColor: LightGray})
+			UITextBox(clay.IDI("SaveFilePath", n.ID), &c.Path, UITextBoxConfig{
 				El: clay.EL{
 					Layout: clay.LAY{Sizing: GROWH},
 				},
-				Disabled: n.InputIsWired(0),
 			})
-			UISpacer(clay.AUTO_ID, W2)
-			UIOutputPort(n, 0)
 		})
 
-		UIInputPort(n, 1)
-
-		c.format.Do(clay.AUTO_ID, UIDropdownConfig{
-			El: clay.EL{
-				Layout: clay.LAY{Sizing: GROWH},
-			},
-			OnChange: func(before, after any) {
-				n.ClearResult()
-			},
+		// Format Selection
+		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
+			clay.TEXT("Format:", clay.TextElementConfig{TextColor: LightGray})
+			// Simple dropdown or toggle for now. 
+			// Let's use a simple cycle button for MVP.
+			UIButton(clay.AUTO_ID, UIButtonConfig{
+				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+					switch c.Format {
+					case "raw":
+						c.Format = "csv"
+					case "csv":
+						c.Format = "json"
+					default:
+						c.Format = "raw"
+					}
+				},
+			}, func() {
+				clay.TEXT(c.Format, clay.TextElementConfig{TextColor: White})
+			})
 		})
 	})
 }
@@ -112,128 +103,153 @@ func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
 		var res NodeActionResult
 		defer func() { done <- res }()
 
-		data, ok, err := n.GetInputValue(1)
+		input, ok, err := n.GetInputValue(0)
 		if !ok {
-			panic("should have had input data due to validation")
+			res.Err = errors.New("input required")
+			return
 		}
 		if err != nil {
 			res.Err = err
 			return
 		}
 
-		primitiveValueToBytes := func(v FlowValue) ([]byte, error) {
-			switch v.Type.Kind {
-			case FSKindBytes:
-				return v.BytesValue, nil
-			case FSKindInt64:
-				return []byte(fmt.Sprintf("%v", v.Int64Value)), nil
-			case FSKindFloat64:
-				return []byte(fmt.Sprintf("%v", v.Float64Value)), nil
-			default:
-				return nil, fmt.Errorf("cannot write type %s as raw bytes - use another format like CSV instead", v.Type)
-			}
+		// Open file
+		f, err := os.Create(c.Path)
+		if err != nil {
+			res.Err = fmt.Errorf("failed to create file: %w", err)
+			return
 		}
+		defer f.Close()
 
-		var outputBytes []byte
-		switch format := c.format.GetSelectedOption().Value; format {
+		switch c.Format {
 		case "raw":
-			var err error
-			outputBytes, err = primitiveValueToBytes(data)
+			// Expect Bytes or String
+			var data []byte
+			if input.Type.Kind == FSKindBytes {
+				data = input.BytesValue
+			} else {
+				// Try to convert to string representation
+				data = []byte(fmt.Sprintf("%v", input)) // Placeholder, should use proper string conversion
+				// Better: check specific types
+				switch input.Type.Kind {
+				case FSKindInt64:
+					data = []byte(strconv.FormatInt(input.Int64Value, 10))
+				case FSKindFloat64:
+					data = []byte(strconv.FormatFloat(input.Float64Value, 'f', -1, 64))
+				}
+			}
+			_, err = f.Write(data)
 			if err != nil {
 				res.Err = err
 				return
 			}
-		case "csv":
-			var buf bytes.Buffer
-			w := csv.NewWriter(&buf)
-			switch data.Type.Kind {
-			case FSKindBytes, FSKindInt64, FSKindFloat64:
-				prim, err := primitiveValueToBytes(data)
-				if err != nil {
-					res.Err = err
-					return
-				}
-				w.Write([]string{string(prim)})
-			case FSKindList:
-				// one line per value
-				for _, v := range data.ListValue {
-					prim, err := primitiveValueToBytes(v)
-					if err != nil {
-						res.Err = err
-						return
-					}
-					w.Write([]string{string(prim)})
-				}
-			case FSKindRecord:
-				var headers []string
-				var values []string
-				for _, f := range data.RecordValue {
-					prim, err := primitiveValueToBytes(f.Value)
-					if err != nil {
-						res.Err = err
-						return
-					}
 
-					headers = append(headers, f.Name)
-					values = append(values, string(prim))
-				}
-				w.Write(headers)
-				w.Write(values)
-			case FSKindTable:
-				var headers []string
-				for _, f := range data.Type.ContainedType.Fields {
-					headers = append(headers, f.Name)
-				}
-				w.Write(headers)
-
-				for _, row := range data.TableValue {
-					var values []string
-					for _, v := range row {
-						prim, err := primitiveValueToBytes(v.Value)
-						if err != nil {
-							res.Err = err
-							return
-						}
-						values = append(values, string(prim))
-					}
-					w.Write(values)
-				}
-			default:
-				res.Err = fmt.Errorf("can't convert type %s to CSV", data.Type)
+		case "json":
+			// Marshal whatever we have
+			// Need a way to convert FlowValue to Go types that json.Marshal understands?
+			// Or implement Marshaler on FlowValue?
+			// For now, let's just use a simple recursive converter or just dump FlowValue structure (which might be too verbose).
+			// Ideally we want the "value" not the FlowValue struct.
+			// Let's make a helper toToNative(FlowValue) interface{}
+			
+			// Quick implementation of ToNative
+			native := flowValueToNative(input)
+			enc := json.NewEncoder(f)
+			enc.SetIndent("", "  ")
+			err = enc.Encode(native)
+			if err != nil {
+				res.Err = err
 				return
 			}
 
-			w.Flush()
-			outputBytes = buf.Bytes()
+		case "csv":
+			if input.Type.Kind != FSKindTable {
+				res.Err = errors.New("CSV format requires Table input")
+				return
+			}
+			
+			w := csv.NewWriter(f)
+			defer w.Flush()
+
+			// Write header
+			var header []string
+			if input.Type.ContainedType != nil {
+				for _, field := range input.Type.ContainedType.Fields {
+					header = append(header, field.Name)
+				}
+			}
+			if err := w.Write(header); err != nil {
+				res.Err = err
+				return
+			}
+
+			// Write rows
+			for _, row := range input.TableValue {
+				var record []string
+				for _, field := range row {
+					// Convert value to string
+					valStr := fmt.Sprintf("%v", field.Value) // Simplification
+					// Proper conversion:
+					v := field.Value
+					switch v.Type.Kind {
+					case FSKindBytes:
+						valStr = string(v.BytesValue)
+					case FSKindInt64:
+						valStr = strconv.FormatInt(v.Int64Value, 10)
+					case FSKindFloat64:
+						valStr = strconv.FormatFloat(v.Float64Value, 'f', -1, 64)
+					}
+					record = append(record, valStr)
+				}
+				if err := w.Write(record); err != nil {
+					res.Err = err
+					return
+				}
+			}
+
 		default:
-			res.Err = fmt.Errorf("unknown format \"%v\"", format)
+			res.Err = fmt.Errorf("unknown format: %s", c.Format)
 			return
 		}
-
-		err = os.WriteFile(c.path, outputBytes, 0666) // TODO: get path from port
-		if err != nil {
-			res.Err = err
-			return
-		}
-
-		res = NodeActionResult{
-			Outputs: []FlowValue{data},
-		}
+		
+		// Success
+		res.Outputs = []FlowValue{} // No outputs
 	}()
 
 	return done
 }
 
-func (n *SaveFileAction) Serialize(s *Serializer) bool {
-	SStr(s, &n.path)
-
-	if s.Encode {
-		s.WriteStr(n.format.GetSelectedOption().Name)
-	} else {
-		selected, _ := s.ReadStr()
-		n.format = UIDropdown{Options: saveFileFormatOptions}
-		n.format.SelectByName(selected)
-		util.Assert(n.format.GetSelectedOption().Name == selected, "format %s should have been selected, but %s was instead", selected, n.format.GetSelectedOption().Name)
+func flowValueToNative(v FlowValue) any {
+	switch v.Type.Kind {
+	case FSKindBytes:
+		return string(v.BytesValue)
+	case FSKindInt64:
+		return v.Int64Value
+	case FSKindFloat64:
+		return v.Float64Value
+	case FSKindList:
+		var list []any
+		for _, item := range v.ListValue {
+			list = append(list, flowValueToNative(item))
+		}
+		return list
+	case FSKindRecord:
+		rec := make(map[string]any)
+		for _, f := range v.RecordValue {
+			rec[f.Name] = flowValueToNative(f.Value)
+		}
+		return rec
+	case FSKindTable:
+		var table []map[string]any
+		for _, row := range v.TableValue {
+			rec := make(map[string]any)
+			for _, f := range row {
+				rec[f.Name] = flowValueToNative(f.Value)
+			}
+			table = append(table, rec)
+		}
+		return table
+	default:
+		return nil
 	}
-	return s.Ok()
 }

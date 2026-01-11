@@ -5,7 +5,7 @@
   - "Minify" HTML
 - Nodes
   - Filter Empty
-  - Sort
+  - [x] Sort
   - Save file (w/ format)
   - Temp data (drag from output)
     - ooh drag from any value!
