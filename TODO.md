@@ -12,7 +12,7 @@
 - [x] New node menu
 - [x] Snapping
 - [ ] Writeup
-- [ ] Serialization
+- [x] Serialization
 - [x] Benchmark data analysis: pick columns, min/max/mean across columns, concat rows, add columns, transpose? The list goes on
   - [x] Min/Max/Mean
   - [x] Concat Tables
