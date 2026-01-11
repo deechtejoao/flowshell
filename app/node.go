@@ -148,6 +148,16 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 
 	go func() {
 		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				if e, ok := r.(error); ok {
+					err = e
+				} else {
+					err = fmt.Errorf("panic: %v", r)
+				}
+				n.Result = NodeActionResult{Err: err}
+				n.ResultAvailable = true
+			}
 			n.Running = false
 			if n.done != nil {
 				close(n.done)
@@ -179,11 +189,15 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 		// Run action
 		res := <-n.Action.Run(n)
 		if res.Err == nil && len(res.Outputs) != len(n.OutputPorts) {
-			panic(fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs)))
+			n.Result = NodeActionResult{Err: fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs))}
+			n.ResultAvailable = true
+			return
 		}
 		for i, output := range res.Outputs {
 			if err := Typecheck(*output.Type, n.OutputPorts[i].Type); err != nil {
-				panic(fmt.Errorf("bad value type for %s output port %d: %v", n, i, err))
+				n.Result = NodeActionResult{Err: fmt.Errorf("bad value type for %s output port %d: %v", n, i, err)}
+				n.ResultAvailable = true
+				return
 			}
 		}
 		n.Result = res
