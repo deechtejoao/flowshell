@@ -6,6 +6,7 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "AddColumnAction", Alloc: func() NodeAction { return &AddColumnAction{} }},
 	{Tag: "AggregateAction", Alloc: func() NodeAction { return &AggregateAction{} }},
 	{Tag: "ConcatTablesAction", Alloc: func() NodeAction { return &ConcatTablesAction{} }},
+	{Tag: "ConvertAction", Alloc: func() NodeAction { return &ConvertAction{} }},
 	{Tag: "ExtractColumnAction", Alloc: func() NodeAction { return &ExtractColumnAction{} }},
 	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
 	{Tag: "LinesAction", Alloc: func() NodeAction { return &LinesAction{} }},

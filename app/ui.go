@@ -49,6 +49,7 @@ var nodeTypes = []NodeType{
 	{"Select Columns", func() *Node { return NewSelectColumnsNode() }},
 	{"Extract Column", func() *Node { return NewExtractColumnNode() }},
 	{"Add Column", func() *Node { return NewAddColumnNode() }},
+	{"Convert Type", func() *Node { return NewConvertNode() }},
 	{"Transpose", func() *Node { return NewTransposeNode() }},
 	{"Minify HTML", func() *Node { return NewMinifyHTMLNode() }},
 }
@@ -140,7 +141,7 @@ func beforeLayout() {
 		selectedNodeID = 0
 	}
 
-	if rl.IsFileDropped() {
+	if rl.IsFileDropped() && !IsHoveringUI && !IsHoveringPanel {
 		for i, filename := range rl.LoadDroppedFiles() {
 			n := NewLoadFileNode(filename)
 			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
@@ -154,7 +155,9 @@ func beforeLayout() {
 
 	for _, n := range nodes {
 		// Node drag and drop
-		drag.TryStartDrag(n, n.DragRect, n.Pos)
+		if !IsHoveringUI {
+			drag.TryStartDrag(n, n.DragRect, n.Pos)
+		}
 		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
 			n.Pos = drag.NewObjPosition()
 
@@ -185,7 +188,7 @@ func beforeLayout() {
 				Width:  PortDragRadius * 2,
 				Height: PortDragRadius * 2,
 			}
-			if drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
+			if !IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
 				NewWireSourceNode = n
 				NewWireSourcePort = i
 			}
@@ -198,7 +201,7 @@ func beforeLayout() {
 				Height: PortDragRadius * 2,
 			}
 			if wire, hasWire := n.GetInputWire(i); hasWire {
-				if drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
+				if !IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
 					wires = slices.DeleteFunc(wires, func(w *Wire) bool { return w == wire })
 					NewWireSourceNode = wire.StartNode
 					NewWireSourcePort = wire.StartPort
@@ -279,7 +282,7 @@ func beforeLayout() {
 	// Panning
 	{
 		if background, ok := clay.GetElementData(clay.ID("Background")); ok {
-			if drag.TryStartDrag(PanDragKey, rl.Rectangle(background.BoundingBox), V2{}) {
+			if !IsHoveringUI && !IsHoveringPanel && drag.TryStartDrag(PanDragKey, rl.Rectangle(background.BoundingBox), V2{}) {
 				LastPanMousePosition = rl.GetMousePosition()
 			}
 			if panning, _, _ := drag.State(PanDragKey); panning {
@@ -321,8 +324,12 @@ var OutputWindowWidth float32 = windowWidth * 0.30
 
 func ui() {
 	// Sweep the graph, validating all nodes
-	// TODO: TOPOSORT
-	for _, node := range nodes {
+	sortedNodes, err := Toposort(nodes, wires)
+	if err != nil {
+		// If there is a cycle, we can't toposort. Just use the default order.
+		sortedNodes = nodes
+	}
+	for _, node := range sortedNodes {
 		node.Action.UpdateAndValidate(node)
 	}
 
@@ -358,6 +365,10 @@ func ui() {
 						ChildGap: S2,
 					},
 				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
+
 					textboxID := clay.ID("NewNodeName")
 					shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
 
@@ -420,6 +431,10 @@ func ui() {
 									},
 								},
 							}, func() {
+								clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+									IsHoveringUI = true
+								}, nil)
+
 								matches := SearchNodeTypes(NewNodeName)
 								for i := len(matches) - 1; i >= 0; i-- {
 									UIButton(clay.AUTO_ID, UIButtonConfig{
@@ -468,6 +483,10 @@ func ui() {
 				},
 			}
 		}, func() {
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				IsHoveringUI = true
+			}, nil)
+
 			if selectedNode, ok := GetSelectedNode(); ok {
 				if selectedNode.ResultAvailable {
 					result := selectedNode.Result
@@ -590,6 +609,10 @@ func UINode(node *Node) {
 		Border:          border,
 		CornerRadius:    RA2,
 	}, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			IsHoveringPanel = true
+		}, nil)
+
 		clay.CLAY_AUTO_ID(clay.EL{ // Node header
 			Layout: clay.LAY{
 				Sizing:         GROWH,
