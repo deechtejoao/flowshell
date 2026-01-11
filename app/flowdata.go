@@ -22,6 +22,12 @@ type FlowValueField struct {
 	Value FlowValue
 }
 
+func (f *FlowValueField) Serialize(s *Serializer) bool {
+	SStr(s, &f.Name)
+	SThing(s, &f.Value)
+	return s.Ok()
+}
+
 func (v *FlowValue) ColumnValues(col int) []FlowValue {
 	if v.Type.Kind != FSKindTable {
 		panic(fmt.Errorf("value %s was not a table", v))
@@ -36,6 +42,41 @@ func (v *FlowValue) ColumnValues(col int) []FlowValue {
 
 func (v FlowValue) String() string {
 	return "???(" + v.Type.String() + ")"
+}
+
+func (v *FlowValue) Serialize(s *Serializer) bool {
+	SMaybeThing(s, &v.Type)
+
+	// BytesValue
+	nBytes := len(v.BytesValue)
+	SInt(s, &nBytes)
+	if s.Encode {
+		if _, err := s.Buf.Write(v.BytesValue); err != nil {
+			return s.Error(err)
+		}
+	} else {
+		v.BytesValue = make([]byte, nBytes)
+		if _, err := s.Buf.Read(v.BytesValue); err != nil {
+			return s.Error(err)
+		}
+	}
+
+	SInt(s, &v.Int64Value)
+	SFloat(s, &v.Float64Value)
+	SSlice(s, &v.ListValue)
+	SSlice(s, &v.RecordValue)
+
+	// TableValue
+	nTable := len(v.TableValue)
+	SInt(s, &nTable)
+	if !s.Encode {
+		v.TableValue = make([][]FlowValueField, nTable)
+	}
+	for i := 0; i < nTable; i++ {
+		SSlice(s, &v.TableValue[i])
+	}
+
+	return s.Ok()
 }
 
 type FlowTypeKind int
