@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -131,34 +130,15 @@ func (w *Wire) Type() FlowType {
 
 func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 	if n.Running {
-		fmt.Printf("Node %s is already running; starting another done-er\n", n)
-
-		done := n.done
-		if done == nil {
-			// This is possible since we race with n.Running. If this happens, just
-			// send a new channel that is already complete.
-			//
-			// TODO: I've not yet seen this happen.
-			fmt.Printf("Node %s lost the race with n.Running...we're just done\n", n)
-			go func() {
-				done <- struct{}{}
-			}()
-			return done
-		} else {
-			go func() {
-				// oh the hacks
-				for {
-					if n.Running {
-						time.Sleep(1 * time.Millisecond)
-					} else {
-						break
-					}
-				}
-				done <- struct{}{}
-				fmt.Printf("Node %s is no longer running, extra done-er is done\n", n)
-			}()
+		fmt.Printf("Node %s is already running; joining existing run\n", n)
+		if n.done == nil {
+			// This should theoretically not happen if n.Running is true,
+			// but if it does, return a closed channel.
+			c := make(chan struct{})
+			close(c)
+			return c
 		}
-		return done
+		return n.done
 	}
 
 	fmt.Printf("Running node %s\n", n)
@@ -167,6 +147,13 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 	n.done = make(chan struct{})
 
 	go func() {
+		defer func() {
+			n.Running = false
+			if n.done != nil {
+				close(n.done)
+			}
+		}()
+
 		// Wait on input ports
 		var inputRuns []<-chan struct{}
 		for _, inputNode := range NodeInputs(n) {
@@ -183,9 +170,6 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 		// If any inputs have errors, stop.
 		for _, inputNode := range NodeInputs(n) {
 			if !inputNode.ResultAvailable || inputNode.Result.Err != nil {
-				n.Running = false
-				n.done <- struct{}{}
-				n.done = nil
 				return
 			}
 		}
@@ -203,11 +187,7 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 			}
 		}
 		n.Result = res
-		n.Running = false
 		n.ResultAvailable = true
-
-		n.done <- struct{}{}
-		n.done = nil
 	}()
 
 	return n.done

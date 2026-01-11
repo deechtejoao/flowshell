@@ -90,7 +90,16 @@ func (c *RunProcessAction) UI(n *Node) {
 }
 
 func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
-	pieces := strings.Split(c.CmdString, " ")
+	pieces := parseCommand(c.CmdString)
+	if len(pieces) == 0 {
+		done := make(chan NodeActionResult)
+		go func() {
+			done <- NodeActionResult{Err: nil} // Or error?
+			close(done)
+		}()
+		return done
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, pieces[0], pieces[1:]...)
 
@@ -146,4 +155,36 @@ func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
 func (n *RunProcessAction) Serialize(s *Serializer) bool {
 	SStr(s, &n.CmdString)
 	return s.Ok()
+}
+
+func parseCommand(cmd string) []string {
+	var args []string
+	var current strings.Builder
+	inQuote := false
+	quoteChar := rune(0)
+
+	for _, r := range cmd {
+		switch {
+		case inQuote:
+			if r == quoteChar {
+				inQuote = false
+			} else {
+				current.WriteRune(r)
+			}
+		case r == '"' || r == '\'':
+			inQuote = true
+			quoteChar = r
+		case r == ' ' || r == '\t':
+			if current.Len() > 0 {
+				args = append(args, current.String())
+				current.Reset()
+			}
+		default:
+			current.WriteRune(r)
+		}
+	}
+	if current.Len() > 0 {
+		args = append(args, current.String())
+	}
+	return args
 }
