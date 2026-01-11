@@ -142,6 +142,9 @@ func beforeLayout() {
 		for i, filename := range rl.LoadDroppedFiles() {
 			n := NewLoadFileNode(filename)
 			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{20, 20}.Times(float32(i))))
+			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+				n.Pos = SnapToGrid(n.Pos)
+			}
 			nodes = append(nodes, n)
 			selectedNodeID = n.ID
 		}
@@ -381,7 +384,7 @@ func ui() {
 					if IsFocused(textboxID) {
 						addNodeFromMatch := func(nt NodeType) {
 							newNode := nt.Create()
-							newNode.Pos = V2{200, 200}
+							newNode.Pos = SnapToGrid(V2{200, 200})
 							nodes = append(nodes, newNode)
 							selectedNodeID = newNode.ID
 						}

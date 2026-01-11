@@ -6,10 +6,10 @@
 - Nodes
   - Filter Empty
   - [x] Sort
-  - Save file (w/ format)
-  - Temp data (drag from output)
+  - [x] Save file (w/ format)
+  - [x] Temp data (drag from output)
     - ooh drag from any value!
 - [x] New node menu
-- [ ] Snapping
+- [x] Snapping
 - [ ] Writeup
 - [ ] Serialization
