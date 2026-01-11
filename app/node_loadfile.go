@@ -29,7 +29,7 @@ type LoadFileAction struct {
 	// to number would be ok within the Aggregate node and other nodes that do
 	// math? Who knows. Very large design space. For now we just demo by always
 	// parsing as float.
-	csvNumbers bool
+	inferTypes bool
 }
 
 var loadFileFormatOptions = []UIDropdownOption{
@@ -65,7 +65,7 @@ func NewLoadFileNode(path string) *Node {
 		Action: &LoadFileAction{
 			path:       path,
 			format:     formatDropdown,
-			csvNumbers: true,
+			inferTypes: true,
 		},
 	}
 }
@@ -118,6 +118,10 @@ func (c *LoadFileAction) UI(n *Node) {
 				n.ClearResult()
 			},
 		})
+
+		if c.format.GetSelectedOption().Value == "csv" {
+			UICheckbox(clay.IDI("InferTypes", n.ID), &c.inferTypes, "Infer Types")
+		}
 	})
 }
 
@@ -147,10 +151,16 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 			}
 		case "csv":
 			r := csv.NewReader(f)
+			r.FieldsPerRecord = -1 // Allow variable number of fields
 
-			// Read header
-			header, err := r.Read()
-			if err == io.EOF {
+			// Read all records
+			records, err := r.ReadAll()
+			if err != nil {
+				res.Err = err
+				return
+			}
+
+			if len(records) == 0 {
 				// Special case: if we don't even get a row, synthesize an empty table with no columns.
 				res = NodeActionResult{
 					Outputs: []FlowValue{{
@@ -165,49 +175,90 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 				}
 				return
 			}
-			if err != nil {
-				res.Err = err
-				return
+
+			header := records[0]
+			dataRows := records[1:]
+			numCols := len(header)
+
+			// Determine column types
+			colTypes := make([]FlowTypeKind, numCols)
+			for i := range colTypes {
+				colTypes[i] = FSKindBytes // Default to string
 			}
 
+			if c.inferTypes {
+				for col := 0; col < numCols; col++ {
+					isInt := true
+					isFloat := true
+
+					for _, row := range dataRows {
+						if col >= len(row) {
+							continue
+						}
+						val := row[col]
+						if val == "" {
+							continue // Empty strings can be anything? Or treated as null/zero? Let's say ignore for type inference.
+						}
+
+						if isInt {
+							if _, err := strconv.ParseInt(val, 10, 64); err != nil {
+								isInt = false
+							}
+						}
+						if isFloat {
+							if _, err := strconv.ParseFloat(val, 64); err != nil {
+								isFloat = false
+							}
+						}
+
+						if !isInt && !isFloat {
+							break
+						}
+					}
+
+					if isInt {
+						colTypes[col] = FSKindInt64
+					} else if isFloat {
+						colTypes[col] = FSKindFloat64
+					}
+				}
+			}
+
+			// Build schema
 			tableRecordType := FlowType{Kind: FSKindRecord}
-			for _, headerField := range header {
+			for i, headerField := range header {
 				tableRecordType.Fields = append(tableRecordType.Fields, FlowField{
 					Name: headerField,
-					Type: &FlowType{Kind: util.Tern(c.csvNumbers, FSKindFloat64, FSKindBytes)},
+					Type: &FlowType{Kind: colTypes[i]},
 				})
 			}
 
-			// TODO(low): Be resilient against variable numbers of fields per row, potentially
+			// Build rows
 			var tableRows [][]FlowValueField
-			for {
-				row, err := r.Read()
-				if err == io.EOF {
-					break
-				}
-				if err != nil {
-					res.Err = err
-					return
-				}
-
+			for _, row := range dataRows {
 				var flowRow []FlowValueField
 				for col, value := range row {
-					// Ensure we don't go out of bounds if row is longer than header (or shorter?)
-					// csv.Reader should enforce fields per record if FieldsPerRecord is set, but default is 0 (variable).
-					// But we should probably only process up to len(header).
-					if col >= len(header) {
-						continue
+					if col >= numCols {
+						continue // Ignore extra columns not in header
 					}
 
 					var flowValue FlowValue
-					if c.csvNumbers {
-						floatVal, err := strconv.ParseFloat(value, 64)
-						if err != nil {
-							res.Err = err
-							return
+					switch colTypes[col] {
+					case FSKindInt64:
+						if value == "" {
+							flowValue = NewInt64Value(0, 0) // Handle empty as 0?
+						} else {
+							val, _ := strconv.ParseInt(value, 10, 64)
+							flowValue = NewInt64Value(val, 0)
 						}
-						flowValue = NewFloat64Value(floatVal, 0)
-					} else {
+					case FSKindFloat64:
+						if value == "" {
+							flowValue = NewFloat64Value(0, 0)
+						} else {
+							val, _ := strconv.ParseFloat(value, 64)
+							flowValue = NewFloat64Value(val, 0)
+						}
+					default:
 						flowValue = NewStringValue(value)
 					}
 
@@ -216,6 +267,26 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 						Value: flowValue,
 					})
 				}
+				
+				// Handle missing columns (fill with default)
+				if len(row) < numCols {
+					for col := len(row); col < numCols; col++ {
+						var flowValue FlowValue
+						switch colTypes[col] {
+						case FSKindInt64:
+							flowValue = NewInt64Value(0, 0)
+						case FSKindFloat64:
+							flowValue = NewFloat64Value(0, 0)
+						default:
+							flowValue = NewStringValue("")
+						}
+						flowRow = append(flowRow, FlowValueField{
+							Name:  header[col],
+							Value: flowValue,
+						})
+					}
+				}
+				
 				tableRows = append(tableRows, flowRow)
 			}
 
@@ -238,7 +309,7 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 
 func (n *LoadFileAction) Serialize(s *Serializer) bool {
 	SStr(s, &n.path)
-	SBool(s, &n.csvNumbers)
+	SBool(s, &n.inferTypes)
 
 	if s.Encode {
 		s.WriteStr(n.format.GetSelectedOption().Name)
