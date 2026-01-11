@@ -6,9 +6,39 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-var drag DragState
+type InputProvider interface {
+	IsKeyPressed(key int32) bool
+	IsMouseButtonReleased(button rl.MouseButton) bool
+	IsMouseButtonUp(button rl.MouseButton) bool
+	IsMouseButtonDown(button rl.MouseButton) bool
+	GetMousePosition() rl.Vector2
+}
+
+type RealInputProvider struct{}
+
+func (p RealInputProvider) IsKeyPressed(key int32) bool {
+	return rl.IsKeyPressed(key)
+}
+func (p RealInputProvider) IsMouseButtonReleased(button rl.MouseButton) bool {
+	return rl.IsMouseButtonReleased(button)
+}
+func (p RealInputProvider) IsMouseButtonUp(button rl.MouseButton) bool {
+	return rl.IsMouseButtonUp(button)
+}
+func (p RealInputProvider) IsMouseButtonDown(button rl.MouseButton) bool {
+	return rl.IsMouseButtonDown(button)
+}
+func (p RealInputProvider) GetMousePosition() rl.Vector2 {
+	return rl.GetMousePosition()
+}
+
+var drag DragState = DragState{
+	Input: RealInputProvider{},
+}
 
 type DragState struct {
+	Input InputProvider
+
 	Dragging bool
 	Pending  bool
 	Canceled bool
@@ -22,12 +52,12 @@ type DragState struct {
 
 // Call once per frame at the start of the frame.
 func (d *DragState) Update() {
-	if rl.IsKeyPressed(rl.KeyEscape) {
+	if d.Input.IsKeyPressed(rl.KeyEscape) {
 		d.Dragging = false
 		d.Canceled = true
-	} else if rl.IsMouseButtonReleased(rl.MouseLeftButton) {
+	} else if d.Input.IsMouseButtonReleased(rl.MouseLeftButton) {
 		d.Dragging = false
-	} else if rl.IsMouseButtonUp(rl.MouseLeftButton) {
+	} else if d.Input.IsMouseButtonUp(rl.MouseLeftButton) {
 		d.Dragging = false
 		d.Pending = false
 		d.Canceled = true
@@ -35,10 +65,10 @@ func (d *DragState) Update() {
 		d.Key = ""
 		d.MouseStart = rl.Vector2{}
 		d.ObjStart = rl.Vector2{}
-	} else if rl.IsMouseButtonDown(rl.MouseLeftButton) {
+	} else if d.Input.IsMouseButtonDown(rl.MouseLeftButton) {
 		if !d.Dragging && !d.Pending {
 			d.Pending = true
-			d.MouseStart = rl.GetMousePosition()
+			d.MouseStart = d.Input.GetMousePosition()
 		}
 	}
 }
@@ -58,7 +88,7 @@ func (d *DragState) TryStartDrag(thing any, dragRegion rl.Rectangle, objStart rl
 		return false
 	}
 
-	if rl.Vector2Length(rl.Vector2Subtract(rl.GetMousePosition(), d.MouseStart)) < 3 {
+	if rl.Vector2Length(rl.Vector2Subtract(d.Input.GetMousePosition(), d.MouseStart)) < 3 {
 		// haven't dragged far enough
 		return false
 	}
@@ -82,7 +112,7 @@ func (d *DragState) Offset() rl.Vector2 {
 	if !d.Dragging && d.Key == "" {
 		return rl.Vector2{}
 	}
-	return rl.Vector2Subtract(rl.GetMousePosition(), d.MouseStart)
+	return rl.Vector2Subtract(d.Input.GetMousePosition(), d.MouseStart)
 }
 
 func (d *DragState) NewObjPosition() rl.Vector2 {

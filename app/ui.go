@@ -808,6 +808,8 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 		return config.El
 	}, func() {
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+			IsHoveringUI = true
+
 			if !config.Disabled {
 				UICursor = rl.MouseCursorPointingHand
 			}
@@ -873,6 +875,8 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 		}
 
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			IsHoveringUI = true
+
 			if pointerData.State == clay.PointerDataReleasedThisFrame {
 				UIFocus = &elementID
 			}
@@ -953,6 +957,10 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 	config.El.BackgroundColor = DarkGray
 
 	clay.CLAY(id, config.El, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			IsHoveringUI = true
+		}, nil)
+
 		clay.CLAY_AUTO_ID(clay.EL{
 			Layout: clay.LAY{
 				Padding: PVH(S1, S2),
@@ -1002,6 +1010,10 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 				},
 				BackgroundColor: DarkGray,
 			}, func() {
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+					IsHoveringUI = true
+				}, nil)
+
 				for i, opt := range d.Options {
 					clay.CLAY_AUTO_ID_LATE(func() clay.EL {
 						return clay.EL{
@@ -1013,6 +1025,8 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 						}
 					}, func() {
 						clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							IsHoveringUI = true
+
 							if pointerData.State == clay.PointerDataReleasedThisFrame {
 								selectedBefore := d.Selected
 								d.Selected = userData.(int)
@@ -1052,6 +1066,21 @@ func UITooltip(msg string) {
 		Border:          clay.BorderElementConfig{Color: Gray, Width: BA},
 	}, func() {
 		clay.TEXT(msg, clay.TextElementConfig{TextColor: White})
+	})
+}
+
+func UICheckbox(id clay.ElementID, checked *bool, label string) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildGap: S1, ChildAlignment: YCENTER},
+	}, func() {
+		UIButton(id, UIButtonConfig{
+			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+				*checked = !*checked
+			},
+		}, func() {
+			UIImage(clay.AUTO_ID, util.Tern(*checked, ImgToggleDown, ImgToggleRight), clay.EL{})
+		})
+		clay.TEXT(label, clay.TextElementConfig{TextColor: White})
 	})
 }
 

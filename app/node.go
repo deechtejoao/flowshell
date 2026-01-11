@@ -326,3 +326,55 @@ func NewNodeID() int {
 	nodeID++
 	return nodeID
 }
+
+func Toposort(nodes []*Node, wires []*Wire) ([]*Node, error) {
+	nodeMap := make(map[int]*Node)
+	inDegree := make(map[int]int)
+	adj := make(map[int][]int)
+
+	for _, n := range nodes {
+		nodeMap[n.ID] = n
+		inDegree[n.ID] = 0
+	}
+
+	for _, w := range wires {
+		if _, ok := nodeMap[w.StartNode.ID]; !ok {
+			continue
+		}
+		if _, ok := nodeMap[w.EndNode.ID]; !ok {
+			continue
+		}
+
+		adj[w.StartNode.ID] = append(adj[w.StartNode.ID], w.EndNode.ID)
+		inDegree[w.EndNode.ID]++
+	}
+
+	var queue []*Node
+	for _, n := range nodes {
+		if inDegree[n.ID] == 0 {
+			queue = append(queue, n)
+		}
+	}
+
+	var result []*Node
+	for len(queue) > 0 {
+		u := queue[0]
+		queue = queue[1:]
+		result = append(result, u)
+
+		for _, vID := range adj[u.ID] {
+			inDegree[vID]--
+			if inDegree[vID] == 0 {
+				if v, ok := nodeMap[vID]; ok {
+					queue = append(queue, v)
+				}
+			}
+		}
+	}
+
+	if len(result) != len(nodes) {
+		return nil, fmt.Errorf("cycle detected or disconnected graph error")
+	}
+
+	return result, nil
+}

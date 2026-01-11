@@ -59,9 +59,22 @@ func frame() {
 	}
 
 	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
+
+	// Reset global UI hover state for this frame.
+	// It will be repopulated during ui() execution.
+	IsHoveringUI = false
+	IsHoveringPanel = false
+
+	// If we are dragging something (Node, Wire, Pan), don't let Clay see the mouse down.
+	// This prevents UI elements from being clicked while dragging.
+	clayPointerMouseDown := rl.IsMouseButtonDown(rl.MouseButtonLeft)
+	if drag.Dragging {
+		clayPointerMouseDown = false
+	}
+
 	clay.SetPointerState(
 		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
-		rl.IsMouseButtonDown(rl.MouseButtonLeft),
+		clayPointerMouseDown,
 	)
 	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())
 

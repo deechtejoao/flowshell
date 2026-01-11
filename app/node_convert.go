@@ -69,7 +69,15 @@ func (c *ConvertAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *ConvertAction) UI(n *Node) {
-	c.dropdown.UI(n)
+	c.dropdown.Do(clay.IDI("ConvertTargetKind", n.ID), UIDropdownConfig{
+		El: clay.EL{
+			Layout: clay.LAY{Sizing: GROWH},
+		},
+		OnChange: func(before, after any) {
+			c.TargetKind = after.(FlowTypeKind)
+			n.Action.UpdateAndValidate(n)
+		},
+	})
 }
 
 func (c *ConvertAction) Run(n *Node) <-chan NodeActionResult {
