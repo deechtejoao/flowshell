@@ -2,12 +2,18 @@ package app
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
-type FilterEmptyAction struct{}
+type FilterEmptyAction struct {
+	Column string
+
+	// UI State
+	dropdown UIDropdown
+}
 
 func NewFilterEmptyNode() *Node {
 	return &Node{
@@ -15,12 +21,12 @@ func NewFilterEmptyNode() *Node {
 		Name: "Filter Empty",
 
 		InputPorts: []NodePort{{
-			Name: "List",
-			Type: NewListType(FlowType{Kind: FSKindBytes}),
+			Name: "Input",
+			Type: FlowType{Kind: FSKindTable},
 		}},
 		OutputPorts: []NodePort{{
 			Name: "Filtered",
-			Type: NewListType(FlowType{Kind: FSKindBytes}),
+			Type: FlowType{Kind: FSKindTable},
 		}},
 
 		Action: &FilterEmptyAction{},
@@ -29,79 +35,152 @@ func NewFilterEmptyNode() *Node {
 
 var _ NodeAction = &FilterEmptyAction{}
 
-func (c *FilterEmptyAction) Serialize(s *Serializer) bool {
-	return s.Ok()
-}
-
 func (c *FilterEmptyAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
-
-	// Check if input is wired and valid
-	if wire, ok := n.GetInputWire(0); ok {
-		n.InputPorts[0].Type = wire.Type()
-		n.OutputPorts[0].Type = wire.Type()
-
-		if wire.Type().Kind != FSKindList {
-			n.Valid = false // Only support lists
+	input, wired := n.GetInputWire(0)
+	if wired {
+		n.OutputPorts[0].Type = input.Type()
+		if input.Type().Kind != FSKindTable {
+			n.Valid = false
 		}
 	} else {
+		n.OutputPorts[0].Type = FlowType{Kind: FSKindTable}
 		n.Valid = false
 	}
 }
 
 func (c *FilterEmptyAction) UI(n *Node) {
+	input, wired := n.GetInputWire(0)
+
 	clay.CLAY_AUTO_ID(clay.EL{
 		Layout: clay.LAY{
-			Sizing:         GROWH,
-			ChildAlignment: YCENTER,
+			LayoutDirection: clay.TopToBottom,
+			Sizing:          GROWH,
+			ChildGap:        S2,
 		},
 	}, func() {
-		UIInputPort(n, 0)
-		UISpacer(clay.AUTO_ID, GROWH)
-		UIOutputPort(n, 0)
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+
+		if wired && input.Type().Kind == FSKindTable {
+			var options []UIDropdownOption
+			for _, field := range input.Type().ContainedType.Fields {
+				options = append(options, UIDropdownOption{
+					Name:  field.Name,
+					Value: field.Name,
+				})
+			}
+
+			// Update options if they changed
+			// Simple check: different length or different first/last?
+			// For now, let's just replace them.
+			// TODO: Preserve selection better if columns shift but same names exist?
+			c.dropdown.Options = options
+
+			// Sync selection
+			if c.Column == "" {
+				if len(options) > 0 {
+					c.Column = options[0].Value.(string)
+					c.dropdown.Selected = 0
+				}
+			} else {
+				c.dropdown.SelectByValue(c.Column)
+			}
+
+			c.dropdown.Do(clay.IDI("FilterColumn", n.ID), UIDropdownConfig{
+				El: clay.EL{Layout: clay.LAY{Sizing: GROWH}},
+				OnChange: func(_, after any) {
+					c.Column = after.(string)
+				},
+			})
+		}
 	})
 }
 
 func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
-
 	go func() {
-		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
 
 		input, ok, err := n.GetInputValue(0)
-		if !ok {
-			res.Err = errors.New("input required")
-			return
-		}
-		if err != nil {
-			res.Err = err
+		if !ok || err != nil {
+			done <- NodeActionResult{Err: err}
 			return
 		}
 
-		if input.Type.Kind != FSKindList {
-			res.Err = errors.New("input must be a list")
+		if input.Type.Kind != FSKindTable {
+			done <- NodeActionResult{Err: errors.New("input must be a table")}
 			return
 		}
 
-		var filtered []FlowValue
-		for _, item := range input.ListValue {
+		colIdx := -1
+		for i, field := range input.Type.ContainedType.Fields {
+			if field.Name == c.Column {
+				colIdx = i
+				break
+			}
+		}
+
+		if colIdx == -1 {
+			// If column not found, we can't filter.
+			// Return error.
+			done <- NodeActionResult{Err: fmt.Errorf("column %q not found", c.Column)}
+			return
+		}
+
+		var newRows [][]FlowValueField
+		for _, row := range input.TableValue {
+			val := row[colIdx].Value
 			keep := true
-			switch item.Type.Kind {
+
+			switch val.Type.Kind {
 			case FSKindBytes:
-				if len(item.BytesValue) == 0 {
+				if len(val.BytesValue) == 0 {
 					keep = false
 				}
-				// Add other types if needed (e.g. empty lists?)
+			case FSKindInt64:
+				if val.Int64Value == 0 {
+					keep = false
+				}
+			case FSKindFloat64:
+				if val.Float64Value == 0 {
+					keep = false
+				}
+			case FSKindList:
+				if len(val.ListValue) == 0 {
+					keep = false
+				}
+			case FSKindRecord:
+				if len(val.RecordValue) == 0 {
+					keep = false
+				}
+			case FSKindTable:
+				if len(val.TableValue) == 0 {
+					keep = false
+				}
 			}
 
 			if keep {
-				filtered = append(filtered, item)
+				newRows = append(newRows, row)
 			}
 		}
 
-		res.Outputs = []FlowValue{NewListValue(*input.Type.ContainedType, filtered)}
+		done <- NodeActionResult{
+			Outputs: []FlowValue{{
+				Type:       input.Type,
+				TableValue: newRows,
+			}},
+		}
 	}()
-
 	return done
+}
+
+func (c *FilterEmptyAction) Serialize(s *Serializer) bool {
+	SStr(s, &c.Column)
+	return s.Ok()
 }
