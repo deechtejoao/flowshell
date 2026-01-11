@@ -107,6 +107,8 @@ func (a *AggregateAction) Run(n *Node) <-chan NodeActionResult {
 		var res NodeActionResult
 		defer func() { done <- res }()
 
+		util.Assert(n.Action != nil && n.Action.Tag() == "Aggregate", fmt.Sprintf("expected aggregate node, got %v", n))
+
 		input, ok, err := n.GetInputValue(0)
 		if !ok {
 			res.Err = errors.New("an input node is required")
@@ -165,7 +167,7 @@ func (n *AggregateAction) Serialize(s *Serializer) bool {
 		}
 		n.ops = UIDropdown{Options: aggOptions}
 		n.ops.SelectByName(selected)
-		util.Assert(n.ops.GetSelectedOption().Name == selected, "aggregate %s should have been selected, but %s was instead", selected, n.ops.GetSelectedOption().Name)
+		util.Assert(n.ops.GetSelectedOption().Name == selected, fmt.Sprintf("aggregate %s should have been selected, but %s was instead", selected, n.ops.GetSelectedOption().Name))
 	}
 	return s.Ok()
 }

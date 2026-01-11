@@ -41,16 +41,16 @@ func renderClayCommands(commands []clay.RenderCommand) {
 				rl.DrawRectangle(int32(bbox.X+config.CornerRadius.BottomLeft), int32(bbox.Y+bbox.Height)-int32(config.Width.Bottom), int32(bbox.Width-config.CornerRadius.BottomLeft-config.CornerRadius.BottomRight), int32(config.Width.Bottom), config.Color.RGBA())
 			}
 			if config.CornerRadius.TopLeft > 0 {
-				rl.DrawRing(rl.Vector2{bbox.X + config.CornerRadius.TopLeft, bbox.Y + config.CornerRadius.TopLeft}, config.CornerRadius.TopLeft-float32(config.Width.Top), config.CornerRadius.TopLeft, 180, 270, 10, config.Color.RGBA())
+				rl.DrawRing(rl.Vector2{X: bbox.X + config.CornerRadius.TopLeft, Y: bbox.Y + config.CornerRadius.TopLeft}, config.CornerRadius.TopLeft-float32(config.Width.Top), config.CornerRadius.TopLeft, 180, 270, 10, config.Color.RGBA())
 			}
 			if config.CornerRadius.TopRight > 0 {
-				rl.DrawRing(rl.Vector2{bbox.X + bbox.Width - config.CornerRadius.TopRight, bbox.Y + config.CornerRadius.TopRight}, config.CornerRadius.TopRight-float32(config.Width.Top), config.CornerRadius.TopRight, 270, 360, 10, config.Color.RGBA())
+				rl.DrawRing(rl.Vector2{X: bbox.X + bbox.Width - config.CornerRadius.TopRight, Y: bbox.Y + config.CornerRadius.TopRight}, config.CornerRadius.TopRight-float32(config.Width.Top), config.CornerRadius.TopRight, 270, 360, 10, config.Color.RGBA())
 			}
 			if config.CornerRadius.BottomLeft > 0 {
-				rl.DrawRing(rl.Vector2{bbox.X + config.CornerRadius.BottomLeft, bbox.Y + bbox.Height - config.CornerRadius.BottomLeft}, config.CornerRadius.BottomLeft-float32(config.Width.Bottom), config.CornerRadius.BottomLeft, 90, 180, 10, config.Color.RGBA())
+				rl.DrawRing(rl.Vector2{X: bbox.X + config.CornerRadius.BottomLeft, Y: bbox.Y + bbox.Height - config.CornerRadius.BottomLeft}, config.CornerRadius.BottomLeft-float32(config.Width.Bottom), config.CornerRadius.BottomLeft, 90, 180, 10, config.Color.RGBA())
 			}
 			if config.CornerRadius.BottomRight > 0 {
-				rl.DrawRing(rl.Vector2{bbox.X + bbox.Width - config.CornerRadius.BottomRight, bbox.Y + bbox.Height - config.CornerRadius.BottomRight}, config.CornerRadius.BottomRight-float32(config.Width.Bottom), config.CornerRadius.BottomRight, 0.1, 90, 10, config.Color.RGBA())
+				rl.DrawRing(rl.Vector2{X: bbox.X + bbox.Width - config.CornerRadius.BottomRight, Y: bbox.Y + bbox.Height - config.CornerRadius.BottomRight}, config.CornerRadius.BottomRight-float32(config.Width.Bottom), config.CornerRadius.BottomRight, 0.1, 90, 10, config.Color.RGBA())
 			}
 
 		case clay.RenderCommandTypeText:
@@ -67,11 +67,11 @@ func renderClayCommands(commands []clay.RenderCommand) {
 			tex := img.ImageData.(rl.Texture2D)
 			tintColor := img.BackgroundColor
 			if tintColor.R == 0 && tintColor.G == 0 && tintColor.B == 0 && tintColor.A == 0 {
-				tintColor = clay.Color{255, 255, 255, 255}
+				tintColor = clay.Color{R: 255, G: 255, B: 255, A: 255}
 			}
 			rl.DrawTexturePro(
 				tex,
-				rl.Rectangle{0, 0, float32(tex.Width), float32(tex.Height)},
+				rl.Rectangle{X: 0, Y: 0, Width: float32(tex.Width), Height: float32(tex.Height)},
 				rl.Rectangle(cmd.BoundingBox),
 				rl.Vector2{},
 				0,

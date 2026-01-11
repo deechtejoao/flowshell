@@ -6,17 +6,17 @@ import (
 	"github.com/bvisness/flowshell/clay"
 )
 
-var Night = clay.Color{12, 14, 17, 255}
-var Charcoal = clay.Color{20, 22, 25, 255}
-var DarkGray = clay.Color{33, 36, 40, 255}
-var Gray = clay.Color{67, 71, 79, 255}
-var LightGray = clay.Color{157, 161, 170, 255}
-var White = clay.Color{250, 250, 252, 255}
-var Red = clay.Color{214, 25, 50, 255}
-var Blue = clay.Color{11, 88, 183, 255}
+var Night = clay.Color{R: 12, G: 14, B: 17, A: 255}
+var Charcoal = clay.Color{R: 20, G: 22, B: 25, A: 255}
+var DarkGray = clay.Color{R: 33, G: 36, B: 40, A: 255}
+var Gray = clay.Color{R: 67, G: 71, B: 79, A: 255}
+var LightGray = clay.Color{R: 157, G: 161, B: 170, A: 255}
+var White = clay.Color{R: 250, G: 250, B: 252, A: 255}
+var Red = clay.Color{R: 214, G: 25, B: 50, A: 255}
+var Blue = clay.Color{R: 11, G: 88, B: 183, A: 255}
 
-var PlayButtonGreen = clay.Color{61, 159, 72, 255}
-var HoverWhite = clay.Color{255, 255, 255, 20}
+var PlayButtonGreen = clay.Color{R: 61, G: 159, B: 72, A: 255}
+var HoverWhite = clay.Color{R: 255, G: 255, B: 255, A: 20}
 
 const S1 = 4
 const S2 = 8

@@ -31,7 +31,7 @@ func Main() {
 	arena := clay.CreateArenaWithCapacity(uintptr(clay.MinMemorySize()))
 	clay.Initialize(
 		arena,
-		clay.Dimensions{windowWidth, windowHeight},
+		clay.Dimensions{Width: windowWidth, Height: windowHeight},
 		clay.ErrorHandler{ErrorHandlerFunction: handleClayErrors},
 	)
 	clay.SetMeasureTextFunction(func(str string, config *clay.TextElementConfig, userData any) clay.Dimensions {
@@ -58,9 +58,9 @@ func frame() {
 		clay.SetDebugModeEnabled(!clay.IsDebugModeEnabled())
 	}
 
-	clay.SetLayoutDimensions(clay.D{windowWidth, windowHeight})
+	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
 	clay.SetPointerState(
-		clay.V2{float32(rl.GetMouseX()), float32(rl.GetMouseY())},
+		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
 		rl.IsMouseButtonDown(rl.MouseButtonLeft),
 	)
 	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())

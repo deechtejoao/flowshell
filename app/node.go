@@ -261,13 +261,13 @@ func (n *Node) UpdateLayoutInfo() {
 	for i := range n.InputPorts {
 		if portData, ok := clay.GetElementData(PortAnchorID(n, false, i)); ok {
 			bboxPort := portData.BoundingBox
-			n.InputPortPositions[i] = V2{bboxNode.X, bboxPort.Y}
+			n.InputPortPositions[i] = V2{X: bboxNode.X, Y: bboxPort.Y}
 		}
 	}
 	for i := range n.OutputPorts {
 		if portData, ok := clay.GetElementData(PortAnchorID(n, true, i)); ok {
 			bboxPort := portData.BoundingBox
-			n.OutputPortPositions[i] = V2{bboxNode.X + bboxNode.Width, bboxPort.Y}
+			n.OutputPortPositions[i] = V2{X: bboxNode.X + bboxNode.Width, Y: bboxPort.Y}
 		}
 	}
 

@@ -219,7 +219,7 @@ func (n *LoadFileAction) Serialize(s *Serializer) bool {
 		}
 		n.format = UIDropdown{Options: loadFileFormatOptions}
 		n.format.SelectByName(selected)
-		util.Assert(n.format.GetSelectedOption().Name == selected, "format %s should have been selected, but %s was instead", selected, n.format.GetSelectedOption().Name)
+		util.Assert(n.format.GetSelectedOption().Name == selected, fmt.Sprintf("format %s should have been selected, but %s was instead", selected, n.format.GetSelectedOption().Name))
 	}
 
 	return s.Ok()

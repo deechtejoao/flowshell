@@ -143,7 +143,7 @@ func beforeLayout() {
 	if rl.IsFileDropped() {
 		for i, filename := range rl.LoadDroppedFiles() {
 			n := NewLoadFileNode(filename)
-			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{20, 20}.Times(float32(i))))
+			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
 			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 				n.Pos = SnapToGrid(n.Pos)
 			}
@@ -258,7 +258,7 @@ func beforeLayout() {
 			Width:  OutputWindowDragWidth,
 			Height: float32(rl.GetScreenHeight()),
 		}
-		drag.TryStartDrag(OutputWindowDragKey, outputWindowRect, V2{OutputWindowWidth, 0})
+		drag.TryStartDrag(OutputWindowDragKey, outputWindowRect, V2{X: OutputWindowWidth, Y: 0})
 
 		resizing, done, canceled := drag.State(OutputWindowDragKey)
 		if resizing {
@@ -386,7 +386,7 @@ func ui() {
 					if IsFocused(textboxID) {
 						addNodeFromMatch := func(nt NodeType) {
 							newNode := nt.Create()
-							newNode.Pos = SnapToGrid(V2{200, 200})
+							newNode.Pos = SnapToGrid(V2{X: 200, Y: 200})
 							nodes = append(nodes, newNode)
 							selectedNodeID = newNode.ID
 						}
@@ -1021,7 +1021,7 @@ func UITooltip(msg string) {
 	clay.CLAY_AUTO_ID(clay.EL{
 		Floating: clay.FloatingElementConfig{
 			AttachTo: clay.AttachToRoot,
-			Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{0, 28}),
+			Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 0, Y: 28}),
 			ZIndex:   ZTOP,
 		},
 		Layout:          clay.LAY{Padding: PA1},
@@ -1060,7 +1060,7 @@ func menu() {
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          clay.Sizing{Width: clay.SizingFit(MenuMinWidth, MenuMaxWidth)},
 		},
-		Floating:        clay.FloatingElementConfig{AttachTo: clay.AttachToRoot, Offset: clay.V2{float32(rl.GetMouseX()), float32(rl.GetMouseY())}},
+		Floating:        clay.FloatingElementConfig{AttachTo: clay.AttachToRoot, Offset: clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())}},
 		BackgroundColor: DarkGray,
 	}, func() {
 		clay.CLAY(clay.ID("thing"), clay.EL{Layout: clay.LayoutConfig{Padding: PVH(S2, S3)}}, func() {
@@ -1070,21 +1070,21 @@ func menu() {
 }
 
 func clayExample() {
-	var ColorLight = clay.Color{224, 215, 210, 255}
-	var ColorRed = clay.Color{168, 66, 28, 255}
-	var ColorOrange = clay.Color{225, 138, 50, 255}
+	var ColorLight = clay.Color{R: 224, G: 215, B: 210, A: 255}
+	var ColorRed = clay.Color{R: 168, G: 66, B: 28, A: 255}
+	var ColorOrange = clay.Color{R: 225, G: 138, B: 50, A: 255}
 
 	sidebarItemComponent := func() {
 		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingFixed(50)}}, BackgroundColor: ColorOrange})
 	}
 
-	clay.CLAY(clay.ID("OuterContainer"), clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{clay.SizingGrow(0, 0), clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16}, BackgroundColor: clay.Color{250, 250, 255, 255}}, func() {
+	clay.CLAY(clay.ID("OuterContainer"), clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16}, BackgroundColor: clay.Color{R: 250, G: 250, B: 255, A: 255}}, func() {
 		clay.CLAY(clay.ID("Sidebar"), clay.EL{
 			Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16},
 			BackgroundColor: ColorLight,
 		}, func() {
 			clay.CLAY(clay.ID("ProfilePictureOuter"), clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}}, BackgroundColor: ColorRed}, func() {
-				clay.TEXT("Clay - UI Library", clay.TextElementConfig{FontID: InterBold, FontSize: 24, TextColor: clay.Color{255, 255, 255, 255}})
+				clay.TEXT("Clay - UI Library", clay.TextElementConfig{FontID: InterBold, FontSize: 24, TextColor: clay.Color{R: 255, G: 255, B: 255, A: 255}})
 			})
 
 			for range 5 {
@@ -1093,7 +1093,7 @@ func clayExample() {
 		})
 		clay.CLAY(clay.ID("MainContent"), clay.EL{Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 8}, BackgroundColor: ColorLight}, func() {
 			for f := range FontsEnd {
-				clay.TEXT(fontFiles[f], clay.TextElementConfig{FontID: f, TextColor: clay.Color{0, 0, 0, 255}})
+				clay.TEXT(fontFiles[f], clay.TextElementConfig{FontID: f, TextColor: clay.Color{R: 0, G: 0, B: 0, A: 255}})
 			}
 		})
 	})
