@@ -5,12 +5,18 @@ package app
 var allNodeActions = [...]NodeActionMeta{
 	{Tag: "AggregateAction", Alloc: func() NodeAction { return &AggregateAction{} }},
 	{Tag: "ConcatTablesAction", Alloc: func() NodeAction { return &ConcatTablesAction{} }},
+	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
 	{Tag: "LinesAction", Alloc: func() NodeAction { return &LinesAction{} }},
 	{Tag: "ListFilesAction", Alloc: func() NodeAction { return &ListFilesAction{} }},
 	{Tag: "LoadFileAction", Alloc: func() NodeAction { return &LoadFileAction{} }},
+	{Tag: "MinifyHTMLAction", Alloc: func() NodeAction { return &MinifyHTMLAction{} }},
 	{Tag: "RunProcessAction", Alloc: func() NodeAction { return &RunProcessAction{} }},
 	{Tag: "SaveFileAction", Alloc: func() NodeAction { return &SaveFileAction{} }},
+	{Tag: "SelectColumnsAction", Alloc: func() NodeAction { return &SelectColumnsAction{} }},
+	{Tag: "SortAction", Alloc: func() NodeAction { return &SortAction{} }},
+	{Tag: "TransposeAction", Alloc: func() NodeAction { return &TransposeAction{} }},
 	{Tag: "TrimSpacesAction", Alloc: func() NodeAction { return &TrimSpacesAction{} }},
+	{Tag: "ValueAction", Alloc: func() NodeAction { return &ValueAction{} }},
 }
 
 func (a *AggregateAction) Tag() string {
@@ -19,6 +25,10 @@ func (a *AggregateAction) Tag() string {
 
 func (a *ConcatTablesAction) Tag() string {
 	return "ConcatTablesAction"
+}
+
+func (a *FilterEmptyAction) Tag() string {
+	return "FilterEmptyAction"
 }
 
 func (a *LinesAction) Tag() string {
@@ -33,6 +43,10 @@ func (a *LoadFileAction) Tag() string {
 	return "LoadFileAction"
 }
 
+func (a *MinifyHTMLAction) Tag() string {
+	return "MinifyHTMLAction"
+}
+
 func (a *RunProcessAction) Tag() string {
 	return "RunProcessAction"
 }
@@ -41,6 +55,22 @@ func (a *SaveFileAction) Tag() string {
 	return "SaveFileAction"
 }
 
+func (a *SelectColumnsAction) Tag() string {
+	return "SelectColumnsAction"
+}
+
+func (a *SortAction) Tag() string {
+	return "SortAction"
+}
+
+func (a *TransposeAction) Tag() string {
+	return "TransposeAction"
+}
+
 func (a *TrimSpacesAction) Tag() string {
 	return "TrimSpacesAction"
+}
+
+func (a *ValueAction) Tag() string {
+	return "ValueAction"
 }

@@ -15,6 +15,15 @@ import (
 const MenuMinWidth = 200
 const MenuMaxWidth = 0 // no max
 
+const GridSize = 20
+
+func SnapToGrid(v V2) V2 {
+	return V2{
+		X: float32(int(v.X/GridSize) * GridSize),
+		Y: float32(int(v.Y/GridSize) * GridSize),
+	}
+}
+
 const NodeMinWidth = 360
 
 var nodes []*Node
@@ -35,6 +44,11 @@ var nodeTypes = []NodeType{
 	{"Max", func() *Node { return NewAggregateNode("Max") }},
 	{"Mean (Average)", func() *Node { return NewAggregateNode("Mean") }},
 	{"Concatenate Tables (Combine Rows)", func() *Node { return NewConcatTablesNode() }},
+	{"Filter Empty", func() *Node { return NewFilterEmptyNode() }},
+	{"Sort", func() *Node { return NewSortNode() }},
+	{"Select Columns", func() *Node { return NewSelectColumnsNode() }},
+	{"Transpose", func() *Node { return NewTransposeNode() }},
+	{"Minify HTML", func() *Node { return NewMinifyHTMLNode() }},
 }
 
 func SearchNodeTypes(search string) []NodeType {
@@ -100,6 +114,25 @@ func IsFocused(id clay.ElementID) bool {
 }
 
 func beforeLayout() {
+	if rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl) {
+		if rl.IsKeyPressed(rl.KeyS) {
+			fmt.Println("Saving to saved.flow...")
+			if err := SaveGraph("saved.flow"); err != nil {
+				fmt.Printf("Error saving: %v\n", err)
+			} else {
+				fmt.Println("Saved!")
+			}
+		}
+		if rl.IsKeyPressed(rl.KeyO) {
+			fmt.Println("Loading from saved.flow...")
+			if err := LoadGraph("saved.flow"); err != nil {
+				fmt.Printf("Error loading: %v\n", err)
+			} else {
+				fmt.Println("Loaded!")
+			}
+		}
+	}
+
 	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && selectedNodeID != 0 {
 		DeleteNode(selectedNodeID)
 		selectedNodeID = 0
@@ -119,6 +152,12 @@ func beforeLayout() {
 		drag.TryStartDrag(n, n.DragRect, n.Pos)
 		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
 			n.Pos = drag.NewObjPosition()
+
+			// Snap to grid (hold Shift to disable)
+			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+				n.Pos = SnapToGrid(n.Pos)
+			}
+
 			if done {
 				if canceled {
 					n.Pos = drag.ObjStart
@@ -239,6 +278,14 @@ const OutputWindowDragKey = "OUTPUT_WINDOW"
 const OutputWindowDragWidth = 8
 
 const PanDragKey = "PAN"
+
+type FlowValueDrag struct {
+	Value FlowValue
+}
+
+func (f FlowValueDrag) DragKey() string {
+	return "FLOW_VALUE_DRAG"
+}
 
 var LastPanMousePosition V2
 
@@ -627,68 +674,76 @@ func UIOutputPort(n *Node, port int) {
 }
 
 func UIFlowValue(v FlowValue) {
-	switch v.Type.Kind {
-	case FSKindBytes:
-		if len(v.BytesValue) == 0 {
-			clay.TEXT("<no data>", clay.TextElementConfig{FontID: JetBrainsMono, TextColor: LightGray})
-		} else {
-			clay.TEXT(string(v.BytesValue), clay.TextElementConfig{FontID: JetBrainsMono, TextColor: White})
-		}
-	case FSKindInt64:
-		var str string
-		if v.Type.WellKnownType == FSWKTTimestamp {
-			str = time.Unix(v.Int64Value, 0).Format(time.RFC1123)
-		} else if v.Type.Unit == FSUnitBytes {
-			str = FormatBytes(v.Int64Value)
-		} else {
-			str = fmt.Sprintf("%d", v.Int64Value)
-		}
-		clay.TEXT(str, clay.TextElementConfig{TextColor: White})
-	case FSKindFloat64:
-		var str string
-		str = fmt.Sprintf("%v", v.Float64Value)
-		clay.TEXT(str, clay.TextElementConfig{TextColor: White})
-	case FSKindList:
-		clay.CLAY_AUTO_ID(clay.EL{ // list items
-			Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
-		}, func() {
-			for i, item := range v.ListValue {
-				clay.CLAY_AUTO_ID(clay.EL{ // list item
-					Layout: clay.LAY{ChildGap: S2},
-				}, func() {
-					clay.TEXT(fmt.Sprintf("%d", i), clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
-					UIFlowValue(item)
-				})
+	clay.CLAY(clay.AUTO_ID, clay.EL{}, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+			if data, ok := clay.GetElementData(elementID); ok {
+				drag.TryStartDrag(FlowValueDrag{Value: v}, rl.Rectangle(data.BoundingBox), V2{})
 			}
-		})
-	case FSKindTable:
-		clay.CLAY_AUTO_ID(clay.EL{ // Table
-			Border: clay.B{Width: BA_BTW, Color: Gray},
-		}, func() {
-			for col, field := range v.Type.ContainedType.Fields {
-				clay.CLAY_AUTO_ID(clay.EL{ // Table col
-					Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
-					Border: clay.B{Width: BTW, Color: Gray},
-				}, func() {
-					clay.CLAY_AUTO_ID(clay.EL{ // Header cell
-						Layout: clay.LAY{Padding: PVH(S2, S3)},
-					}, func() {
-						clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
-					})
+		}, nil)
 
-					for _, val := range v.ColumnValues(col) {
-						clay.CLAY_AUTO_ID(clay.EL{
+		switch v.Type.Kind {
+		case FSKindBytes:
+			if len(v.BytesValue) == 0 {
+				clay.TEXT("<no data>", clay.TextElementConfig{FontID: JetBrainsMono, TextColor: LightGray})
+			} else {
+				clay.TEXT(string(v.BytesValue), clay.TextElementConfig{FontID: JetBrainsMono, TextColor: White})
+			}
+		case FSKindInt64:
+			var str string
+			if v.Type.WellKnownType == FSWKTTimestamp {
+				str = time.Unix(v.Int64Value, 0).Format(time.RFC1123)
+			} else if v.Type.Unit == FSUnitBytes {
+				str = FormatBytes(v.Int64Value)
+			} else {
+				str = fmt.Sprintf("%d", v.Int64Value)
+			}
+			clay.TEXT(str, clay.TextElementConfig{TextColor: White})
+		case FSKindFloat64:
+			var str string
+			str = fmt.Sprintf("%v", v.Float64Value)
+			clay.TEXT(str, clay.TextElementConfig{TextColor: White})
+		case FSKindList:
+			clay.CLAY_AUTO_ID(clay.EL{ // list items
+				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
+			}, func() {
+				for i, item := range v.ListValue {
+					clay.CLAY_AUTO_ID(clay.EL{ // list item
+						Layout: clay.LAY{ChildGap: S2},
+					}, func() {
+						clay.TEXT(fmt.Sprintf("%d", i), clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
+						UIFlowValue(item)
+					})
+				}
+			})
+		case FSKindTable:
+			clay.CLAY_AUTO_ID(clay.EL{ // Table
+				Border: clay.B{Width: BA_BTW, Color: Gray},
+			}, func() {
+				for col, field := range v.Type.ContainedType.Fields {
+					clay.CLAY_AUTO_ID(clay.EL{ // Table col
+						Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
+						Border: clay.B{Width: BTW, Color: Gray},
+					}, func() {
+						clay.CLAY_AUTO_ID(clay.EL{ // Header cell
 							Layout: clay.LAY{Padding: PVH(S2, S3)},
 						}, func() {
-							UIFlowValue(val)
+							clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
 						})
-					}
-				})
-			}
-		})
-	default:
-		clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
-	}
+
+						for _, val := range v.ColumnValues(col) {
+							clay.CLAY_AUTO_ID(clay.EL{
+								Layout: clay.LAY{Padding: PVH(S2, S3)},
+							}, func() {
+								UIFlowValue(val)
+							})
+						}
+					})
+				}
+			})
+		default:
+			clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
+		}
+	})
 }
 
 type UIButtonConfig struct {
