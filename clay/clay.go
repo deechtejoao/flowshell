@@ -477,7 +477,7 @@ type T = TextElementConfig
 
 func (r TextElementConfig) C() C.Clay_TextElementConfig {
 	return C.Clay_TextElementConfig{
-		// userData: unsafe.Pointer(&r.UserData), // TODO: UserData registry
+		userData:      CacheHandle(r.UserData),
 		textColor:     r.TextColor.C(),
 		fontId:        C.uint16_t(r.FontID),
 		fontSize:      C.uint16_t(r.FontSize),
@@ -490,7 +490,7 @@ func (r TextElementConfig) C() C.Clay_TextElementConfig {
 
 func TextElementConfig2Go(r C.Clay_TextElementConfig) TextElementConfig {
 	return TextElementConfig{
-		// UserData: , // TODO: UserData registry
+		UserData:      util.Tern(r.userData != nil, cgo.Handle(uintptr(r.userData)).Value(), nil),
 		TextColor:     Color2Go(r.textColor),
 		FontID:        uint16(r.fontId),
 		FontSize:      uint16(r.fontSize),
@@ -527,10 +527,8 @@ type IMG = ImageElementConfig
 func (r ImageElementConfig) C() C.Clay_ImageElementConfig {
 	var imageHandlePtr unsafe.Pointer
 	if r.ImageData != nil {
-		imageHandle := cgo.NewHandle(r.ImageData)
-		imageHandlePtr = unsafe.Pointer(&imageHandle)
+		imageHandlePtr = CacheHandle(r.ImageData)
 	}
-	// pinner.Pin(imageHandlePtr)
 
 	return C.Clay_ImageElementConfig{
 		imageData: imageHandlePtr,
@@ -698,7 +696,7 @@ type CustomElementConfig struct {
 
 func (r CustomElementConfig) C() C.Clay_CustomElementConfig {
 	return C.Clay_CustomElementConfig{
-		// TODO: Another registry!!!!
+		customData: CacheHandle(r.CustomData),
 	}
 }
 
@@ -840,7 +838,7 @@ func ImageRenderData2Go(r C.Clay_ImageRenderData) ImageRenderData {
 	return ImageRenderData{
 		BackgroundColor: Color2Go(r.backgroundColor),
 		CornerRadius:    CornerRadius2Go(r.cornerRadius),
-		ImageData:       util.Tern(r.imageData != nil, (*cgo.Handle)(r.imageData).Value(), nil),
+		ImageData:       util.Tern(r.imageData != nil, cgo.Handle(uintptr(r.imageData)).Value(), nil),
 	}
 }
 
@@ -857,6 +855,14 @@ type CustomRenderData struct {
 	// A pointer transparently passed through from the original element
 	// definition.
 	CustomData any
+}
+
+func CustomRenderData2Go(r C.Clay_CustomRenderData) CustomRenderData {
+	return CustomRenderData{
+		BackgroundColor: Color2Go(r.backgroundColor),
+		CornerRadius:    CornerRadius2Go(r.cornerRadius),
+		CustomData:      util.Tern(r.customData != nil, cgo.Handle(uintptr(r.customData)).Value(), nil),
+	}
 }
 
 // Render command data when commandType == CLAY_RENDER_COMMAND_TYPE_SCISSOR_START || commandType == CLAY_RENDER_COMMAND_TYPE_SCISSOR_END
@@ -914,6 +920,8 @@ func RenderData2Go(r C.Clay_RenderData, ty RenderCommandType) RenderData {
 		return RenderData{Image: ImageRenderData2Go(C.Clay_GetRenderDataImage(r))}
 	case RenderCommandTypeScissorStart, RenderCommandTypeScissorEnd:
 		return RenderData{Clip: ClipRenderData2Go(C.Clay_GetRenderDataClip(r))}
+	case RenderCommandTypeCustom:
+		return RenderData{Custom: CustomRenderData2Go(C.Clay_GetRenderDataCustom(r))}
 	default:
 		return RenderData{}
 	}
@@ -979,7 +987,7 @@ func RenderCommand2Go(r C.Clay_RenderCommand) RenderCommand {
 	return RenderCommand{
 		BoundingBox: BoundingBox2Go(r.boundingBox),
 		RenderData:  RenderData2Go(r.renderData, RenderCommandType(r.commandType)),
-		UserData:    r.userData, // TODO: Another Go-side registry?
+		UserData:    util.Tern(r.userData != nil, cgo.Handle(uintptr(r.userData)).Value(), nil),
 		ID:          uint32(r.id),
 		ZIndex:      int16(r.zIndex),
 		CommandType: RenderCommandType(r.commandType),
@@ -1073,7 +1081,7 @@ func (r ElementDeclaration) C() C.Clay_ElementDeclaration {
 		custom:          r.Custom.C(),
 		clip:            r.Clip.C(),
 		border:          r.Border.C(),
-		// TODO: userdata? another registry?
+		userData:        CacheHandle(r.UserData),
 	}
 }
 
@@ -1232,11 +1240,11 @@ type registeredOnHover struct {
 }
 
 func OnHover(f OnHoverFunc, userData any) {
-	registeredFuncHandle := cgo.NewHandle(registeredOnHover{
+	registeredFuncHandle := CacheHandle(registeredOnHover{
 		Func:     f,
 		UserData: userData,
 	})
-	C.Clay_OnHover(C.Clay_OnHoverCallback(C.clayOnHoverCallback_cgo), C.intptr_t(registeredFuncHandle))
+	C.Clay_OnHover(C.Clay_OnHoverCallback(C.clayOnHoverCallback_cgo), C.intptr_t(uintptr(registeredFuncHandle)))
 }
 
 //export clayOnHoverCallback
@@ -1361,6 +1369,7 @@ func IDI(label string, offset int) ElementID {
 }
 
 var allocatedStrings []unsafe.Pointer
+var allocatedHandles []cgo.Handle
 
 func CacheString(str string) String {
 	ptr := C.CBytes([]byte(str))
@@ -1373,11 +1382,27 @@ func CacheString(str string) String {
 	}
 }
 
-func ClearCachedStrings() {
+func CacheHandle(v any) unsafe.Pointer {
+	h := cgo.NewHandle(v)
+	allocatedHandles = append(allocatedHandles, h)
+	return unsafe.Pointer(h)
+}
+
+func ReleaseFrameMemory() {
 	for _, ptr := range allocatedStrings {
 		C.free(ptr)
 	}
 	allocatedStrings = allocatedStrings[:0]
+
+	for _, h := range allocatedHandles {
+		h.Delete()
+	}
+	allocatedHandles = allocatedHandles[:0]
+}
+
+// Deprecated: Use ReleaseFrameMemory instead
+func ClearCachedStrings() {
+	ReleaseFrameMemory()
 }
 
 func hashString(key string, seed uint32) ElementID {
