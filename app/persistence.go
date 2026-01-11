@@ -6,7 +6,7 @@ import (
 )
 
 func SaveGraph(path string) error {
-	s := NewEncoder(1)
+	s := NewEncoder(2)
 
 	// Nodes
 	nodeCount := len(nodes)

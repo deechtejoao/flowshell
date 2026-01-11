@@ -47,33 +47,74 @@ func (v FlowValue) String() string {
 func (v *FlowValue) Serialize(s *Serializer) bool {
 	SMaybeThing(s, &v.Type)
 
-	// BytesValue
-	nBytes := len(v.BytesValue)
-	SInt(s, &nBytes)
-	if s.Encode {
-		if _, err := s.Buf.Write(v.BytesValue); err != nil {
-			return s.Error(err)
+	if s.Version < 2 {
+		// BytesValue
+		nBytes := len(v.BytesValue)
+		SInt(s, &nBytes)
+		if s.Encode {
+			if _, err := s.Buf.Write(v.BytesValue); err != nil {
+				return s.Error(err)
+			}
+		} else {
+			v.BytesValue = make([]byte, nBytes)
+			if _, err := s.Buf.Read(v.BytesValue); err != nil {
+				return s.Error(err)
+			}
 		}
-	} else {
-		v.BytesValue = make([]byte, nBytes)
-		if _, err := s.Buf.Read(v.BytesValue); err != nil {
-			return s.Error(err)
+
+		SInt(s, &v.Int64Value)
+		SFloat(s, &v.Float64Value)
+		SSlice(s, &v.ListValue)
+		SSlice(s, &v.RecordValue)
+
+		// TableValue
+		nTable := len(v.TableValue)
+		SInt(s, &nTable)
+		if !s.Encode {
+			v.TableValue = make([][]FlowValueField, nTable)
 		}
+		for i := 0; i < nTable; i++ {
+			SSlice(s, &v.TableValue[i])
+		}
+
+		return s.Ok()
 	}
 
-	SInt(s, &v.Int64Value)
-	SFloat(s, &v.Float64Value)
-	SSlice(s, &v.ListValue)
-	SSlice(s, &v.RecordValue)
-
-	// TableValue
-	nTable := len(v.TableValue)
-	SInt(s, &nTable)
-	if !s.Encode {
-		v.TableValue = make([][]FlowValueField, nTable)
+	if v.Type == nil {
+		return s.Ok()
 	}
-	for i := 0; i < nTable; i++ {
-		SSlice(s, &v.TableValue[i])
+
+	switch v.Type.Kind {
+	case FSKindBytes:
+		nBytes := len(v.BytesValue)
+		SInt(s, &nBytes)
+		if s.Encode {
+			if _, err := s.Buf.Write(v.BytesValue); err != nil {
+				return s.Error(err)
+			}
+		} else {
+			v.BytesValue = make([]byte, nBytes)
+			if _, err := s.Buf.Read(v.BytesValue); err != nil {
+				return s.Error(err)
+			}
+		}
+	case FSKindInt64:
+		SInt(s, &v.Int64Value)
+	case FSKindFloat64:
+		SFloat(s, &v.Float64Value)
+	case FSKindList:
+		SSlice(s, &v.ListValue)
+	case FSKindRecord:
+		SSlice(s, &v.RecordValue)
+	case FSKindTable:
+		nTable := len(v.TableValue)
+		SInt(s, &nTable)
+		if !s.Encode {
+			v.TableValue = make([][]FlowValueField, nTable)
+		}
+		for i := 0; i < nTable; i++ {
+			SSlice(s, &v.TableValue[i])
+		}
 	}
 
 	return s.Ok()
