@@ -21,3 +21,53 @@
   - [x] Extract Column (Table -> List)
   - [x] Add Column (Math?)
 - [x] "Minify" HTML
+
+## Critical Issues
+- [ ] Error Handling Scopes: The `Run` method uses `panic` inside goroutines for logical errors. Use `recover()` or propagate errors. `app/node.go`
+- [ ] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
+
+## Architecture Improvements
+- [ ] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
+- [ ] Global UI State / Event Handling: Implement centralized `InputManager` or `EventBus` to prevent click-through conflicts. `app/ui.go`
+- [ ] Type System & Polymorphism: Implement robust Type Inference, `ConvertType` node, and mixed type support. `app/node_loadfile.go`
+
+## App Logic Gaps
+- [ ] Subprocesses: Extract exit codes from external processes. `app/node_runprocess.go:130`
+- [ ] CSV Loading: Get dynamic path from input port, handle variable fields, support string lists. `app/node_loadfile.go`
+- [ ] Filtering: Preserve column selection when data changes. `app/node_filterempty.go:82`
+- [ ] Cancellation: Implement task cancellation with `context.Context`. `app/node.go:283`
+- [ ] Persistence: Confirm before clearing graph. `app/persistence.go:44`
+
+## UI/UX Enhancements
+- [ ] Box Selection: Drag on canvas to select multiple nodes.
+- [ ] Grouping/Containers: Visual containers to organize related nodes.
+- [ ] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
+- [ ] Zoom: Canvas zooming support.
+- [ ] Minimap: Navigation aid for large flows.
+- [ ] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
+- [ ] Undo/Redo: Global history stack for graph mutations.
+- [ ] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
+- [ ] Rendering: Custom rendering implementation. `app/render.go:86`
+
+## New Native Nodes
+- [ ] Regex: Match, Find All, Replace, Split.
+- [ ] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
+- [ ] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
+- [ ] Text Operations: Split lines, Join, String formatting, Case conversion.
+- [ ] JSON/XML Query: Extract data using JSONPath or XPath.
+- [ ] Date/Time Parsing: Parse strings to Timestamps with format strings.
+
+## System & Core
+- [ ] Plugin System: Load dynamic libraries or external binaries as nodes.
+- [ ] Settings/Configuration: Persist app preferences (theme, default shell, window state).
+- [ ] Import/Merge: Load a `.flow` file into the current workspace (merging).
+- [ ] Shell Integration: "Run Process" option to execute via system shell (PowerShell/Bash) for pipes/redirects.
+- [ ] Headless Mode: Run a flow file from CLI without UI (e.g. `flowshell run mygraph.flow`).
+
+## Engineering & Infra
+- [ ] Unit Tests: specifically for `drag.go` state machine and `serialize.go` edge cases.
+- [ ] Refactor Globals: Move `nodes`, `wires`, and `nodeID` into a `Graph` struct.
+- [ ] Action Tests: Add unit tests for `NodeAction.Run` logic independent of the UI/Raylib.
+- [ ] Linter: Add `golangci-lint` configuration.
+- [ ] Clay Optimization: Search `clay/clay.h` for performance optimizations.
+
