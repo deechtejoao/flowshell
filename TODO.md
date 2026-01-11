@@ -24,7 +24,7 @@
 
 ## Critical Issues
 - [x] Error Handling Scopes: The `Run` method uses `panic` inside goroutines for logical errors. Use `recover()` or propagate errors. `app/node.go`
-- [ ] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
+- [x] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
 
 ## Architecture Improvements
 - [ ] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
