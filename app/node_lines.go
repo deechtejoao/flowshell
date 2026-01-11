@@ -68,7 +68,22 @@ func (l *LinesAction) UI(n *Node) {
 		})
 	})
 
-	// TODO: Checkbox for carriage returns
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildGap: S1, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
+	}, func() {
+		UIButton(clay.AUTO_ID, UIButtonConfig{
+			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+				l.IncludeCarriageReturns = !l.IncludeCarriageReturns
+			},
+		}, func() {
+			clay.CLAY_AUTO_ID(clay.EL{
+				Layout:          clay.LAY{Sizing: WH(16, 16), ChildAlignment: ALLCENTER},
+				Border:          clay.B{Width: BA, Color: White},
+				BackgroundColor: util.Tern(l.IncludeCarriageReturns, White, clay.Color{}),
+			})
+		})
+		clay.TEXT("Keep \\r", clay.TextElementConfig{TextColor: White})
+	})
 }
 
 var LFSplit = regexp.MustCompile(`\n`)
