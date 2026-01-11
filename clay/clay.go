@@ -1360,8 +1360,11 @@ func IDI(label string, offset int) ElementID {
 	return hashStringWithOffset(label, uint32(offset), 0)
 }
 
+var allocatedStrings []unsafe.Pointer
+
 func CacheString(str string) String {
 	ptr := C.CBytes([]byte(str))
+	allocatedStrings = append(allocatedStrings, ptr)
 	return String{
 		IsStaticallyAllocated: false,
 
@@ -1371,7 +1374,10 @@ func CacheString(str string) String {
 }
 
 func ClearCachedStrings() {
-	// TODO: uh, who knows?
+	for _, ptr := range allocatedStrings {
+		C.free(ptr)
+	}
+	allocatedStrings = allocatedStrings[:0]
 }
 
 func hashString(key string, seed uint32) ElementID {
