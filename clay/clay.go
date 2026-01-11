@@ -1385,7 +1385,7 @@ func CacheString(str string) String {
 func CacheHandle(v any) unsafe.Pointer {
 	h := cgo.NewHandle(v)
 	allocatedHandles = append(allocatedHandles, h)
-	return unsafe.Pointer(h)
+	return *(*unsafe.Pointer)(unsafe.Pointer(&h))
 }
 
 func ReleaseFrameMemory() {
