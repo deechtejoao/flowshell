@@ -230,6 +230,21 @@ func beforeLayout() {
 		}
 	}
 
+	// Dropping FlowValue
+	if draggingValue, done, canceled := drag.State("FLOW_VALUE_DRAG"); draggingValue {
+		if done && !canceled {
+			if dragValue, ok := drag.Thing.(FlowValueDrag); ok {
+				n := NewValueNode(dragValue.Value)
+				n.Pos = V2(rl.GetMousePosition())
+				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+					n.Pos = SnapToGrid(n.Pos)
+				}
+				nodes = append(nodes, n)
+				selectedNodeID = n.ID
+			}
+		}
+	}
+
 	// Resizing output window
 	{
 		outputWindowRect := rl.Rectangle{
