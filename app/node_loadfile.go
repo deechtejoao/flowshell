@@ -1,9 +1,9 @@
 package app
 
 import (
-	"bytes"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -128,27 +128,30 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 		var res NodeActionResult
 		defer func() { done <- res }()
 
-		content, err := os.ReadFile(c.path) // TODO: Get path from port
+		f, err := os.Open(c.path) // TODO: Get path from port
 		if err != nil {
 			res.Err = err
 			return
 		}
+		defer f.Close()
 
 		switch format := c.format.GetSelectedOption().Value; format {
 		case "raw":
-			res = NodeActionResult{
-				Outputs: []FlowValue{NewBytesValue(content)},
-			}
-		case "csv":
-			r := csv.NewReader(bytes.NewReader(content))
-			rows, err := r.ReadAll()
+			content, err := io.ReadAll(f)
 			if err != nil {
 				res.Err = err
 				return
 			}
+			res = NodeActionResult{
+				Outputs: []FlowValue{NewBytesValue(content)},
+			}
+		case "csv":
+			r := csv.NewReader(f)
 
-			// Special case: if we don't even get a row, synthesize an empty table with no columns.
-			if len(rows) == 0 {
+			// Read header
+			header, err := r.Read()
+			if err == io.EOF {
+				// Special case: if we don't even get a row, synthesize an empty table with no columns.
 				res = NodeActionResult{
 					Outputs: []FlowValue{{
 						Type: &FlowType{
@@ -162,9 +165,13 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 				}
 				return
 			}
+			if err != nil {
+				res.Err = err
+				return
+			}
 
 			tableRecordType := FlowType{Kind: FSKindRecord}
-			for _, headerField := range rows[0] {
+			for _, headerField := range header {
 				tableRecordType.Fields = append(tableRecordType.Fields, FlowField{
 					Name: headerField,
 					Type: &FlowType{Kind: util.Tern(c.csvNumbers, FSKindFloat64, FSKindBytes)},
@@ -173,17 +180,40 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 
 			// TODO(low): Be resilient against variable numbers of fields per row, potentially
 			var tableRows [][]FlowValueField
-			for _, row := range rows[1:] {
+			for {
+				row, err := r.Read()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					res.Err = err
+					return
+				}
+
 				var flowRow []FlowValueField
 				for col, value := range row {
-					floatVal, err := strconv.ParseFloat(value, 64)
-					if err != nil {
-						res.Err = err
-						return
+					// Ensure we don't go out of bounds if row is longer than header (or shorter?)
+					// csv.Reader should enforce fields per record if FieldsPerRecord is set, but default is 0 (variable).
+					// But we should probably only process up to len(header).
+					if col >= len(header) {
+						continue
 					}
+
+					var flowValue FlowValue
+					if c.csvNumbers {
+						floatVal, err := strconv.ParseFloat(value, 64)
+						if err != nil {
+							res.Err = err
+							return
+						}
+						flowValue = NewFloat64Value(floatVal, 0)
+					} else {
+						flowValue = NewStringValue(value)
+					}
+
 					flowRow = append(flowRow, FlowValueField{
-						Name:  rows[0][col],
-						Value: util.Tern(c.csvNumbers, NewFloat64Value(floatVal, 0), NewStringValue(value)),
+						Name:  header[col],
+						Value: flowValue,
 					})
 				}
 				tableRows = append(tableRows, flowRow)
