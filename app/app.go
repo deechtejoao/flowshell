@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bvisness/flowshell/clay"
+	"github.com/bvisness/flowshell/util"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -54,44 +55,70 @@ func frame() {
 	drag.Update()
 	beforeLayout()
 
+	// Handle Zoom Input
+	wheel := rl.GetMouseWheelMove()
+	if wheel != 0 {
+		Camera.ZoomAt(rl.GetMousePosition(), util.Tern(wheel > 0, float32(1.1), float32(0.9)))
+	}
+
 	if rl.IsKeyPressed(rl.KeyF9) {
 		clay.SetDebugModeEnabled(!clay.IsDebugModeEnabled())
 	}
 
-	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
+	// Update Graph Logic
+	topoErr := UpdateGraph()
 
 	// Reset global UI hover state for this frame.
-	// It will be repopulated during ui() execution.
 	IsHoveringUI = false
 	IsHoveringPanel = false
 
-	// If we are dragging something (Node, Wire, Pan), don't let Clay see the mouse down.
-	// This prevents UI elements from being clicked while dragging.
 	clayPointerMouseDown := rl.IsMouseButtonDown(rl.MouseButtonLeft)
 	if drag.Dragging {
 		clayPointerMouseDown = false
 	}
 	UIInput.BeginFrame(clayPointerMouseDown)
 
+	// --- Layout 1: Nodes (World Space) ---
+	worldMouse := Camera.ScreenToWorld(rl.GetMousePosition())
+	clay.SetPointerState(
+		clay.V2{X: worldMouse.X, Y: worldMouse.Y},
+		clayPointerMouseDown,
+	)
+	clay.SetLayoutDimensions(clay.D{
+		Width:  windowWidth / Camera.Zoom,
+		Height: windowHeight / Camera.Zoom,
+	})
+
+	clay.BeginLayout()
+	UINodes(topoErr)
+	nodeCommands := clay.EndLayout()
+
+	// --- Layout 2: Overlay (Screen Space) ---
 	clay.SetPointerState(
 		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
 		clayPointerMouseDown,
 	)
+	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
 	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())
 
 	clay.BeginLayout()
-	{
-		ui()
-	}
-	commands := clay.EndLayout()
+	UIOverlay(topoErr)
+	overlayCommands := clay.EndLayout()
 
 	afterLayout()
 	UIInput.EndFrame()
 
 	rl.BeginDrawing()
-	rl.ClearBackground(rl.RayWhite)
-	renderClayCommands(commands)
-	renderOverlays()
+	rl.ClearBackground(Night.RGBA())
+
+	rl.BeginMode2D(Camera.Camera2D)
+	renderClayCommands(nodeCommands)
+	renderWorldOverlays()
+	rl.EndMode2D()
+
+	renderClayCommands(overlayCommands)
+	renderScreenOverlays()
+
 	rl.EndDrawing()
 	clay.ReleaseFrameMemory()
 }

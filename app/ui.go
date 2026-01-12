@@ -528,7 +528,7 @@ var ShowLoadConfirmation bool
 
 var OutputWindowWidth float32 = windowWidth * 0.30
 
-func ui() {
+func UpdateGraph() error {
 	// Sweep the graph, validating all nodes
 	sortedNodes, topoErr := Toposort(currentGraph.Nodes, currentGraph.Wires)
 	if topoErr != nil {
@@ -538,11 +538,27 @@ func ui() {
 	for _, node := range sortedNodes {
 		node.Action.UpdateAndValidate(node)
 	}
+	return topoErr
+}
 
-	clay.CLAY(clay.ID("Background"), clay.EL{
-		Layout:          clay.LAY{Sizing: GROWALL},
-		BackgroundColor: Night,
-		Border:          clay.BorderElementConfig{Width: BTW, Color: LightGray},
+func UINodes(topoErr error) {
+	clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
+		Layout: clay.LAY{Sizing: GROWALL},
+		Clip:   clay.CLIP{Horizontal: true, Vertical: true},
+	}, func() {
+		for _, group := range currentGraph.Groups {
+			UIGroup(group)
+		}
+		for _, node := range currentGraph.Nodes {
+			UINode(node, topoErr != nil)
+		}
+	})
+}
+
+func UIOverlay(topoErr error) {
+	clay.CLAY(clay.ID("OverlayRoot"), clay.EL{
+		Layout: clay.LAY{Sizing: GROWALL},
+		Border: clay.BorderElementConfig{Width: BTW, Color: LightGray},
 	}, func() {
 		if topoErr != nil {
 			clay.CLAY(clay.ID("CycleWarning"), clay.EL{
@@ -599,140 +615,127 @@ func ui() {
 			})
 		}
 
-		clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
-			Layout: clay.LAY{Sizing: GROWALL},
-			Clip:   clay.CLIP{Horizontal: true, Vertical: true},
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{
+				Sizing:  GROWH,
+				Padding: PA3,
+			},
+			Floating: clay.FLOAT{
+				AttachTo: clay.AttachToParent,
+				AttachPoints: clay.FloatingAttachPoints{
+					Element: clay.AttachPointLeftBottom,
+					Parent:  clay.AttachPointLeftBottom,
+				},
+			},
 		}, func() {
-			for _, group := range currentGraph.Groups {
-				UIGroup(group)
-			}
-			for _, node := range currentGraph.Nodes {
-				UINode(node, topoErr != nil)
-			}
-
 			clay.CLAY_AUTO_ID(clay.EL{
 				Layout: clay.LAY{
-					Sizing:  GROWH,
-					Padding: PA3,
-				},
-				Floating: clay.FLOAT{
-					AttachTo: clay.AttachToParent,
-					AttachPoints: clay.FloatingAttachPoints{
-						Element: clay.AttachPointLeftBottom,
-						Parent:  clay.AttachPointLeftBottom,
-					},
+					Sizing:   GROWH,
+					ChildGap: S2,
 				},
 			}, func() {
-				clay.CLAY_AUTO_ID(clay.EL{
-					Layout: clay.LAY{
-						Sizing:   GROWH,
-						ChildGap: S2,
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+					IsHoveringUI = true
+				}, nil)
+
+				textboxID := clay.ID("NewNodeName")
+				shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
+
+				// Before UI: defocus textbox
+				if shortcut && IsFocused(textboxID) {
+					UIFocus = nil
+					shortcut = false
+				}
+
+				UIButton(clay.ID("NewNode"), UIButtonConfig{
+					El: clay.EL{
+						Layout: clay.LAY{
+							Sizing:         WH(36, 36),
+							ChildAlignment: ALLCENTER,
+						},
+						Border: clay.B{Width: BA, Color: Gray},
+					},
+					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						NewNodeName = ""
+						id := textboxID
+						UIFocus = &id
 					},
 				}, func() {
-					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						IsHoveringUI = true
-					}, nil)
-
-					textboxID := clay.ID("NewNodeName")
-					shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
-
-					// Before UI: defocus textbox
-					if shortcut && IsFocused(textboxID) {
-						UIFocus = nil
-						shortcut = false
+					clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
+				})
+				if IsFocused(textboxID) {
+					addNodeFromMatch := func(nt NodeType) {
+						newNode := nt.Create()
+						centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
+						newNode.Pos = SnapToGrid(centerWorld)
+						currentGraph.AddNode(newNode)
+						selectedNodeID = newNode.ID
 					}
 
-					UIButton(clay.ID("NewNode"), UIButtonConfig{
-						El: clay.EL{
+					UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
+						El: clay.ElementDeclaration{
 							Layout: clay.LAY{
-								Sizing:         WH(36, 36),
-								ChildAlignment: ALLCENTER,
+								Sizing: GROWALL,
 							},
-							Border: clay.B{Width: BA, Color: Gray},
 						},
-						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-							NewNodeName = ""
-							id := textboxID
-							UIFocus = &id
+						OnSubmit: func(val string) {
+							matches := SearchNodeTypes(val)
+							if len(matches) > 0 {
+								addNodeFromMatch(matches[0])
+							}
+							UIFocus = nil
 						},
 					}, func() {
-						clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
-					})
-					if IsFocused(textboxID) {
-						addNodeFromMatch := func(nt NodeType) {
-							newNode := nt.Create()
-							newNode.Pos = SnapToGrid(V2{X: 200, Y: 200})
-							currentGraph.AddNode(newNode)
-							selectedNodeID = newNode.ID
-						}
-
-						UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
-							El: clay.ElementDeclaration{
-								Layout: clay.LAY{
-									Sizing: GROWALL,
-								},
+						clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
+							Layout: clay.LAY{
+								LayoutDirection: clay.TopToBottom,
+								Sizing:          GROWH,
 							},
-							OnSubmit: func(val string) {
-								matches := SearchNodeTypes(val)
-								if len(matches) > 0 {
-									addNodeFromMatch(matches[0])
-								}
-								UIFocus = nil
+							BackgroundColor: DarkGray,
+							Border:          clay.B{Width: BA_BTW, Color: Gray},
+							Floating: clay.FLOAT{
+								AttachTo: clay.AttachToParent,
+								AttachPoints: clay.FloatingAttachPoints{
+									Parent:  clay.AttachPointLeftTop,
+									Element: clay.AttachPointLeftBottom,
+								},
 							},
 						}, func() {
-							clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
-								Layout: clay.LAY{
-									LayoutDirection: clay.TopToBottom,
-									Sizing:          GROWH,
-								},
-								BackgroundColor: DarkGray,
-								Border:          clay.B{Width: BA_BTW, Color: Gray},
-								Floating: clay.FLOAT{
-									AttachTo: clay.AttachToParent,
-									AttachPoints: clay.FloatingAttachPoints{
-										Parent:  clay.AttachPointLeftTop,
-										Element: clay.AttachPointLeftBottom,
+							clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+								IsHoveringUI = true
+							}, nil)
+
+							matches := SearchNodeTypes(NewNodeName)
+							for i := len(matches) - 1; i >= 0; i-- {
+								UIButton(clay.AUTO_ID, UIButtonConfig{
+									El: clay.EL{
+										Layout: clay.LAY{
+											Padding: PVH(S1, S2),
+											Sizing:  GROWH,
+										},
+										BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
 									},
-								},
-							}, func() {
-								clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-									IsHoveringUI = true
-								}, nil)
-
-								matches := SearchNodeTypes(NewNodeName)
-								for i := len(matches) - 1; i >= 0; i-- {
-									UIButton(clay.AUTO_ID, UIButtonConfig{
-										El: clay.EL{
-											Layout: clay.LAY{
-												Padding: PVH(S2, S3),
-												Sizing:  GROWH,
-											},
-										},
-										OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-											addNodeFromMatch(matches[i])
-											UIFocus = nil
-										},
-									}, func() {
-										clay.TEXT(matches[i].Name, clay.T{
-											FontID:    util.Tern(i == 0, InterBold, InterRegular),
-											FontSize:  F3,
-											TextColor: White,
-										})
-									})
-								}
-							})
+									OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+										addNodeFromMatch(matches[userData.(int)])
+										UIFocus = nil
+									},
+								}, func() {
+									clay.TEXT(matches[i].Name, clay.T{TextColor: White})
+								})
+							}
 						})
-					}
+					})
+				}
 
-					// After UI: focus textbox
-					if shortcut && !IsFocused(textboxID) {
-						UIFocus = &textboxID
-						NewNodeName = ""
-						shortcut = false
-					}
-				})
+				// After UI: focus textbox
+				if shortcut && !IsFocused(textboxID) {
+					UIFocus = &textboxID
+					NewNodeName = ""
+					shortcut = false
+				}
 			})
 		})
+
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
 			return clay.EL{
 				Layout: clay.LAY{
@@ -802,6 +805,70 @@ func ui() {
 				}
 			}
 		})
+
+		// Box Selection & Panning
+		if overlay, ok := clay.GetElementData(clay.ID("OverlayRoot")); ok {
+			isShift := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift)
+
+			if !IsHoveringUI && !IsHoveringPanel {
+				if isShift {
+					// Snapshot selection
+					initial := make(map[int]struct{})
+					for k, v := range selectedNodes {
+						initial[k] = v
+					}
+					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(overlay.BoundingBox), V2{})
+				} else {
+					if drag.TryStartDrag(PanDragKey, rl.Rectangle(overlay.BoundingBox), V2{}) {
+						LastPanMousePosition = rl.GetMousePosition()
+					}
+				}
+			}
+
+			if boxSelecting, _, canceled := drag.State(BoxSelectDragKey); boxSelecting {
+				if bs, ok := drag.Thing.(BoxSelectDrag); ok {
+					if canceled {
+						// Restore
+						clear(selectedNodes)
+						for k, v := range bs.InitialSelection {
+							selectedNodes[k] = v
+						}
+					} else {
+						// Update selection
+						start := drag.MouseStart
+						end := rl.GetMousePosition()
+
+						startWorld := Camera.ScreenToWorld(start)
+						endWorld := Camera.ScreenToWorld(end)
+
+						x := min(startWorld.X, endWorld.X)
+						y := min(startWorld.Y, endWorld.Y)
+						w := max(startWorld.X, endWorld.X) - x
+						h := max(startWorld.Y, endWorld.Y) - y
+						box := rl.Rectangle{X: x, Y: y, Width: w, Height: h}
+
+						clear(selectedNodes)
+						for k, v := range bs.InitialSelection {
+							selectedNodes[k] = v
+						}
+
+						for _, n := range currentGraph.Nodes {
+							if rl.CheckCollisionRecs(box, n.DragRect) {
+								selectedNodes[n.ID] = struct{}{}
+								selectedNodeID = n.ID
+							}
+						}
+					}
+				}
+			}
+
+			if panning, _, _ := drag.State(PanDragKey); panning {
+				mousePos := rl.GetMousePosition()
+				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
+				Camera.Pan(delta)
+				LastPanMousePosition = mousePos
+			}
+		}
 	})
 
 	rl.SetMouseCursor(UICursor)
@@ -814,7 +881,7 @@ func afterLayout() {
 	}
 }
 
-func renderOverlays() {
+func renderWorldOverlays() {
 	// Render wires
 	for _, wire := range currentGraph.Wires {
 		color := util.Tern(wire.StartNode.ResultAvailable && wire.StartNode.Result.Err != nil, Red, LightGray)
@@ -826,14 +893,25 @@ func renderOverlays() {
 		)
 	}
 	if draggingNewWire, _, _ := drag.State(NewWireDragKey); draggingNewWire {
+		// Calculate end position in world space
+		mouseWorld := Camera.ScreenToWorld(rl.GetMousePosition())
+
 		rl.DrawLineBezier(
 			rl.Vector2(NewWireSourceNode.OutputPortPositions[NewWireSourcePort]),
-			rl.GetMousePosition(),
+			mouseWorld,
 			1,
 			LightGray.RGBA(),
 		)
 	}
 
+	for _, node := range currentGraph.Nodes {
+		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
+			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
+		}
+	}
+}
+
+func renderScreenOverlays() {
 	if draggingBox, _, _ := drag.State(BoxSelectDragKey); draggingBox {
 		start := drag.MouseStart
 		end := rl.GetMousePosition()
@@ -847,12 +925,6 @@ func renderOverlays() {
 		c := rl.Color{R: uint8(Blue.R), G: uint8(Blue.G), B: uint8(Blue.B), A: uint8(Blue.A)}
 		rl.DrawRectangleRec(rect, rl.Fade(c, 0.2))
 		rl.DrawRectangleLinesEx(rect, 1, c)
-	}
-
-	for _, node := range currentGraph.Nodes {
-		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
-			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
-		}
 	}
 }
 
