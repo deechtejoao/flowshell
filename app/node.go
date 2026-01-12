@@ -402,7 +402,7 @@ func Toposort(nodes []*Node, wires []*Wire) ([]*Node, error) {
 	}
 
 	if len(result) != len(nodes) {
-		return nil, fmt.Errorf("cycle detected or disconnected graph error")
+		return nil, fmt.Errorf("cycle detected")
 	}
 
 	return result, nil

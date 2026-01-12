@@ -128,11 +128,15 @@ func beforeLayout() {
 			}
 		}
 		if rl.IsKeyPressed(rl.KeyO) {
-			fmt.Println("Loading from saved.flow...")
-			if err := LoadGraph("saved.flow"); err != nil {
-				fmt.Printf("Error loading: %v\n", err)
+			if len(nodes) > 0 {
+				ShowLoadConfirmation = true
 			} else {
-				fmt.Println("Loaded!")
+				fmt.Println("Loading from saved.flow...")
+				if err := LoadGraph("saved.flow"); err != nil {
+					fmt.Printf("Error loading: %v\n", err)
+				} else {
+					fmt.Println("Loaded!")
+				}
 			}
 		}
 	}
@@ -321,12 +325,14 @@ var NewWireSourcePort int
 
 var NewNodeName string
 
+var ShowLoadConfirmation bool
+
 var OutputWindowWidth float32 = windowWidth * 0.30
 
 func ui() {
 	// Sweep the graph, validating all nodes
-	sortedNodes, err := Toposort(nodes, wires)
-	if err != nil {
+	sortedNodes, topoErr := Toposort(nodes, wires)
+	if topoErr != nil {
 		// If there is a cycle, we can't toposort. Just use the default order.
 		sortedNodes = nodes
 	}
@@ -339,12 +345,67 @@ func ui() {
 		BackgroundColor: Night,
 		Border:          clay.BorderElementConfig{Width: BTW, Color: LightGray},
 	}, func() {
+		if topoErr != nil {
+			clay.CLAY(clay.ID("CycleWarning"), clay.EL{
+				Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0), Height: clay.SizingFixed(30)}, ChildAlignment: ALLCENTER},
+				BackgroundColor: Red,
+				Floating: clay.FLOAT{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Element: clay.AttachPointCenterTop,
+						Parent:  clay.AttachPointCenterTop,
+					},
+					ZIndex: ZTOP,
+				},
+			}, func() {
+				clay.TEXT("Cycle Detected! Graph execution disabled.", clay.TextElementConfig{TextColor: White, FontID: InterBold})
+			})
+		}
+
+		if ShowLoadConfirmation {
+			clay.CLAY(clay.ID("LoadConfirmation"), clay.EL{
+				Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300)}, ChildAlignment: ALLCENTER, Padding: PA3, ChildGap: S2},
+				BackgroundColor: Charcoal,
+				Border:          clay.BorderElementConfig{Width: BA2, Color: Red},
+				CornerRadius:    RA2,
+				Floating: clay.FLOAT{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Element: clay.AttachPointCenterCenter,
+						Parent:  clay.AttachPointCenterCenter,
+					},
+					ZIndex: ZTOP,
+				},
+			}, func() {
+				clay.TEXT("Discard changes and load?", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
+				clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{ChildGap: S3}}, func() {
+					UIButton(clay.ID("ConfirmLoad"), UIButtonConfig{
+						El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Red, CornerRadius: RA1},
+						OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+							ShowLoadConfirmation = false
+							LoadGraph("saved.flow")
+						},
+					}, func() {
+						clay.TEXT("Load", clay.TextElementConfig{TextColor: White})
+					})
+					UIButton(clay.ID("CancelLoad"), UIButtonConfig{
+						El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Gray, CornerRadius: RA1},
+						OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+							ShowLoadConfirmation = false
+						},
+					}, func() {
+						clay.TEXT("Cancel", clay.TextElementConfig{TextColor: White})
+					})
+				})
+			})
+		}
+
 		clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 			Layout: clay.LAY{Sizing: GROWALL},
 			Clip:   clay.CLIP{Horizontal: true, Vertical: true},
 		}, func() {
 			for _, node := range nodes {
-				UINode(node)
+				UINode(node, topoErr != nil)
 			}
 
 			clay.CLAY_AUTO_ID(clay.EL{
@@ -578,7 +639,7 @@ func renderOverlays() {
 	}
 }
 
-func UINode(node *Node) {
+func UINode(node *Node, disabled bool) {
 	border := clay.B{
 		Color: Gray,
 		Width: BA,
@@ -635,7 +696,7 @@ func UINode(node *Node) {
 				clay.TEXT("Running...", clay.TextElementConfig{TextColor: White})
 			}
 
-			playButtonDisabled := !node.Valid || node.Running
+			playButtonDisabled := !node.Valid || node.Running || disabled
 
 			UIButton(clay.AUTO_ID, // Pin button
 				UIButtonConfig{
@@ -928,22 +989,24 @@ func (d *UIDropdown) GetSelectedOption() UIDropdownOption {
 	return d.GetOption(d.Selected)
 }
 
-func (d *UIDropdown) SelectByName(name string) {
+func (d *UIDropdown) SelectByName(name string) bool {
 	for i, opt := range d.Options {
 		if opt.Name == name {
 			d.Selected = i
-			break
+			return true
 		}
 	}
+	return false
 }
 
-func (d *UIDropdown) SelectByValue(v any) {
+func (d *UIDropdown) SelectByValue(v any) bool {
 	for i, opt := range d.Options {
 		if opt.Value == v {
 			d.Selected = i
-			break
+			return true
 		}
 	}
+	return false
 }
 
 type UIDropdownConfig struct {
