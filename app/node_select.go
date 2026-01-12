@@ -51,9 +51,11 @@ func (c *SelectColumnsAction) UpdateAndValidate(n *Node) {
 
 	// Calculate output type
 	var newFields []FlowField
-	for _, field := range input.Type().ContainedType.Fields {
-		if slices.Contains(c.SelectedColumns, field.Name) {
-			newFields = append(newFields, field)
+	if input.Type().ContainedType != nil {
+		for _, field := range input.Type().ContainedType.Fields {
+			if slices.Contains(c.SelectedColumns, field.Name) {
+				newFields = append(newFields, field)
+			}
 		}
 	}
 	
@@ -143,7 +145,10 @@ func (c *SelectColumnsAction) RunContext(ctx context.Context, n *Node) <-chan No
 		defer close(done)
 		defer func() {
 			if r := recover(); r != nil {
-				done <- NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+				select {
+				case done <- NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}:
+				case <-ctx.Done():
+				}
 			}
 		}()
 
@@ -169,15 +174,25 @@ func (c *SelectColumnsAction) RunContext(ctx context.Context, n *Node) <-chan No
 		var colIndices []int
 		var newFields []FlowField
 		
-		for i, field := range input.Type.ContainedType.Fields {
-			if slices.Contains(c.SelectedColumns, field.Name) {
-				colIndices = append(colIndices, i)
-				newFields = append(newFields, field)
+		if input.Type.ContainedType != nil {
+			for i, field := range input.Type.ContainedType.Fields {
+				if slices.Contains(c.SelectedColumns, field.Name) {
+					colIndices = append(colIndices, i)
+					newFields = append(newFields, field)
+				}
 			}
 		}
 
 		var newRows [][]FlowValueField
 		for _, row := range input.TableValue {
+			// Check context
+			select {
+			case <-ctx.Done():
+				done <- NodeActionResult{Err: ctx.Err()}
+				return
+			default:
+			}
+
 			var newRow []FlowValueField
 			for _, idx := range colIndices {
 				newRow = append(newRow, row[idx])

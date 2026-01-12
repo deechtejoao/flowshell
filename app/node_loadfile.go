@@ -350,6 +350,13 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			// Build rows
 			var tableRows [][]FlowValueField
 			for _, row := range allDataRows {
+				select {
+				case <-ctx.Done():
+					res.Err = ctx.Err()
+					return
+				default:
+				}
+
 				var flowRow []FlowValueField
 				for col, value := range row {
 					if col >= numCols {

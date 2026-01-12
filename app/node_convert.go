@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/bvisness/flowshell/clay"
+	"github.com/bvisness/flowshell/util"
 )
 
 // GEN:NodeAction
@@ -15,6 +16,8 @@ type ConvertAction struct {
 
 	Column      string
 	colDropdown UIDropdown
+
+	IgnoreErrors bool
 }
 
 var convertOptions = []UIDropdownOption{
@@ -57,6 +60,7 @@ var _ NodeAction = &ConvertAction{}
 func (c *ConvertAction) Serialize(s *Serializer) bool {
 	SInt(s, (*int)(&c.TargetKind))
 	SStr(s, &c.Column)
+	SBool(s, &c.IgnoreErrors)
 	return s.Ok()
 }
 
@@ -130,6 +134,19 @@ func (c *ConvertAction) UI(n *Node) {
 			c.TargetKind = after.(FlowTypeKind)
 			n.Action.UpdateAndValidate(n)
 		},
+	})
+
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildGap: S1, ChildAlignment: YCENTER, Padding: clay.Padding{Top: S2}},
+	}, func() {
+		UIButton(clay.AUTO_ID, UIButtonConfig{
+			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+				c.IgnoreErrors = !c.IgnoreErrors
+			},
+		}, func() {
+			UIImage(clay.AUTO_ID, util.Tern(c.IgnoreErrors, ImgToggleDown, ImgToggleRight), clay.EL{})
+		})
+		clay.TEXT("Ignore Errors", clay.TextElementConfig{TextColor: White})
 	})
 
 	if n.InputIsWired(0) && n.InputPorts[0].Type.Kind == FSKindTable {
@@ -227,9 +244,12 @@ func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActi
 				if colIndex < len(row) {
 					convertedVal, err := ConvertValue(row[colIndex].Value, c.TargetKind)
 					if err != nil {
-						// For now, fail on error. Could add option to ignore/nullify.
-						res.Err = fmt.Errorf("conversion failed for value %v: %w", row[colIndex].Value, err)
-						return
+						if c.IgnoreErrors {
+							convertedVal = ZeroValue(c.TargetKind)
+						} else {
+							res.Err = fmt.Errorf("conversion failed for value %v: %w", row[colIndex].Value, err)
+							return
+						}
 					}
 					newRow[colIndex].Value = convertedVal
 				}
@@ -248,8 +268,12 @@ func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActi
 			// Scalar conversion
 			resVal, err := ConvertValue(input, c.TargetKind)
 			if err != nil {
-				res.Err = err
-				return
+				if c.IgnoreErrors {
+					resVal = ZeroValue(c.TargetKind)
+				} else {
+					res.Err = err
+					return
+				}
 			}
 
 			res = NodeActionResult{
@@ -262,6 +286,19 @@ func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActi
 
 func (c *ConvertAction) Run(n *Node) <-chan NodeActionResult {
 	return c.RunContext(context.Background(), n)
+}
+
+func ZeroValue(kind FlowTypeKind) FlowValue {
+	switch kind {
+	case FSKindBytes:
+		return NewStringValue("")
+	case FSKindInt64:
+		return NewInt64Value(0, 0)
+	case FSKindFloat64:
+		return NewFloat64Value(0, 0)
+	default:
+		return FlowValue{Type: &FlowType{Kind: kind}}
+	}
 }
 
 func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {

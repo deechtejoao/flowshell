@@ -154,6 +154,13 @@ func (c *AddColumnAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 
 		var newRows [][]FlowValueField
 		for i, row := range tableInput.TableValue {
+			select {
+			case <-ctx.Done():
+				res.Err = ctx.Err()
+				return
+			default:
+			}
+
 			newRow := make([]FlowValueField, len(row)+1)
 			copy(newRow, row)
 			newRow[len(row)] = FlowValueField{

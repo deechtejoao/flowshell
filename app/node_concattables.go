@@ -138,8 +138,16 @@ func (a *ConcatTablesAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 		}
 		expectedType := firstInput.Type
 
-		var tableRowses [][][]FlowValueField
+		var finalTableRows [][]FlowValueField
 		for i := range n.InputPorts {
+			// Check context
+			select {
+			case <-ctx.Done():
+				res.Err = ctx.Err()
+				return
+			default:
+			}
+
 			input, ok, err := n.GetInputValue(i)
 			if !ok {
 				res.Err = errors.New("an input node is required")
@@ -154,13 +162,9 @@ func (a *ConcatTablesAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 				res.Err = fmt.Errorf("all tables should have the same type: expected %s but got %s", expectedType, input.Type)
 				return
 			}
-			tableRowses = append(tableRowses, input.TableValue)
+			finalTableRows = append(finalTableRows, input.TableValue...)
 		}
 
-		var finalTableRows [][]FlowValueField
-		for _, rows := range tableRowses {
-			finalTableRows = append(finalTableRows, rows...)
-		}
 		res = NodeActionResult{
 			Outputs: []FlowValue{{
 				Type:       expectedType,

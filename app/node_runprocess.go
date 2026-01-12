@@ -129,6 +129,11 @@ func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 		}
 
 		runErr = cmd.Run()
+		if ctx.Err() != nil {
+			res.Err = ctx.Err()
+			return
+		}
+
 		if runErr != nil {
 			if exitErr, ok := runErr.(*exec.ExitError); ok {
 				exitCode = int64(exitErr.ExitCode())

@@ -207,6 +207,12 @@ func Typecheck(a, b FlowType) error {
 	case FSKindBytes, FSKindInt64, FSKindFloat64:
 		// These are primitives, so if their kinds are the same, there is nothing else to check.
 	case FSKindList, FSKindTable:
+		if b.ContainedType == nil {
+			return nil // Accept any contained type if expected is generic
+		}
+		if a.ContainedType == nil {
+			return fmt.Errorf("expected contained type %s, but got nil", b.ContainedType.String())
+		}
 		if err := Typecheck(*a.ContainedType, *b.ContainedType); err != nil {
 			return fmt.Errorf("expected type %s, but got %s: %v", b.String(), a.String(), err)
 		}

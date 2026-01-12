@@ -175,6 +175,14 @@ func (c *ExtractColumnAction) RunContext(ctx context.Context, n *Node) <-chan No
 
 		var list []FlowValue
 		for _, row := range input.TableValue {
+			// Check context
+			select {
+			case <-ctx.Done():
+				res.Err = ctx.Err()
+				return
+			default:
+			}
+
 			list = append(list, row[colIdx].Value)
 		}
 

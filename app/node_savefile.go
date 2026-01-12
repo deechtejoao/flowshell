@@ -198,6 +198,12 @@ func (c *SaveFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 
 			// Write rows
 			for _, row := range input.TableValue {
+				select {
+				case <-ctx.Done():
+					res.Err = ctx.Err()
+					return
+				default:
+				}
 				var record []string
 				for _, field := range row {
 					// Convert value to string

@@ -124,7 +124,24 @@ func (c *SortAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionR
 		sorted := make([]FlowValue, len(input.ListValue))
 		copy(sorted, input.ListValue)
 
+		// Recover from panic caused by cancellation
+		defer func() {
+			if r := recover(); r != nil {
+				if r == ctx.Err() {
+					res.Err = ctx.Err()
+					// done <- res will happen in the outer defer
+				} else {
+					panic(r) // Re-panic if it's not our cancellation
+				}
+			}
+		}()
+
 		slices.SortFunc(sorted, func(a, b FlowValue) int {
+			// Check for cancellation
+			if ctx.Err() != nil {
+				panic(ctx.Err())
+			}
+
 			res := 0
 			switch a.Type.Kind {
 			case FSKindBytes:
