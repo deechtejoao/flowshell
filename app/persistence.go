@@ -40,12 +40,10 @@ func LoadGraph(path string) error {
 
 	s := NewDecoder(data)
 
-	// Clear existing state
-	// TODO: Maybe confirm before clearing?
-	nodes = nil
-	wires = nil
-	nodeID = 0 // Reset node ID counter? Or just ensure loaded IDs are respected?
-	// If we load nodes with specific IDs, we should probably update nodeID to be max(IDs) + 1.
+	// Read into temporary variables first to avoid destroying state on failure
+	var newNodes []*Node
+	var newWires []*Wire
+	var newNodeID int
 
 	// Nodes
 	var nodeCount int
@@ -61,13 +59,13 @@ func LoadGraph(path string) error {
 		if !SThing(s, n) {
 			return fmt.Errorf("failed to read node: %v", s.Errs)
 		}
-		nodes = append(nodes, n)
+		newNodes = append(newNodes, n)
 		nodeMap[n.ID] = n
 		if n.ID > maxID {
 			maxID = n.ID
 		}
 	}
-	nodeID = maxID // Ensure next new node gets a unique ID
+	newNodeID = maxID // Ensure next new node gets a unique ID
 
 	// Wires
 	var wireCount int
@@ -90,7 +88,7 @@ func LoadGraph(path string) error {
 		endNode, ok2 := nodeMap[endNodeID]
 
 		if ok1 && ok2 {
-			wires = append(wires, &Wire{
+			newWires = append(newWires, &Wire{
 				StartNode: startNode,
 				StartPort: startPort,
 				EndNode:   endNode,
@@ -101,11 +99,14 @@ func LoadGraph(path string) error {
 		}
 	}
 
-	// Re-validate and update layout
-	// for _, n := range nodes {
-	// 	// n.UpdateLayoutInfo() // Will happen in main loop
-	// 	// n.Action.UpdateAndValidate(n) // Will happen in main loop
-	// }
+	if !s.Ok() {
+		return fmt.Errorf("deserialization failed: %v", s.Errs)
+	}
+
+	// Success! Swap in the new state
+	nodes = newNodes
+	wires = newWires
+	nodeID = newNodeID
 
 	return nil
 }
