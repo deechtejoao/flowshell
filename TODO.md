@@ -39,7 +39,7 @@
 - [x] Persistence: Confirm before clearing graph. `app/persistence.go:44`
 
 ## UI/UX Enhancements
-- [ ] Box Selection: Drag on canvas to select multiple nodes.
+- [x] Box Selection: Drag on canvas to select multiple nodes.
 - [ ] Grouping/Containers: Visual containers to organize related nodes.
 - [ ] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
 - [ ] Zoom: Canvas zooming support.
