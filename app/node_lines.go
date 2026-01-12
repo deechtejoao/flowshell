@@ -17,7 +17,6 @@ type LinesAction struct {
 
 func NewLinesNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Lines",
 
 		InputPorts: []NodePort{{

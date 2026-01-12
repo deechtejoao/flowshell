@@ -39,7 +39,6 @@ func NewConvertNode() *Node {
 	action.targetDropdown.SelectByValue(FSKindBytes)
 
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Convert Type",
 
 		InputPorts: []NodePort{{

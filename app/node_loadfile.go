@@ -51,7 +51,6 @@ func NewLoadFileNode(path string) *Node {
 	}
 
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Load File",
 
 		InputPorts: []NodePort{{

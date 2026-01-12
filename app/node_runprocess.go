@@ -17,7 +17,6 @@ type RunProcessAction struct {
 
 func NewRunProcessNode(cmd string) *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Run Process",
 
 		InputPorts: nil,

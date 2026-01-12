@@ -20,7 +20,6 @@ type SaveFileAction struct {
 
 func NewSaveFileNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Save File",
 
 		InputPorts: []NodePort{{

@@ -100,26 +100,12 @@ func IsFocused(id clay.ElementID) bool {
 }
 
 func beforeLayout() {
-	if rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl) {
-		if rl.IsKeyPressed(rl.KeyS) {
-			fmt.Println("Saving to saved.flow...")
-			if err := SaveGraph("saved.flow"); err != nil {
-				fmt.Printf("Error saving: %v\n", err)
-			} else {
-				fmt.Println("Saved!")
-			}
-		}
-		if rl.IsKeyPressed(rl.KeyO) {
-			if len(nodes) > 0 {
-				ShowLoadConfirmation = true
-			} else {
-				fmt.Println("Loading from saved.flow...")
-				if err := LoadGraph("saved.flow"); err != nil {
-					fmt.Printf("Error loading: %v\n", err)
-				} else {
-					fmt.Println("Loaded!")
-				}
-			}
+	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
+		SaveGraph("saved.flow", currentGraph)
+	}
+	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
+		if g, err := LoadGraph("saved.flow"); err == nil {
+			currentGraph = g
 		}
 	}
 
@@ -140,7 +126,7 @@ func beforeLayout() {
 		}
 	}
 
-	for _, n := range nodes {
+	for _, n := range currentGraph.Nodes {
 		// Node drag and drop
 		if !IsHoveringUI {
 			drag.TryStartDrag(n, n.DragRect, n.Pos)
@@ -189,7 +175,7 @@ func beforeLayout() {
 			}
 			if wire, hasWire := n.GetInputWire(i); hasWire {
 				if !IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
-					wires = slices.DeleteFunc(wires, func(w *Wire) bool { return w == wire })
+					currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(w *Wire) bool { return w == wire })
 					NewWireSourceNode = wire.StartNode
 					NewWireSourcePort = wire.StartPort
 				}
@@ -201,7 +187,7 @@ func beforeLayout() {
 	if draggingNewWire, done, canceled := drag.State(NewWireDragKey); draggingNewWire {
 		if done && !canceled {
 			// Loop over nodes to find any you may have dropped on
-			for _, node := range nodes {
+			for _, node := range currentGraph.Nodes {
 				for port, portPos := range node.InputPortPositions {
 					portRect := rl.Rectangle{
 						X:      portPos.X - PortDragRadius,
@@ -212,10 +198,10 @@ func beforeLayout() {
 
 					if rl.CheckCollisionPointRec(rl.GetMousePosition(), portRect) && node != NewWireSourceNode {
 						// Delete existing wires into that port
-						wires = slices.DeleteFunc(wires, func(wire *Wire) bool {
+						currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
 							return wire.EndNode == node && wire.EndPort == port
 						})
-						wires = append(wires, &Wire{
+						currentGraph.Wires = append(currentGraph.Wires, &Wire{
 							StartNode: NewWireSourceNode, EndNode: node,
 							StartPort: NewWireSourcePort, EndPort: port,
 						})
@@ -234,7 +220,7 @@ func beforeLayout() {
 				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 					n.Pos = SnapToGrid(n.Pos)
 				}
-				nodes = append(nodes, n)
+				currentGraph.AddNode(n)
 				selectedNodeID = n.ID
 			}
 		}
@@ -275,7 +261,7 @@ func beforeLayout() {
 			if panning, _, _ := drag.State(PanDragKey); panning {
 				mousePos := rl.GetMousePosition()
 				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
-				for _, n := range nodes {
+				for _, n := range currentGraph.Nodes {
 					n.Pos = rl.Vector2Add(n.Pos, delta)
 				}
 				LastPanMousePosition = mousePos

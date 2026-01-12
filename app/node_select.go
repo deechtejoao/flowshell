@@ -16,7 +16,6 @@ type SelectColumnsAction struct {
 
 func NewSelectColumnsNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Select Columns",
 
 		InputPorts: []NodePort{{

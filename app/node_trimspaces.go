@@ -15,7 +15,6 @@ type TrimSpacesAction struct{}
 
 func NewTrimSpacesNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Trim Spaces",
 
 		InputPorts: []NodePort{{

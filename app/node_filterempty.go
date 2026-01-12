@@ -18,7 +18,6 @@ type FilterEmptyAction struct {
 
 func NewFilterEmptyNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Filter Empty",
 
 		InputPorts: []NodePort{{

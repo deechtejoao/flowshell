@@ -14,7 +14,6 @@ type ValueAction struct {
 
 func NewValueNode(v FlowValue) *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Value",
 
 		OutputPorts: []NodePort{{

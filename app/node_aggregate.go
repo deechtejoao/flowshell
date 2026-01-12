@@ -29,7 +29,6 @@ func NewAggregateNode(op string) *Node {
 	action.ops.SelectByName(op)
 
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Aggregate",
 
 		InputPorts: []NodePort{{

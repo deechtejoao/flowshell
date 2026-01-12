@@ -15,7 +15,6 @@ type AddColumnAction struct {
 
 func NewAddColumnNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Add Column",
 
 		InputPorts: []NodePort{

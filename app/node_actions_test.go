@@ -88,16 +88,11 @@ func TestSortAction(t *testing.T) {
 
 			valueNode := NewValueNode(inputList)
 
-			// Setup globals
-			oldWires := wires
-			oldNodes := nodes
-			defer func() {
-				wires = oldWires
-				nodes = oldNodes
-			}()
-			wires = nil
-			nodes = []*Node{valueNode, node}
-			wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+			// Setup graph
+			g := NewGraph()
+			g.AddNode(valueNode)
+			g.AddNode(node)
+			g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 			// Pre-calculate input node result
 			valueNode.ResultAvailable = true
@@ -145,16 +140,11 @@ func TestConvertAction_Scalar(t *testing.T) {
 	val := NewInt64Value(123, 0)
 	valueNode := NewValueNode(val)
 
-	// Setup globals
-	oldWires := wires
-	oldNodes := nodes
-	defer func() {
-		wires = oldWires
-		nodes = oldNodes
-	}()
-	wires = nil
-	nodes = []*Node{valueNode, node}
-	wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	// Setup graph
+	g := NewGraph()
+	g.AddNode(valueNode)
+	g.AddNode(node)
+	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
 	valueNode.ResultAvailable = true
@@ -194,16 +184,11 @@ func TestConvertAction_IgnoreErrors(t *testing.T) {
 	val := NewStringValue("invalid")
 	valueNode := NewValueNode(val)
 
-	// Setup globals
-	oldWires := wires
-	oldNodes := nodes
-	defer func() {
-		wires = oldWires
-		nodes = oldNodes
-	}()
-	wires = nil
-	nodes = []*Node{valueNode, node}
-	wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	// Setup graph
+	g := NewGraph()
+	g.AddNode(valueNode)
+	g.AddNode(node)
+	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
 	valueNode.ResultAvailable = true
@@ -263,16 +248,11 @@ func TestExtractColumnAction(t *testing.T) {
 
 	valueNode := NewValueNode(val)
 
-	// Setup globals
-	oldWires := wires
-	oldNodes := nodes
-	defer func() {
-		wires = oldWires
-		nodes = oldNodes
-	}()
-	wires = nil
-	nodes = []*Node{valueNode, node}
-	wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	// Setup graph
+	g := NewGraph()
+	g.AddNode(valueNode)
+	g.AddNode(node)
+	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
 	valueNode.ResultAvailable = true
@@ -340,16 +320,11 @@ func TestSelectColumnsAction(t *testing.T) {
 
 	valueNode := NewValueNode(val)
 
-	// Setup globals
-	oldWires := wires
-	oldNodes := nodes
-	defer func() {
-		wires = oldWires
-		nodes = oldNodes
-	}()
-	wires = nil
-	nodes = []*Node{valueNode, node}
-	wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	// Setup graph
+	g := NewGraph()
+	g.AddNode(valueNode)
+	g.AddNode(node)
+	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
 	valueNode.ResultAvailable = true
@@ -412,16 +387,11 @@ func TestSelectColumnsAction_NilContainedType(t *testing.T) {
 
 	valueNode := NewValueNode(val)
 
-	// Setup globals
-	oldWires := wires
-	oldNodes := nodes
-	defer func() {
-		wires = oldWires
-		nodes = oldNodes
-	}()
-	wires = nil
-	nodes = []*Node{valueNode, node}
-	wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	// Setup graph
+	g := NewGraph()
+	g.AddNode(valueNode)
+	g.AddNode(node)
+	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
 	valueNode.ResultAvailable = true

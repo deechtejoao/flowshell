@@ -14,7 +14,6 @@ type ConcatTablesAction struct{}
 
 func NewConcatTablesNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Concatenate Tables",
 
 		InputPorts: []NodePort{{
@@ -78,9 +77,11 @@ func (a *ConcatTablesAction) UI(n *Node) {
 				El: buttonStyle,
 				OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 					if len(n.InputPorts) > 1 {
-						wires = slices.DeleteFunc(wires, func(w *Wire) bool {
-							return w.EndNode == n && w.EndPort >= len(n.InputPorts)-1
-						})
+						if n.Graph != nil {
+							n.Graph.Wires = slices.DeleteFunc(n.Graph.Wires, func(w *Wire) bool {
+								return w.EndNode == n && w.EndPort >= len(n.InputPorts)-1
+							})
+						}
 						n.InputPorts = n.InputPorts[:len(n.InputPorts)-1]
 					}
 				},

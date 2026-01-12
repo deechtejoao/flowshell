@@ -19,7 +19,6 @@ type ListFilesAction struct {
 
 func NewListFilesNode(dir string) *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "List Files",
 
 		InputPorts: []NodePort{{

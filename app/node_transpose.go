@@ -17,7 +17,6 @@ func (c *TransposeAction) Serialize(s *Serializer) bool {
 
 func NewTransposeNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Transpose",
 
 		InputPorts: []NodePort{{

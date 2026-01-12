@@ -13,7 +13,6 @@ type MinifyHTMLAction struct{}
 
 func NewMinifyHTMLNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Minify HTML",
 
 		InputPorts: []NodePort{{

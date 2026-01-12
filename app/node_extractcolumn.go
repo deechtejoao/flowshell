@@ -18,7 +18,6 @@ type ExtractColumnAction struct {
 
 func NewExtractColumnNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Extract Column",
 
 		InputPorts: []NodePort{{

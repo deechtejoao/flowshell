@@ -18,7 +18,6 @@ type SortAction struct {
 
 func NewSortNode() *Node {
 	return &Node{
-		ID:   NewNodeID(),
 		Name: "Sort",
 
 		InputPorts: []NodePort{{

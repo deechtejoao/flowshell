@@ -7,88 +7,96 @@ import (
 
 func TestSaveLoadGraph(t *testing.T) {
 	// Setup some nodes and wires
-	nodes = []*Node{
-		{ID: 1, Name: "Node 1", Pos: V2{X: 10, Y: 10}, Action: &TrimSpacesAction{}}, // Using a simple action
-		{ID: 2, Name: "Node 2", Pos: V2{X: 100, Y: 100}, Action: &TrimSpacesAction{}},
-	}
-	wires = []*Wire{
-		{StartNode: nodes[0], StartPort: 0, EndNode: nodes[1], EndPort: 0},
+	g := NewGraph()
+	n1 := &Node{ID: 1, Name: "Node 1", Pos: V2{X: 10, Y: 10}, Action: &TrimSpacesAction{}}
+	n2 := &Node{ID: 2, Name: "Node 2", Pos: V2{X: 100, Y: 100}, Action: &TrimSpacesAction{}}
+	// Manually adding to ensure IDs are preserved for the test
+	g.Nodes = append(g.Nodes, n1, n2)
+	g.Wires = []*Wire{
+		{StartNode: n1, StartPort: 0, EndNode: n2, EndPort: 0},
 	}
 
 	tmpFile := "test_graph.flow"
 	defer os.Remove(tmpFile)
 
 	// Save
-	err := SaveGraph(tmpFile)
+	err := SaveGraph(tmpFile, g)
 	if err != nil {
 		t.Fatalf("SaveGraph failed: %v", err)
 	}
 
-	// Clear state
-	nodes = nil
-	wires = nil
-
 	// Load
-	err = LoadGraph(tmpFile)
+	loadedG, err := LoadGraph(tmpFile)
 	if err != nil {
 		t.Fatalf("LoadGraph failed: %v", err)
 	}
 
 	// Verify
-	if len(nodes) != 2 {
-		t.Errorf("Expected 2 nodes, got %d", len(nodes))
+	if len(loadedG.Nodes) != 2 {
+		t.Errorf("Expected 2 nodes, got %d", len(loadedG.Nodes))
 	}
-	if len(wires) != 1 {
-		t.Errorf("Expected 1 wire, got %d", len(wires))
-	}
-
-	if nodes[0].ID != 1 || nodes[1].ID != 2 {
-		t.Errorf("Node IDs mismatch")
+	if len(loadedG.Wires) != 1 {
+		t.Errorf("Expected 1 wire, got %d", len(loadedG.Wires))
 	}
 
-	if wires[0].StartNode.ID != 1 || wires[0].EndNode.ID != 2 {
+	// Helper to find node by ID
+	findNode := func(id int) *Node {
+		for _, n := range loadedG.Nodes {
+			if n.ID == id {
+				return n
+			}
+		}
+		return nil
+	}
+
+	ln1 := findNode(1)
+	ln2 := findNode(2)
+
+	if ln1 == nil || ln2 == nil {
+		t.Fatalf("Nodes not found")
+	}
+
+	if loadedG.Wires[0].StartNode.ID != 1 || loadedG.Wires[0].EndNode.ID != 2 {
 		t.Errorf("Wire connections mismatch")
 	}
 }
 
 func TestSaveLoadGraphComplex(t *testing.T) {
 	// Setup
-	nodes = []*Node{
-		{
-			ID: 1, Name: "Lines", Pos: V2{X: 10, Y: 10},
-			Action: &LinesAction{IncludeCarriageReturns: true},
-		},
-		{
-			ID: 2, Name: "Extract", Pos: V2{X: 100, Y: 100},
-			Action: &ExtractColumnAction{Column: "MyCol"},
-		},
+	g := NewGraph()
+	n1 := &Node{
+		ID: 1, Name: "Lines", Pos: V2{X: 10, Y: 10},
+		Action: &LinesAction{IncludeCarriageReturns: true},
 	}
+	n2 := &Node{
+		ID: 2, Name: "Extract", Pos: V2{X: 100, Y: 100},
+		Action: &ExtractColumnAction{Column: "MyCol"},
+	}
+	g.Nodes = append(g.Nodes, n1, n2)
 	// No wires needed for this test, just testing node state serialization
 
 	tmpFile := "test_graph_complex.flow"
 	defer os.Remove(tmpFile)
 
 	// Save
-	if err := SaveGraph(tmpFile); err != nil {
+	if err := SaveGraph(tmpFile, g); err != nil {
 		t.Fatalf("SaveGraph failed: %v", err)
 	}
 
-	// Clear
-	nodes = nil
-
 	// Load
-	if err := LoadGraph(tmpFile); err != nil {
+	loadedG, err := LoadGraph(tmpFile)
+	if err != nil {
 		t.Fatalf("LoadGraph failed: %v", err)
 	}
 
 	// Verify
-	if len(nodes) != 2 {
-		t.Fatalf("Expected 2 nodes, got %d", len(nodes))
+	if len(loadedG.Nodes) != 2 {
+		t.Fatalf("Expected 2 nodes, got %d", len(loadedG.Nodes))
 	}
 
 	// Find nodes by ID (order might not be guaranteed, though slice usually preserves it)
 	var linesNode, extractNode *Node
-	for _, n := range nodes {
+	for _, n := range loadedG.Nodes {
 		if n.ID == 1 {
 			linesNode = n
 		}
