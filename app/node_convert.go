@@ -48,10 +48,6 @@ func NewConvertNode() *Node {
 
 var _ NodeAction = &ConvertAction{}
 
-func (c *ConvertAction) Tag() string {
-	return "ConvertAction"
-}
-
 func (c *ConvertAction) Serialize(s *Serializer) bool {
 	SInt(s, (*int)(&c.TargetKind))
 	return s.Ok()

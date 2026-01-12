@@ -140,7 +140,13 @@ func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 
 		c.state.err = c.state.cmd.Run()
 		if c.state.err != nil {
-			// TODO: Extract exit code
+			if exitErr, ok := c.state.err.(*exec.ExitError); ok {
+				c.state.exitCode = exitErr.ExitCode()
+			} else {
+				c.state.exitCode = -1 // Unknown error or signal
+			}
+		} else {
+			c.state.exitCode = 0
 		}
 
 		res = NodeActionResult{
