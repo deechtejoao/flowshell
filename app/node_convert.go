@@ -74,8 +74,8 @@ func (c *ConvertAction) UpdateAndValidate(n *Node) {
 	}
 
 	// Update input/output types and column dropdown
-	if n.InputIsWired(0) {
-		inputType := n.InputPorts[0].Type
+	if wire, ok := n.GetInputWire(0); ok {
+		inputType := wire.Type()
 		if inputType.Kind == FSKindTable && inputType.ContainedType != nil && inputType.ContainedType.Kind == FSKindRecord {
 			// Populate column dropdown
 			var options []UIDropdownOption
@@ -148,7 +148,7 @@ func (c *ConvertAction) UI(n *Node) {
 		clay.TEXT("Ignore Errors", clay.TextElementConfig{TextColor: White})
 	})
 
-	if n.InputIsWired(0) && n.InputPorts[0].Type.Kind == FSKindTable {
+	if wire, ok := n.GetInputWire(0); ok && wire.Type().Kind == FSKindTable {
 		clay.CLAY_AUTO_ID(clay.EL{
 			Layout: clay.LAY{Padding: clay.Padding{Bottom: S2}},
 		}, func() {

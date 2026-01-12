@@ -652,8 +652,8 @@ func UINode(node *Node, disabled bool) {
 			BackgroundColor: Charcoal,
 		}, func() {
 			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
-				// TODO: Hook into global system for mouse events
-				if pointerData.State == clay.PointerDataReleasedThisFrame {
+				UIInput.RegisterPointerDown(elementID, pointerData)
+				if UIInput.IsClick(elementID, pointerData) {
 					selectedNodeID = node.ID
 				}
 			}, nil)
@@ -842,14 +842,14 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 
 			if !config.Disabled {
 				UICursor = rl.MouseCursorPointingHand
+				UIInput.RegisterPointerDown(elementID, pointerData)
 			}
 
 			if config.OnHover != nil {
 				config.OnHover(elementID, pointerData, config.OnHoverUserData)
 			}
 
-			// TODO: Check global UI state to see what UI component the click started on
-			if !config.Disabled && pointerData.State == clay.PointerDataReleasedThisFrame {
+			if !config.Disabled && UIInput.IsClick(elementID, pointerData) {
 				if config.OnClick != nil {
 					config.OnClick(elementID, pointerData, config.OnClickUserData)
 				}
@@ -906,8 +906,9 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 			IsHoveringUI = true
+			UIInput.RegisterPointerDown(elementID, pointerData)
 
-			if pointerData.State == clay.PointerDataReleasedThisFrame {
+			if UIInput.IsClick(elementID, pointerData) {
 				UIFocus = &elementID
 			}
 		}, nil)
@@ -1058,8 +1059,9 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 					}, func() {
 						clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							IsHoveringUI = true
+							UIInput.RegisterPointerDown(elementID, pointerData)
 
-							if pointerData.State == clay.PointerDataReleasedThisFrame {
+							if UIInput.IsClick(elementID, pointerData) {
 								selectedBefore := d.Selected
 								d.Selected = userData.(int)
 								d.open = false

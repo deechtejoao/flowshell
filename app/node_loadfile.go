@@ -99,9 +99,17 @@ var _ NodeAction = &LoadFileAction{}
 func (c *LoadFileAction) UpdateAndValidate(n *Node) {
 	isListInput := false
 	if wire, ok := n.GetInputWire(0); ok {
-		if wire.Type().Kind == FSKindList {
+		switch wire.Type().Kind {
+		case FSKindBytes:
+			n.InputPorts[0].Type = FlowType{Kind: FSKindBytes}
+		case FSKindList:
 			isListInput = true
+			n.InputPorts[0].Type = NewListType(FlowType{Kind: FSKindBytes})
+		default:
+			n.InputPorts[0].Type = FlowType{Kind: FSKindBytes}
 		}
+	} else {
+		n.InputPorts[0].Type = FlowType{Kind: FSKindBytes}
 	}
 
 	switch c.format.GetSelectedOption().Value {

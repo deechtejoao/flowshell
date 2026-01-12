@@ -71,6 +71,7 @@ func frame() {
 	if drag.Dragging {
 		clayPointerMouseDown = false
 	}
+	UIInput.BeginFrame(clayPointerMouseDown)
 
 	clay.SetPointerState(
 		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
@@ -85,6 +86,7 @@ func frame() {
 	commands := clay.EndLayout()
 
 	afterLayout()
+	UIInput.EndFrame()
 
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.RayWhite)
