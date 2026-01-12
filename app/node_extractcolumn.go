@@ -107,7 +107,15 @@ func (c *ExtractColumnAction) UI(n *Node) {
 					c.dropdown.Selected = 0
 				}
 			} else {
-				c.dropdown.SelectByValue(c.Column)
+				if !c.dropdown.SelectByValue(c.Column) {
+					// Selection no longer valid, reset to first option
+					if len(options) > 0 {
+						c.Column = options[0].Value.(string)
+						c.dropdown.Selected = 0
+					} else {
+						c.Column = ""
+					}
+				}
 			}
 
 			c.dropdown.Do(clay.IDI("ExtractColumn", n.ID), UIDropdownConfig{
