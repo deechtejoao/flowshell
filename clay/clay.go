@@ -489,8 +489,12 @@ func (r TextElementConfig) C() C.Clay_TextElementConfig {
 }
 
 func TextElementConfig2Go(r C.Clay_TextElementConfig) TextElementConfig {
+	var userData any
+	if r.userData != nil {
+		userData = cgo.Handle(uintptr(r.userData)).Value()
+	}
 	return TextElementConfig{
-		UserData:      util.Tern(r.userData != nil, cgo.Handle(uintptr(r.userData)).Value(), nil),
+		UserData:      userData,
 		TextColor:     Color2Go(r.textColor),
 		FontID:        uint16(r.fontId),
 		FontSize:      uint16(r.fontSize),
@@ -858,10 +862,14 @@ type CustomRenderData struct {
 }
 
 func CustomRenderData2Go(r C.Clay_CustomRenderData) CustomRenderData {
+	var customData any
+	if r.customData != nil {
+		customData = cgo.Handle(uintptr(r.customData)).Value()
+	}
 	return CustomRenderData{
 		BackgroundColor: Color2Go(r.backgroundColor),
 		CornerRadius:    CornerRadius2Go(r.cornerRadius),
-		CustomData:      util.Tern(r.customData != nil, cgo.Handle(uintptr(r.customData)).Value(), nil),
+		CustomData:      customData,
 	}
 }
 
@@ -984,10 +992,14 @@ type RenderCommand struct {
 }
 
 func RenderCommand2Go(r C.Clay_RenderCommand) RenderCommand {
+	var userData any
+	if r.userData != nil {
+		userData = cgo.Handle(uintptr(r.userData)).Value()
+	}
 	return RenderCommand{
 		BoundingBox: BoundingBox2Go(r.boundingBox),
 		RenderData:  RenderData2Go(r.renderData, RenderCommandType(r.commandType)),
-		UserData:    util.Tern(r.userData != nil, cgo.Handle(uintptr(r.userData)).Value(), nil),
+		UserData:    userData,
 		ID:          uint32(r.id),
 		ZIndex:      int16(r.zIndex),
 		CommandType: RenderCommandType(r.commandType),
@@ -1370,6 +1382,8 @@ func IDI(label string, offset int) ElementID {
 
 var allocatedStrings []unsafe.Pointer
 var allocatedHandles []cgo.Handle
+var pendingFreeStrings []unsafe.Pointer
+var pendingFreeHandles []cgo.Handle
 
 func CacheString(str string) String {
 	ptr := C.CBytes([]byte(str))
@@ -1383,21 +1397,30 @@ func CacheString(str string) String {
 }
 
 func CacheHandle(v any) unsafe.Pointer {
+	if v == nil {
+		return nil
+	}
 	h := cgo.NewHandle(v)
 	allocatedHandles = append(allocatedHandles, h)
 	return *(*unsafe.Pointer)(unsafe.Pointer(&h))
 }
 
 func ReleaseFrameMemory() {
-	for _, ptr := range allocatedStrings {
+	// Free strings pending from previous frame
+	for _, ptr := range pendingFreeStrings {
 		C.free(ptr)
 	}
-	allocatedStrings = allocatedStrings[:0]
+	// Move current strings to pending
+	pendingFreeStrings = allocatedStrings
+	allocatedStrings = nil
 
-	for _, h := range allocatedHandles {
+	// Free handles pending from previous frame
+	for _, h := range pendingFreeHandles {
 		h.Delete()
 	}
-	allocatedHandles = allocatedHandles[:0]
+	// Move current handles to pending
+	pendingFreeHandles = allocatedHandles
+	allocatedHandles = nil
 }
 
 // Deprecated: Use ReleaseFrameMemory instead

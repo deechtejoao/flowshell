@@ -1,6 +1,8 @@
 package app
 
-import "github.com/bvisness/flowshell/clay"
+import (
+	"github.com/bvisness/flowshell/clay"
+)
 
 // Global state to track if the mouse is currently hovering over any HIGH PRIORITY UI element
 // (buttons, textboxes, dropdowns).
@@ -35,11 +37,6 @@ func (m *InputManager) BeginFrame(pointerDown bool) {
 }
 
 func (m *InputManager) EndFrame() {
-	if m.pointerReleasedThisFrame {
-		m.pointerDownOwnerID = 0
-		m.pointerDownOwnerSet = false
-	}
-
 	m.pointerPressedThisFrame = false
 	m.pointerReleasedThisFrame = false
 }
@@ -51,9 +48,7 @@ func (m *InputManager) RegisterPointerDown(owner clay.ElementID, pointerData cla
 	if m.pointerDownOwnerSet {
 		return
 	}
-	if !m.pointerPressedThisFrame {
-		return
-	}
+	// We trust Clay's event timing even if it's lagging behind our InputManager's frame detection.
 
 	m.pointerDownOwnerID = owner.ID
 	m.pointerDownOwnerSet = true
@@ -63,9 +58,8 @@ func (m *InputManager) IsClick(owner clay.ElementID, pointerData clay.PointerDat
 	if pointerData.State != clay.PointerDataReleasedThisFrame {
 		return false
 	}
-	if !m.pointerReleasedThisFrame {
-		return false
-	}
+	// We don't check m.pointerReleasedThisFrame because Clay might be late.
+
 	if !m.pointerDownOwnerSet {
 		return false
 	}

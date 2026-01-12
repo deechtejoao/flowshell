@@ -13,7 +13,6 @@ func renderClayCommands(commands []clay.RenderCommand) {
 		case clay.RenderCommandTypeRectangle:
 			config := cmd.RenderData.Rectangle
 			if config.CornerRadius.TopLeft > 0 {
-				// Why we have to do this for Raylib I do not understand.
 				radius := config.CornerRadius.TopLeft * 2 / util.Tern(bbox.Width > bbox.Height, bbox.Height, bbox.Width)
 				rl.DrawRectangleRounded(rl.Rectangle(bbox), radius, 8, config.BackgroundColor.RGBA())
 			} else {
@@ -21,8 +20,6 @@ func renderClayCommands(commands []clay.RenderCommand) {
 			}
 
 		case clay.RenderCommandTypeBorder:
-			// There's a whole lot of rounding that I'm doing differently here.
-
 			config := cmd.RenderData.Border
 			// Left border
 			if config.Width.Left > 0 {
@@ -83,7 +80,14 @@ func renderClayCommands(commands []clay.RenderCommand) {
 		case clay.RenderCommandTypeScissorEnd:
 			rl.EndScissorMode()
 
-			// TODO: CUSTOM
+		case clay.RenderCommandTypeCustom:
+			config := cmd.RenderData.Custom
+			if config.CornerRadius.TopLeft > 0 {
+				radius := config.CornerRadius.TopLeft * 2 / util.Tern(bbox.Width > bbox.Height, bbox.Height, bbox.Width)
+				rl.DrawRectangleRounded(rl.Rectangle(bbox), radius, 8, config.BackgroundColor.RGBA())
+			} else {
+				rl.DrawRectangle(int32(bbox.X), int32(bbox.Y), int32(bbox.Width), int32(bbox.Height), config.BackgroundColor.RGBA())
+			}
 		}
 	}
 }
