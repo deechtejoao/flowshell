@@ -34,6 +34,10 @@ func (a *ConcatTablesAction) Tag() string {
 	return "ConcatTablesAction"
 }
 
+func (a *ConvertAction) Tag() string {
+	return "ConvertAction"
+}
+
 func (a *ExtractColumnAction) Tag() string {
 	return "ExtractColumnAction"
 }
