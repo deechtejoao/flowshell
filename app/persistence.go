@@ -6,7 +6,7 @@ import (
 )
 
 func SaveGraph(path string, g *Graph) error {
-	s := NewEncoder(2)
+	s := NewEncoder(3)
 
 	// Nodes
 	nodeCount := len(g.Nodes)
@@ -23,6 +23,13 @@ func SaveGraph(path string, g *Graph) error {
 		SInt(s, &w.StartPort)
 		SInt(s, &w.EndNode.ID)
 		SInt(s, &w.EndPort)
+	}
+
+	// Groups
+	groupCount := len(g.Groups)
+	SInt(s, &groupCount)
+	for _, grp := range g.Groups {
+		SThing(s, grp)
 	}
 
 	if !s.Ok() {
@@ -95,6 +102,27 @@ func LoadGraph(path string) (*Graph, error) {
 		} else {
 			fmt.Printf("Warning: skipping wire with missing nodes (%d -> %d)\n", startNodeID, endNodeID)
 		}
+	}
+
+	// Groups
+	if s.Version >= 3 {
+		var groupCount int
+		if !SInt(s, &groupCount) {
+			return nil, fmt.Errorf("failed to read group count: %v", s.Errs)
+		}
+
+		maxGroupID := 0
+		for range groupCount {
+			grp := &Group{}
+			if !SThing(s, grp) {
+				return nil, fmt.Errorf("failed to read group: %v", s.Errs)
+			}
+			g.AddGroup(grp)
+			if grp.ID > maxGroupID {
+				maxGroupID = grp.ID
+			}
+		}
+		g.NextGroupID = maxGroupID
 	}
 
 	if !s.Ok() {

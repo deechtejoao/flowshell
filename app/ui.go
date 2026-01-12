@@ -55,6 +55,47 @@ var nodeTypes = []NodeType{
 	{"Minify HTML", func() *Node { return NewMinifyHTMLNode() }},
 }
 
+func CreateGroup() {
+	// Calculate bounding box of selected nodes
+	if len(selectedNodes) == 0 {
+		return
+	}
+
+	minX, minY := float32(1e9), float32(1e9)
+	maxX, maxY := float32(-1e9), float32(-1e9)
+
+	for id := range selectedNodes {
+		if n, ok := currentGraph.GetNode(id); ok {
+			minX = min(minX, n.Pos.X)
+			minY = min(minY, n.Pos.Y)
+			maxX = max(maxX, n.Pos.X+NodeMinWidth) // Approx width
+			// Height is variable, but let's assume a safe buffer or use n.DragRect if available
+			// n.DragRect is updated in layout, so it might be stale or 0 if not rendered yet?
+			// But since we are selecting them, they must be rendered.
+			h := n.DragRect.Height
+			if h == 0 {
+				h = 100
+			}
+			maxY = max(maxY, n.Pos.Y+h)
+		}
+	}
+
+	// Add padding
+	pad := float32(20)
+	rect := rl.Rectangle{
+		X:      minX - pad,
+		Y:      minY - pad - 40, // Extra top padding for header
+		Width:  (maxX - minX) + pad*2,
+		Height: (maxY - minY) + pad*2 + 40,
+	}
+
+	currentGraph.AddGroup(&Group{
+		Title: "New Group",
+		Rect:  rect,
+		Color: clay.Color{R: 100, G: 100, B: 100, A: 255}, // Default gray
+	})
+}
+
 func SearchNodeTypes(search string) []NodeType {
 	var names []string
 	for _, t := range nodeTypes {
@@ -143,6 +184,22 @@ func IsFocused(id clay.ElementID) bool {
 }
 
 func beforeLayout() {
+	if rl.IsMouseButtonPressed(rl.MouseRightButton) && !IsHoveringPanel && !IsHoveringUI {
+		isGroup := false
+		for _, grp := range currentGraph.Groups {
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
+				isGroup = true
+				break
+			}
+		}
+
+		if !isGroup {
+			NewNodeName = ""
+			id := clay.ID("NewNodeName")
+			UIFocus = &id
+		}
+	}
+
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
 		SaveGraph("saved.flow", currentGraph)
 	}
@@ -150,6 +207,10 @@ func beforeLayout() {
 		if g, err := LoadGraph("saved.flow"); err == nil {
 			currentGraph = g
 		}
+	}
+
+	if rl.IsKeyPressed(rl.KeyG) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+		CreateGroup()
 	}
 
 	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && len(selectedNodes) > 0 {
@@ -535,6 +596,9 @@ func ui() {
 			Layout: clay.LAY{Sizing: GROWALL},
 			Clip:   clay.CLIP{Horizontal: true, Vertical: true},
 		}, func() {
+			for _, group := range currentGraph.Groups {
+				UIGroup(group)
+			}
 			for _, node := range currentGraph.Nodes {
 				UINode(node, topoErr != nil)
 			}
@@ -783,6 +847,88 @@ func renderOverlays() {
 			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
 		}
 	}
+}
+
+const GroupDragKey = "GROUP_DRAG"
+
+type GroupDrag struct {
+	Group *Group
+	Nodes []*Node
+}
+
+func (g GroupDrag) DragKey() string { return GroupDragKey }
+
+func UIGroup(group *Group) {
+	clay.CLAY(clay.IDI("Group", group.ID), clay.EL{
+		Floating: clay.FloatingElementConfig{
+			AttachTo: clay.AttachToParent,
+			Offset:   clay.Vector2(group.XY()),
+			ClipTo:   clay.ClipToAttachedParent,
+		},
+		Layout: clay.LAY{
+			LayoutDirection: clay.TopToBottom,
+			Sizing:          clay.Sizing{Width: clay.SizingFixed(group.Rect.Width), Height: clay.SizingFixed(group.Rect.Height)},
+		},
+		BackgroundColor: clay.Color{R: group.Color.R, G: group.Color.G, B: group.Color.B, A: 50},
+		Border:          clay.B{Color: group.Color, Width: BA},
+		CornerRadius:    RA2,
+	}, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			// Don't set IsHoveringPanel so we can still pan if we click the background of a group
+			// But we do want to catch clicks to select/drag
+		}, nil)
+
+		// Header
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{
+				Sizing:         GROWH,
+				Padding:        PD(1, 0, 0, 0, PVH(S1, S2)),
+				ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter},
+			},
+			BackgroundColor: clay.Color{R: group.Color.R, G: group.Color.G, B: group.Color.B, A: 200},
+		}, func() {
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+				UIInput.RegisterPointerDown(elementID, pointerData)
+
+				if drag.TryStartDrag(GroupDrag{Group: group}, rl.Rectangle{}, V2{}) {
+					// Find nodes inside
+					var nodes []*Node
+					for _, n := range currentGraph.Nodes {
+						// Simple center point check
+						center := rl.Vector2Add(n.Pos, rl.Vector2{X: NodeMinWidth / 2, Y: 50}) // Approx center
+						if rl.CheckCollisionPointRec(center, group.Rect) {
+							nodes = append(nodes, n)
+						}
+					}
+					// Update the drag thing with found nodes
+					drag.Thing = GroupDrag{Group: group, Nodes: nodes}
+				}
+			}, nil)
+
+			clay.TEXT(group.Title, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
+		})
+	})
+
+	if dragging, _, _ := drag.State(GroupDragKey); dragging {
+		if gd, ok := drag.Thing.(GroupDrag); ok && gd.Group.ID == group.ID {
+			targetPos := drag.NewObjPosition()
+			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+				targetPos = SnapToGrid(targetPos)
+			}
+
+			delta := rl.Vector2Subtract(targetPos, group.XY())
+			group.Rect.X = targetPos.X
+			group.Rect.Y = targetPos.Y
+
+			for _, n := range gd.Nodes {
+				n.Pos = rl.Vector2Add(n.Pos, delta)
+			}
+		}
+	}
+}
+
+func (r *Group) XY() rl.Vector2 {
+	return rl.Vector2{X: r.Rect.X, Y: r.Rect.Y}
 }
 
 func UINode(node *Node, disabled bool) {
