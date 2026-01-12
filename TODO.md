@@ -28,8 +28,8 @@
 
 ## Architecture Improvements
 - [x] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
-- [ ] Global UI State / Event Handling: Implement centralized `InputManager` or `EventBus` to prevent click-through conflicts. `app/ui.go`
-- [ ] Type System & Polymorphism: Implement robust Type Inference, `ConvertType` node, and mixed type support. `app/node_loadfile.go`
+- [x] Global UI State / Event Handling: Implement centralized `InputManager` or `EventBus` to prevent click-through conflicts. `app/ui.go`
+- [x] Type System & Polymorphism: Implement robust Type Inference, `ConvertType` node, and mixed type support. `app/node_loadfile.go`
 
 ## App Logic Gaps
 - [x] Subprocesses: Extract exit codes from external processes. `app/node_runprocess.go:130`
