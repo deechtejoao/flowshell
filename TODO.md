@@ -27,16 +27,16 @@
 - [x] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
 
 ## Architecture Improvements
-- [ ] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
+- [x] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
 - [ ] Global UI State / Event Handling: Implement centralized `InputManager` or `EventBus` to prevent click-through conflicts. `app/ui.go`
 - [ ] Type System & Polymorphism: Implement robust Type Inference, `ConvertType` node, and mixed type support. `app/node_loadfile.go`
 
 ## App Logic Gaps
-- [ ] Subprocesses: Extract exit codes from external processes. `app/node_runprocess.go:130`
-- [ ] CSV Loading: Get dynamic path from input port, handle variable fields, support string lists. `app/node_loadfile.go`
-- [ ] Filtering: Preserve column selection when data changes. `app/node_filterempty.go:82`
-- [ ] Cancellation: Implement task cancellation with `context.Context`. `app/node.go:283`
-- [ ] Persistence: Confirm before clearing graph. `app/persistence.go:44`
+- [x] Subprocesses: Extract exit codes from external processes. `app/node_runprocess.go:130`
+- [x] CSV Loading: Get dynamic path from input port, handle variable fields, support string lists. `app/node_loadfile.go`
+- [x] Filtering: Preserve column selection when data changes. `app/node_filterempty.go:82`
+- [x] Cancellation: Implement task cancellation with `context.Context`. `app/node.go:283`
+- [x] Persistence: Confirm before clearing graph. `app/persistence.go:44`
 
 ## UI/UX Enhancements
 - [ ] Box Selection: Drag on canvas to select multiple nodes.

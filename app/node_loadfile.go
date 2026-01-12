@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -73,13 +74,28 @@ func NewLoadFileNode(path string) *Node {
 var _ NodeAction = &LoadFileAction{}
 
 func (c *LoadFileAction) UpdateAndValidate(n *Node) {
+	isListInput := false
+	if wire, ok := n.GetInputWire(0); ok {
+		if wire.Type().Kind == FSKindList {
+			isListInput = true
+		}
+	}
+
 	switch c.format.GetSelectedOption().Value {
 	case "raw":
-		n.OutputPorts[0].Type = FlowType{Kind: FSKindBytes}
+		if isListInput {
+			n.OutputPorts[0].Type = NewListType(FlowType{Kind: FSKindBytes})
+		} else {
+			n.OutputPorts[0].Type = FlowType{Kind: FSKindBytes}
+		}
 	case "csv":
 		n.OutputPorts[0].Type = FlowType{Kind: FSKindTable, ContainedType: &FlowType{Kind: FSKindAny}}
 	case "json":
-		n.OutputPorts[0].Type = FlowType{Kind: FSKindAny}
+		if isListInput {
+			n.OutputPorts[0].Type = NewListType(FlowType{Kind: FSKindAny})
+		} else {
+			n.OutputPorts[0].Type = FlowType{Kind: FSKindAny}
+		}
 	}
 
 	n.Valid = true
@@ -144,48 +160,125 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 		default:
 		}
 
-		var path string
-		wirePath, hasWire, err := n.GetInputValue(0)
+		var paths []string
+		wireVal, hasWire, err := n.GetInputValue(0)
 		if err != nil {
 			res.Err = err
 			return
-		}
-		if hasWire && wirePath.Type.Kind == FSKindBytes {
-			path = string(wirePath.BytesValue)
-		} else {
-			path = c.path
 		}
 
-		f, err := os.Open(path)
-		if err != nil {
-			res.Err = err
-			return
+		if hasWire {
+			if wireVal.Type.Kind == FSKindList {
+				for _, v := range wireVal.ListValue {
+					if v.Type.Kind == FSKindBytes {
+						paths = append(paths, string(v.BytesValue))
+					} else {
+						// Try to convert to string or just skip/error?
+						// For now, let's assume strict typing or best effort.
+						// The UpdateAndValidate checks for FSKindList, but doesn't check contained type strictly yet?
+						// Actually UpdateAndValidate doesn't check contained type.
+						// Let's best-effort convert.
+						paths = append(paths, fmt.Sprintf("%v", v)) // TODO: Better string conversion
+					}
+				}
+			} else if wireVal.Type.Kind == FSKindBytes {
+				paths = []string{string(wireVal.BytesValue)}
+			} else {
+				res.Err = fmt.Errorf("unsupported input type %s", wireVal.Type.Kind)
+				return
+			}
+		} else {
+			paths = []string{c.path}
 		}
-		defer f.Close()
 
 		switch format := c.format.GetSelectedOption().Value; format {
 		case "raw":
-			content, err := io.ReadAll(f)
-			if err != nil {
-				res.Err = err
-				return
+			var outputs []FlowValue
+			for _, path := range paths {
+				// Check context
+				if ctx.Err() != nil {
+					res.Err = ctx.Err()
+					return
+				}
+
+				f, err := os.Open(path)
+				if err != nil {
+					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
+					return
+				}
+				content, err := io.ReadAll(f)
+				f.Close()
+				if err != nil {
+					res.Err = fmt.Errorf("failed to read %s: %w", path, err)
+					return
+				}
+				outputs = append(outputs, NewBytesValue(content))
 			}
-			res = NodeActionResult{
-				Outputs: []FlowValue{NewBytesValue(content)},
+
+			if hasWire && wireVal.Type.Kind == FSKindList {
+				res = NodeActionResult{
+					Outputs: []FlowValue{NewListValue(FlowType{Kind: FSKindBytes}, outputs)},
+				}
+			} else {
+				// Single output if single input
+				if len(outputs) == 1 {
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				} else {
+					// Should not happen given logic above
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				}
 			}
+
 		case "csv":
-			r := csv.NewReader(f)
-			r.FieldsPerRecord = -1 // Allow variable number of fields
+			var allHeader []string
+			var allDataRows [][]string
 
-			// Read all records
-			records, err := r.ReadAll()
-			if err != nil {
-				res.Err = err
-				return
+			for i, path := range paths {
+				// Check context
+				if ctx.Err() != nil {
+					res.Err = ctx.Err()
+					return
+				}
+
+				f, err := os.Open(path)
+				if err != nil {
+					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
+					return
+				}
+				
+				r := csv.NewReader(f)
+				r.FieldsPerRecord = -1 // Allow variable number of fields
+				records, err := r.ReadAll()
+				f.Close()
+				if err != nil {
+					res.Err = fmt.Errorf("failed to read CSV %s: %w", path, err)
+					return
+				}
+
+				if len(records) == 0 {
+					continue
+				}
+
+				header := records[0]
+				dataRows := records[1:]
+
+				if i == 0 {
+					allHeader = header
+					allDataRows = dataRows
+				} else {
+					// Verify header matches
+					// For now, strict match.
+					if len(header) != len(allHeader) {
+						res.Err = fmt.Errorf("CSV header mismatch in %s: expected %d columns, got %d", path, len(allHeader), len(header))
+						return
+					}
+					// TODO: Check column names too?
+					allDataRows = append(allDataRows, dataRows...)
+				}
 			}
 
-			if len(records) == 0 {
-				// Special case: if we don't even get a row, synthesize an empty table with no columns.
+			if len(allHeader) == 0 {
+				// Empty table
 				res = NodeActionResult{
 					Outputs: []FlowValue{{
 						Type: &FlowType{
@@ -200,11 +293,8 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 				return
 			}
 
-			header := records[0]
-			dataRows := records[1:]
-			numCols := len(header)
-
-			// Determine column types
+			// Process all collected rows
+			numCols := len(allHeader)
 			colTypes := make([]FlowTypeKind, numCols)
 			for i := range colTypes {
 				colTypes[i] = FSKindBytes // Default to string
@@ -215,13 +305,13 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					isInt := true
 					isFloat := true
 
-					for _, row := range dataRows {
+					for _, row := range allDataRows {
 						if col >= len(row) {
 							continue
 						}
 						val := row[col]
 						if val == "" {
-							continue // Empty strings can be anything? Or treated as null/zero? Let's say ignore for type inference.
+							continue
 						}
 
 						if isInt {
@@ -250,7 +340,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 
 			// Build schema
 			tableRecordType := FlowType{Kind: FSKindRecord}
-			for i, headerField := range header {
+			for i, headerField := range allHeader {
 				tableRecordType.Fields = append(tableRecordType.Fields, FlowField{
 					Name: headerField,
 					Type: &FlowType{Kind: colTypes[i]},
@@ -259,18 +349,18 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 
 			// Build rows
 			var tableRows [][]FlowValueField
-			for _, row := range dataRows {
+			for _, row := range allDataRows {
 				var flowRow []FlowValueField
 				for col, value := range row {
 					if col >= numCols {
-						continue // Ignore extra columns not in header
+						continue
 					}
 
 					var flowValue FlowValue
 					switch colTypes[col] {
 					case FSKindInt64:
 						if value == "" {
-							flowValue = NewInt64Value(0, 0) // Handle empty as 0?
+							flowValue = NewInt64Value(0, 0)
 						} else {
 							val, _ := strconv.ParseInt(value, 10, 64)
 							flowValue = NewInt64Value(val, 0)
@@ -287,12 +377,12 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					}
 
 					flowRow = append(flowRow, FlowValueField{
-						Name:  header[col],
+						Name:  allHeader[col],
 						Value: flowValue,
 					})
 				}
 
-				// Handle missing columns (fill with default)
+				// Fill missing
 				if len(row) < numCols {
 					for col := len(row); col < numCols; col++ {
 						var flowValue FlowValue
@@ -305,7 +395,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 							flowValue = NewStringValue("")
 						}
 						flowRow = append(flowRow, FlowValueField{
-							Name:  header[col],
+							Name:  allHeader[col],
 							Value: flowValue,
 						})
 					}
@@ -323,6 +413,50 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					TableValue: tableRows,
 				}},
 			}
+		case "json":
+			var outputs []FlowValue
+			for _, path := range paths {
+				if ctx.Err() != nil {
+					res.Err = ctx.Err()
+					return
+				}
+
+				f, err := os.Open(path)
+				if err != nil {
+					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
+					return
+				}
+				
+				var v any
+				decoder := json.NewDecoder(f)
+				if err := decoder.Decode(&v); err != nil {
+					f.Close()
+					res.Err = fmt.Errorf("failed to decode JSON %s: %w", path, err)
+					return
+				}
+				f.Close()
+
+				fv, err := NativeToFlowValue(v)
+				if err != nil {
+					res.Err = fmt.Errorf("failed to convert JSON to FlowValue in %s: %w", path, err)
+					return
+				}
+				outputs = append(outputs, fv)
+			}
+
+			if hasWire && wireVal.Type.Kind == FSKindList {
+				res = NodeActionResult{
+					Outputs: []FlowValue{NewListValue(FlowType{Kind: FSKindAny}, outputs)},
+				}
+			} else {
+				if len(outputs) == 1 {
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				} else {
+					// Should not happen
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				}
+			}
+
 		default:
 			res.Err = fmt.Errorf("unknown format \"%v\"", format)
 		}

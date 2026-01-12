@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -333,5 +334,68 @@ func NewListValue(contained FlowType, items []FlowValue) FlowValue {
 	return FlowValue{
 		Type:      &t,
 		ListValue: items,
+	}
+}
+
+func NativeToFlowValue(v any) (FlowValue, error) {
+	switch val := v.(type) {
+	case nil:
+		return NewStringValue(""), nil
+	case string:
+		return NewStringValue(val), nil
+	case float64:
+		if float64(int64(val)) == val {
+			return NewInt64Value(int64(val), 0), nil
+		}
+		return NewFloat64Value(val, 0), nil
+	case bool:
+		if val {
+			return NewInt64Value(1, 0), nil
+		}
+		return NewInt64Value(0, 0), nil
+	case []any:
+		var list []FlowValue
+		var elemType *FlowType
+		for _, item := range val {
+			fv, err := NativeToFlowValue(item)
+			if err != nil {
+				return FlowValue{}, err
+			}
+			if elemType == nil {
+				elemType = fv.Type
+			} else {
+				if fv.Type.Kind != elemType.Kind {
+					elemType = &FlowType{Kind: FSKindAny}
+				}
+			}
+			list = append(list, fv)
+		}
+		if elemType == nil {
+			elemType = &FlowType{Kind: FSKindAny}
+		}
+		return NewListValue(*elemType, list), nil
+	case map[string]any:
+		var fields []FlowValueField
+		var fieldTypes []FlowField
+		for k, v := range val {
+			fv, err := NativeToFlowValue(v)
+			if err != nil {
+				return FlowValue{}, err
+			}
+			fields = append(fields, FlowValueField{Name: k, Value: fv})
+			fieldTypes = append(fieldTypes, FlowField{Name: k, Type: fv.Type})
+		}
+		slices.SortFunc(fields, func(a, b FlowValueField) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+		slices.SortFunc(fieldTypes, func(a, b FlowField) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+		return FlowValue{
+			Type:        &FlowType{Kind: FSKindRecord, Fields: fieldTypes},
+			RecordValue: fields,
+		}, nil
+	default:
+		return FlowValue{}, fmt.Errorf("unsupported type %T", v)
 	}
 }
