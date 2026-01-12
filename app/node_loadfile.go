@@ -144,7 +144,19 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 		default:
 		}
 
-		f, err := os.Open(c.path) // TODO: Get path from port
+		var path string
+		wirePath, hasWire, err := n.GetInputValue(0)
+		if err != nil {
+			res.Err = err
+			return
+		}
+		if hasWire && wirePath.Type.Kind == FSKindBytes {
+			path = string(wirePath.BytesValue)
+		} else {
+			path = c.path
+		}
+
+		f, err := os.Open(path)
 		if err != nil {
 			res.Err = err
 			return
