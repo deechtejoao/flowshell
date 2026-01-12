@@ -90,7 +90,15 @@ func (c *FilterEmptyAction) UI(n *Node) {
 					c.dropdown.Selected = 0
 				}
 			} else {
-				c.dropdown.SelectByValue(c.Column)
+				if !c.dropdown.SelectByValue(c.Column) {
+					// Selection no longer valid, reset to first option
+					if len(options) > 0 {
+						c.Column = options[0].Value.(string)
+						c.dropdown.Selected = 0
+					} else {
+						c.Column = ""
+					}
+				}
 			}
 
 			c.dropdown.Do(clay.IDI("FilterColumn", n.ID), UIDropdownConfig{
@@ -150,6 +158,13 @@ func (c *FilterEmptyAction) RunContext(ctx context.Context, n *Node) <-chan Node
 
 		var newRows [][]FlowValueField
 		for _, row := range input.TableValue {
+			select {
+			case <-ctx.Done():
+				res.Err = ctx.Err()
+				return
+			default:
+			}
+
 			val := row[colIdx].Value
 			keep := true
 

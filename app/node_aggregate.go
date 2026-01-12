@@ -147,6 +147,13 @@ func (a *AggregateAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 		case FSKindTable:
 			aggedRow := make([]FlowValueField, len(input.Type.ContainedType.Fields))
 			for col, field := range input.Type.ContainedType.Fields {
+				select {
+				case <-ctx.Done():
+					res.Err = ctx.Err()
+					return
+				default:
+				}
+
 				agged, err := op(input.ColumnValues(col), *field.Type)
 				if err != nil {
 					res.Err = fmt.Errorf("for column %s: %v", field.Name, err)
