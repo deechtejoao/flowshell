@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"slices"
@@ -176,7 +177,7 @@ func beforeLayout() {
 		// Selected node keyboard shortcuts
 		if selectedNodeID == n.ID {
 			if rl.IsKeyPressed(rl.KeyR) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
-				n.Run(rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift))
+				n.Run(context.Background(), rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift))
 			}
 		}
 
@@ -658,7 +659,7 @@ func UINode(node *Node) {
 					El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
 					Disabled: playButtonDisabled,
 					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						node.Run(true)
+						node.Run(context.Background(), true)
 					},
 				},
 				func() {
@@ -676,7 +677,7 @@ func UINode(node *Node) {
 					El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
 					Disabled: playButtonDisabled,
 					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						node.Run(false)
+						node.Run(context.Background(), false)
 					},
 				},
 				func() {

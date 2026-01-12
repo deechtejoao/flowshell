@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -136,10 +137,22 @@ func (c *SelectColumnsAction) UI(n *Node) {
 	})
 }
 
-func (c *SelectColumnsAction) Run(n *Node) <-chan NodeActionResult {
+func (c *SelectColumnsAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
 		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				done <- NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+			done <- NodeActionResult{Err: ctx.Err()}
+			return
+		default:
+		}
 		
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
@@ -186,6 +199,10 @@ func (c *SelectColumnsAction) Run(n *Node) <-chan NodeActionResult {
 		}
 	}()
 	return done
+}
+
+func (c *SelectColumnsAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func (c *SelectColumnsAction) Serialize(s *Serializer) bool {

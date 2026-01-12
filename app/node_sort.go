@@ -2,7 +2,9 @@ package app
 
 import (
 	"cmp"
+	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/bvisness/flowshell/clay"
@@ -83,12 +85,25 @@ func (c *SortAction) UI(n *Node) {
 	})
 }
 
-func (c *SortAction) Run(n *Node) <-chan NodeActionResult {
+func (c *SortAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok {
@@ -130,4 +145,8 @@ func (c *SortAction) Run(n *Node) <-chan NodeActionResult {
 	}()
 
 	return done
+}
+
+func (c *SortAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/bvisness/flowshell/clay"
@@ -56,14 +58,28 @@ func (a *MinifyHTMLAction) UI(n *Node) {
 	})
 }
 
-func (a *MinifyHTMLAction) Run(n *Node) <-chan NodeActionResult {
+func (a *MinifyHTMLAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
-		defer close(done)
+		var res NodeActionResult
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
-			done <- NodeActionResult{Err: err}
+			res.Err = err
 			return
 		}
 
@@ -72,7 +88,7 @@ func (a *MinifyHTMLAction) Run(n *Node) <-chan NodeActionResult {
 		re := regexp.MustCompile(`>\s+<`)
 		minified := re.ReplaceAllString(html, "><")
 
-		done <- NodeActionResult{
+		res = NodeActionResult{
 			Outputs: []FlowValue{{
 				Type:       &FlowType{Kind: FSKindBytes},
 				BytesValue: []byte(minified),
@@ -80,4 +96,8 @@ func (a *MinifyHTMLAction) Run(n *Node) <-chan NodeActionResult {
 		}
 	}()
 	return done
+}
+
+func (a *MinifyHTMLAction) Run(n *Node) <-chan NodeActionResult {
+	return a.RunContext(context.Background(), n)
 }

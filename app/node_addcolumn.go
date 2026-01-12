@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -102,38 +103,52 @@ func (c *AddColumnAction) UI(n *Node) {
 	})
 }
 
-func (c *AddColumnAction) Run(n *Node) <-chan NodeActionResult {
+func (c *AddColumnAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
-		defer close(done)
+		var res NodeActionResult
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		tableInput, ok1, err1 := n.GetInputValue(0)
 		valuesInput, ok2, err2 := n.GetInputValue(1)
 
 		if !ok1 || !ok2 {
-			done <- NodeActionResult{Err: errors.New("missing inputs")}
+			res.Err = errors.New("missing inputs")
 			return
 		}
 		if err1 != nil {
-			done <- NodeActionResult{Err: err1}
+			res.Err = err1
 			return
 		}
 		if err2 != nil {
-			done <- NodeActionResult{Err: err2}
+			res.Err = err2
 			return
 		}
 
 		if tableInput.Type.Kind != FSKindTable {
-			done <- NodeActionResult{Err: errors.New("input 1 must be a table")}
+			res.Err = errors.New("input 1 must be a table")
 			return
 		}
 		if valuesInput.Type.Kind != FSKindList {
-			done <- NodeActionResult{Err: errors.New("input 2 must be a list")}
+			res.Err = errors.New("input 2 must be a list")
 			return
 		}
 
 		if len(tableInput.TableValue) != len(valuesInput.ListValue) {
-			done <- NodeActionResult{Err: fmt.Errorf("row count mismatch: table has %d, values list has %d", len(tableInput.TableValue), len(valuesInput.ListValue))}
+			res.Err = fmt.Errorf("row count mismatch: table has %d, values list has %d", len(tableInput.TableValue), len(valuesInput.ListValue))
 			return
 		}
 
@@ -158,7 +173,7 @@ func (c *AddColumnAction) Run(n *Node) <-chan NodeActionResult {
 		copy(newFields, originalFields)
 		newFields[len(originalFields)] = newField
 
-		done <- NodeActionResult{
+		res = NodeActionResult{
 			Outputs: []FlowValue{{
 				Type: &FlowType{
 					Kind: FSKindTable,
@@ -172,6 +187,10 @@ func (c *AddColumnAction) Run(n *Node) <-chan NodeActionResult {
 		}
 	}()
 	return done
+}
+
+func (c *AddColumnAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func (c *AddColumnAction) Serialize(s *Serializer) bool {

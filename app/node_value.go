@@ -1,6 +1,9 @@
 package app
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/bvisness/flowshell/clay"
 )
 
@@ -52,12 +55,30 @@ func (c *ValueAction) UI(n *Node) {
 	})
 }
 
-func (c *ValueAction) Run(n *Node) <-chan NodeActionResult {
+func (c *ValueAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				done <- NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+			done <- NodeActionResult{Err: ctx.Err()}
+			return
+		default:
+		}
+
 		done <- NodeActionResult{
 			Outputs: []FlowValue{c.Value},
 		}
 	}()
 	return done
+}
+
+func (c *ValueAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }

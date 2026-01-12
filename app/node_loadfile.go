@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/bvisness/flowshell/clay"
-	"github.com/bvisness/flowshell/util"
 )
 
 // GEN:NodeAction
@@ -125,12 +125,24 @@ func (c *LoadFileAction) UI(n *Node) {
 	})
 }
 
-func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
+func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
-
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		f, err := os.Open(c.path) // TODO: Get path from port
 		if err != nil {
@@ -267,7 +279,7 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 						Value: flowValue,
 					})
 				}
-				
+
 				// Handle missing columns (fill with default)
 				if len(row) < numCols {
 					for col := len(row); col < numCols; col++ {
@@ -286,7 +298,7 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 						})
 					}
 				}
-				
+
 				tableRows = append(tableRows, flowRow)
 			}
 
@@ -303,24 +315,31 @@ func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
 			res.Err = fmt.Errorf("unknown format \"%v\"", format)
 		}
 	}()
-
 	return done
 }
 
-func (n *LoadFileAction) Serialize(s *Serializer) bool {
-	SStr(s, &n.path)
-	SBool(s, &n.inferTypes)
+func (c *LoadFileAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
+}
+
+func (c *LoadFileAction) Serialize(s *Serializer) bool {
+	SStr(s, &c.path)
+	SBool(s, &c.inferTypes)
 
 	if s.Encode {
-		s.WriteStr(n.format.GetSelectedOption().Name)
+		val := ""
+		opt := c.format.GetSelectedOption()
+		if v, ok := opt.Value.(string); ok {
+			val = v
+		}
+		s.WriteStr(val)
 	} else {
-		selected, ok := s.ReadStr()
+		val, ok := s.ReadStr()
 		if !ok {
 			return false
 		}
-		n.format = UIDropdown{Options: loadFileFormatOptions}
-		n.format.SelectByName(selected)
-		util.Assert(n.format.GetSelectedOption().Name == selected, fmt.Sprintf("format %s should have been selected, but %s was instead", selected, n.format.GetSelectedOption().Name))
+		c.format = UIDropdown{Options: loadFileFormatOptions}
+		c.format.SelectByValue(val)
 	}
 
 	return s.Ok()

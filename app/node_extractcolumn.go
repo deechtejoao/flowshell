@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -119,19 +120,33 @@ func (c *ExtractColumnAction) UI(n *Node) {
 	})
 }
 
-func (c *ExtractColumnAction) Run(n *Node) <-chan NodeActionResult {
+func (c *ExtractColumnAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
-		defer close(done)
+		var res NodeActionResult
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
-			done <- NodeActionResult{Err: err}
+			res.Err = err
 			return
 		}
 
 		if input.Type.Kind != FSKindTable {
-			done <- NodeActionResult{Err: errors.New("input must be a table")}
+			res.Err = errors.New("input must be a table")
 			return
 		}
 
@@ -146,7 +161,7 @@ func (c *ExtractColumnAction) Run(n *Node) <-chan NodeActionResult {
 		}
 
 		if colIdx == -1 {
-			done <- NodeActionResult{Err: fmt.Errorf("column %q not found", c.Column)}
+			res.Err = fmt.Errorf("column %q not found", c.Column)
 			return
 		}
 
@@ -155,7 +170,7 @@ func (c *ExtractColumnAction) Run(n *Node) <-chan NodeActionResult {
 			list = append(list, row[colIdx].Value)
 		}
 
-		done <- NodeActionResult{
+		res = NodeActionResult{
 			Outputs: []FlowValue{{
 				Type:      &FlowType{Kind: FSKindList, ContainedType: colType},
 				ListValue: list,
@@ -163,6 +178,10 @@ func (c *ExtractColumnAction) Run(n *Node) <-chan NodeActionResult {
 		}
 	}()
 	return done
+}
+
+func (c *ExtractColumnAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func (c *ExtractColumnAction) Serialize(s *Serializer) bool {

@@ -2,7 +2,9 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"fmt"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -73,12 +75,25 @@ func (l *TrimSpacesAction) UI(n *Node) {
 	})
 }
 
-func (l *TrimSpacesAction) Run(n *Node) <-chan NodeActionResult {
+func (l *TrimSpacesAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok {
@@ -107,6 +122,10 @@ func (l *TrimSpacesAction) Run(n *Node) <-chan NodeActionResult {
 	}()
 
 	return done
+}
+
+func (l *TrimSpacesAction) Run(n *Node) <-chan NodeActionResult {
+	return l.RunContext(context.Background(), n)
 }
 
 func (n *TrimSpacesAction) Serialize(s *Serializer) bool {

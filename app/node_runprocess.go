@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
@@ -89,10 +90,11 @@ func (c *RunProcessAction) UI(n *Node) {
 	})
 }
 
-func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
+func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
+	done := make(chan NodeActionResult)
+
 	pieces := parseCommand(c.CmdString)
 	if len(pieces) == 0 {
-		done := make(chan NodeActionResult)
 		go func() {
 			done <- NodeActionResult{Err: nil} // Or error?
 			close(done)
@@ -100,10 +102,8 @@ func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
 		return done
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, pieces[0], pieces[1:]...)
-
-	done := make(chan NodeActionResult)
+	cmdCtx, cancel := context.WithCancel(ctx)
+	cmd := exec.CommandContext(cmdCtx, pieces[0], pieces[1:]...)
 
 	c.state = RunProcessActionRuntimeState{
 		cmd:    cmd,
@@ -123,7 +123,20 @@ func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		c.state.err = c.state.cmd.Run()
 		if c.state.err != nil {
@@ -152,8 +165,12 @@ func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
 	return done
 }
 
-func (n *RunProcessAction) Serialize(s *Serializer) bool {
-	SStr(s, &n.CmdString)
+func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
+}
+
+func (c *RunProcessAction) Serialize(s *Serializer) bool {
+	SStr(s, &c.CmdString)
 	return s.Ok()
 }
 

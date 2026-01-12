@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bvisness/flowshell/clay"
@@ -128,7 +129,7 @@ func (w *Wire) Type() FlowType {
 	return w.StartNode.OutputPorts[w.StartPort].Type
 }
 
-func (n *Node) Run(rerunInputs bool) <-chan struct{} {
+func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 	if n.Running {
 		fmt.Printf("Node %s is already running; joining existing run\n", n)
 		if n.done == nil {
@@ -164,17 +165,30 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 			}
 		}()
 
+		// Check context before starting
+		if ctx.Err() != nil {
+			n.Result = NodeActionResult{Err: ctx.Err()}
+			n.ResultAvailable = true
+			return
+		}
+
 		// Wait on input ports
 		var inputRuns []<-chan struct{}
 		for _, inputNode := range NodeInputs(n) {
 			rerunThisNode := rerunInputs && !inputNode.Pinned
 			if rerunThisNode || !inputNode.ResultAvailable {
 				fmt.Printf("Node %s wants node %s to run\n", n, inputNode)
-				inputRuns = append(inputRuns, inputNode.Run(rerunInputs))
+				inputRuns = append(inputRuns, inputNode.Run(ctx, rerunInputs))
 			}
 		}
 		for _, inputRun := range inputRuns {
-			<-inputRun
+			select {
+			case <-inputRun:
+			case <-ctx.Done():
+				n.Result = NodeActionResult{Err: ctx.Err()}
+				n.ResultAvailable = true
+				return
+			}
 		}
 
 		// If any inputs have errors, stop.
@@ -187,21 +201,33 @@ func (n *Node) Run(rerunInputs bool) <-chan struct{} {
 		fmt.Printf("Node %s: all inputs are done\n", n)
 
 		// Run action
-		res := <-n.Action.Run(n)
-		if res.Err == nil && len(res.Outputs) != len(n.OutputPorts) {
-			n.Result = NodeActionResult{Err: fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs))}
-			n.ResultAvailable = true
-			return
+		var resCh <-chan NodeActionResult
+		if actionCtx, ok := n.Action.(NodeActionWithContext); ok {
+			resCh = actionCtx.RunContext(ctx, n)
+		} else {
+			resCh = n.Action.Run(n)
 		}
-		for i, output := range res.Outputs {
-			if err := Typecheck(*output.Type, n.OutputPorts[i].Type); err != nil {
-				n.Result = NodeActionResult{Err: fmt.Errorf("bad value type for %s output port %d: %v", n, i, err)}
+
+		select {
+		case res := <-resCh:
+			if res.Err == nil && len(res.Outputs) != len(n.OutputPorts) {
+				n.Result = NodeActionResult{Err: fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs))}
 				n.ResultAvailable = true
 				return
 			}
+			for i, output := range res.Outputs {
+				if err := Typecheck(*output.Type, n.OutputPorts[i].Type); err != nil {
+					n.Result = NodeActionResult{Err: fmt.Errorf("bad value type for %s output port %d: %v", n, i, err)}
+					n.ResultAvailable = true
+					return
+				}
+			}
+			n.Result = res
+			n.ResultAvailable = true
+		case <-ctx.Done():
+			n.Result = NodeActionResult{Err: ctx.Err()}
+			n.ResultAvailable = true
 		}
-		n.Result = res
-		n.ResultAvailable = true
 	}()
 
 	return n.done
@@ -297,6 +323,10 @@ type NodeAction interface {
 	// TODO: Cancellation!
 	Tag() string // This is implemented automatically by go:generate.
 	Serializable
+}
+
+type NodeActionWithContext interface {
+	RunContext(ctx context.Context, n *Node) <-chan NodeActionResult
 }
 
 type NodeActionResult struct {

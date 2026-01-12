@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"runtime"
@@ -89,12 +90,25 @@ func (l *LinesAction) UI(n *Node) {
 var LFSplit = regexp.MustCompile(`\n`)
 var CRLFSplit = regexp.MustCompile(`\r?\n`)
 
-func (l *LinesAction) Run(n *Node) <-chan NodeActionResult {
+func (l *LinesAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		text, ok, err := n.GetInputValue(0)
 		if !ok {
@@ -114,8 +128,11 @@ func (l *LinesAction) Run(n *Node) <-chan NodeActionResult {
 			}},
 		}
 	}()
-
 	return done
+}
+
+func (l *LinesAction) Run(n *Node) <-chan NodeActionResult {
+	return l.RunContext(context.Background(), n)
 }
 
 func (n *LinesAction) Serialize(s *Serializer) bool {

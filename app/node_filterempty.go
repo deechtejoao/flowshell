@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -102,19 +103,33 @@ func (c *FilterEmptyAction) UI(n *Node) {
 	})
 }
 
-func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
+func (c *FilterEmptyAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
-		defer close(done)
+		var res NodeActionResult
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
-			done <- NodeActionResult{Err: err}
+			res.Err = err
 			return
 		}
 
 		if input.Type.Kind != FSKindTable {
-			done <- NodeActionResult{Err: errors.New("input must be a table")}
+			res.Err = errors.New("input must be a table")
 			return
 		}
 
@@ -129,7 +144,7 @@ func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
 		if colIdx == -1 {
 			// If column not found, we can't filter.
 			// Return error.
-			done <- NodeActionResult{Err: fmt.Errorf("column %q not found", c.Column)}
+			res.Err = fmt.Errorf("column %q not found", c.Column)
 			return
 		}
 
@@ -170,7 +185,7 @@ func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
 			}
 		}
 
-		done <- NodeActionResult{
+		res = NodeActionResult{
 			Outputs: []FlowValue{{
 				Type:       input.Type,
 				TableValue: newRows,
@@ -178,6 +193,10 @@ func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
 		}
 	}()
 	return done
+}
+
+func (c *FilterEmptyAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func (c *FilterEmptyAction) Serialize(s *Serializer) bool {

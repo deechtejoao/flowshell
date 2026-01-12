@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -51,10 +52,10 @@ func (c *SaveFileAction) UpdateAndValidate(n *Node) {
 func (c *SaveFileAction) UI(n *Node) {
 	clay.CLAY_AUTO_ID(clay.EL{
 		Layout: clay.LAY{
-			Sizing:         GROWH,
-			ChildAlignment: YCENTER,
+			Sizing:          GROWH,
+			ChildAlignment:  YCENTER,
 			LayoutDirection: clay.TopToBottom,
-			ChildGap:       S2,
+			ChildGap:        S2,
 		},
 	}, func() {
 		// Input Port
@@ -76,7 +77,7 @@ func (c *SaveFileAction) UI(n *Node) {
 		// Format Selection
 		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
 			clay.TEXT("Format:", clay.TextElementConfig{TextColor: LightGray})
-			// Simple dropdown or toggle for now. 
+			// Simple dropdown or toggle for now.
 			// Let's use a simple cycle button for MVP.
 			UIButton(clay.AUTO_ID, UIButtonConfig{
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
@@ -96,12 +97,24 @@ func (c *SaveFileAction) UI(n *Node) {
 	})
 }
 
-func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
+func (c *SaveFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
-
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok {
@@ -151,7 +164,7 @@ func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
 			// For now, let's just use a simple recursive converter or just dump FlowValue structure (which might be too verbose).
 			// Ideally we want the "value" not the FlowValue struct.
 			// Let's make a helper toToNative(FlowValue) interface{}
-			
+
 			// Quick implementation of ToNative
 			native := flowValueToNative(input)
 			enc := json.NewEncoder(f)
@@ -167,7 +180,7 @@ func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
 				res.Err = errors.New("CSV format requires Table input")
 				return
 			}
-			
+
 			w := csv.NewWriter(f)
 			defer w.Flush()
 
@@ -211,12 +224,16 @@ func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
 			res.Err = fmt.Errorf("unknown format: %s", c.Format)
 			return
 		}
-		
+
 		// Success
 		res.Outputs = []FlowValue{} // No outputs
 	}()
 
 	return done
+}
+
+func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func flowValueToNative(v FlowValue) any {

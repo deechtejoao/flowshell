@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -80,28 +81,46 @@ func (c *ConvertAction) UI(n *Node) {
 	})
 }
 
-func (c *ConvertAction) Run(n *Node) <-chan NodeActionResult {
+func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 	go func() {
-		defer close(done)
+		var res NodeActionResult
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
-			done <- NodeActionResult{Err: err}
+			res.Err = err
 			return
 		}
 
 		resVal, err := ConvertValue(input, c.TargetKind)
 		if err != nil {
-			done <- NodeActionResult{Err: err}
+			res.Err = err
 			return
 		}
 
-		done <- NodeActionResult{
+		res = NodeActionResult{
 			Outputs: []FlowValue{resVal},
 		}
 	}()
 	return done
+}
+
+func (c *ConvertAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {

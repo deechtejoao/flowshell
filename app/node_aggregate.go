@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -100,12 +101,25 @@ func (a *AggregateAction) UI(n *Node) {
 	})
 }
 
-func (a *AggregateAction) Run(n *Node) <-chan NodeActionResult {
+func (a *AggregateAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		util.Assert(n.Action != nil && n.Action.Tag() == "Aggregate", fmt.Sprintf("expected aggregate node, got %v", n))
 
@@ -153,8 +167,11 @@ func (a *AggregateAction) Run(n *Node) <-chan NodeActionResult {
 			res.Err = fmt.Errorf("can only aggregate lists or tables, not %s", input.Type)
 		}
 	}()
-
 	return done
+}
+
+func (a *AggregateAction) Run(n *Node) <-chan NodeActionResult {
+	return a.RunContext(context.Background(), n)
 }
 
 func (n *AggregateAction) Serialize(s *Serializer) bool {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -108,12 +109,24 @@ func (a *ConcatTablesAction) UI(n *Node) {
 	})
 }
 
-func (a *ConcatTablesAction) Run(n *Node) <-chan NodeActionResult {
+func (a *ConcatTablesAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
-
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+			close(done)
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		firstInput, ok, err := n.GetInputValue(0)
 		if !ok {
@@ -155,8 +168,11 @@ func (a *ConcatTablesAction) Run(n *Node) <-chan NodeActionResult {
 			}},
 		}
 	}()
-
 	return done
+}
+
+func (a *ConcatTablesAction) Run(n *Node) <-chan NodeActionResult {
+	return a.RunContext(context.Background(), n)
 }
 
 func (n *ConcatTablesAction) Serialize(s *Serializer) bool {

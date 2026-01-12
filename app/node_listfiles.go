@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/bvisness/flowshell/clay"
@@ -56,12 +58,25 @@ func (c *ListFilesAction) UI(n *Node) {
 	})
 }
 
-func (c *ListFilesAction) Run(n *Node) <-chan NodeActionResult {
+func (c *ListFilesAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
 	go func() {
 		var res NodeActionResult
-		defer func() { done <- res }()
+		defer close(done)
+		defer func() {
+			if r := recover(); r != nil {
+				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
+			}
+			done <- res
+		}()
+
+		select {
+		case <-ctx.Done():
+			res.Err = ctx.Err()
+			return
+		default:
+		}
 
 		wireDir, hasWire, err := n.GetInputValue(0)
 		if err != nil {
@@ -101,8 +116,11 @@ func (c *ListFilesAction) Run(n *Node) <-chan NodeActionResult {
 			}},
 		}
 	}()
-
 	return done
+}
+
+func (c *ListFilesAction) Run(n *Node) <-chan NodeActionResult {
+	return c.RunContext(context.Background(), n)
 }
 
 func (n *ListFilesAction) Serialize(s *Serializer) bool {
