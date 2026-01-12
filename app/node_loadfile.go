@@ -33,6 +33,30 @@ type LoadFileAction struct {
 	inferTypes bool
 }
 
+const maxLoadFileBytes int64 = 256 << 20
+
+func readAllWithLimit(path string, limit int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	r := io.Reader(f)
+	if limit > 0 {
+		r = io.LimitReader(f, limit+1)
+	}
+
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	if limit > 0 && int64(len(b)) > limit {
+		return nil, fmt.Errorf("file exceeds %d bytes", limit)
+	}
+	return b, nil
+}
+
 var loadFileFormatOptions = []UIDropdownOption{
 	{Name: "Raw bytes", Value: "raw"},
 	{Name: "CSV", Value: "csv"},
@@ -200,13 +224,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					return
 				}
 
-				f, err := os.Open(path)
-				if err != nil {
-					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
-					return
-				}
-				content, err := io.ReadAll(f)
-				f.Close()
+				content, err := readAllWithLimit(path, maxLoadFileBytes)
 				if err != nil {
 					res.Err = fmt.Errorf("failed to read %s: %w", path, err)
 					return
@@ -231,6 +249,9 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 		case "csv":
 			var allHeader []string
 			var allDataRows [][]string
+			var colIsInt []bool
+			var colIsFloat []bool
+			var colSeenNonEmpty []bool
 
 			for i, path := range paths {
 				// Check context
@@ -244,36 +265,84 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
 					return
 				}
-
 				r := csv.NewReader(f)
-				r.FieldsPerRecord = -1 // Allow variable number of fields
-				records, err := r.ReadAll()
-				f.Close()
+				r.FieldsPerRecord = -1
+
+				header, err := r.Read()
 				if err != nil {
-					res.Err = fmt.Errorf("failed to read CSV %s: %w", path, err)
+					f.Close()
+					if err == io.EOF {
+						continue
+					}
+					res.Err = fmt.Errorf("failed to read CSV header %s: %w", path, err)
 					return
 				}
-
-				if len(records) == 0 {
-					continue
-				}
-
-				header := records[0]
-				dataRows := records[1:]
+				header = append([]string(nil), header...)
 
 				if i == 0 {
 					allHeader = header
-					allDataRows = dataRows
+					colIsInt = make([]bool, len(allHeader))
+					colIsFloat = make([]bool, len(allHeader))
+					colSeenNonEmpty = make([]bool, len(allHeader))
+					for j := range allHeader {
+						colIsInt[j] = true
+						colIsFloat[j] = true
+					}
 				} else {
-					// Verify header matches
-					// For now, strict match.
 					if len(header) != len(allHeader) {
+						f.Close()
 						res.Err = fmt.Errorf("CSV header mismatch in %s: expected %d columns, got %d", path, len(allHeader), len(header))
 						return
 					}
-					// TODO: Check column names too?
-					allDataRows = append(allDataRows, dataRows...)
 				}
+
+				for {
+					select {
+					case <-ctx.Done():
+						f.Close()
+						res.Err = ctx.Err()
+						return
+					default:
+					}
+
+					record, err := r.Read()
+					if err != nil {
+						f.Close()
+						if err == io.EOF {
+							break
+						}
+						res.Err = fmt.Errorf("failed to read CSV %s: %w", path, err)
+						return
+					}
+
+					row := append([]string(nil), record...)
+					allDataRows = append(allDataRows, row)
+
+					if c.inferTypes {
+						for col := 0; col < len(allHeader); col++ {
+							if col >= len(row) {
+								continue
+							}
+							val := row[col]
+							if val == "" {
+								continue
+							}
+							colSeenNonEmpty[col] = true
+							if colIsInt[col] {
+								if _, err := strconv.ParseInt(val, 10, 64); err != nil {
+									colIsInt[col] = false
+								}
+							}
+							if colIsFloat[col] {
+								if _, err := strconv.ParseFloat(val, 64); err != nil {
+									colIsFloat[col] = false
+								}
+							}
+						}
+					}
+				}
+
+				f.Close()
 			}
 
 			if len(allHeader) == 0 {
@@ -296,42 +365,17 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			numCols := len(allHeader)
 			colTypes := make([]FlowTypeKind, numCols)
 			for i := range colTypes {
-				colTypes[i] = FSKindBytes // Default to string
+				colTypes[i] = FSKindBytes
 			}
 
 			if c.inferTypes {
 				for col := 0; col < numCols; col++ {
-					isInt := true
-					isFloat := true
-
-					for _, row := range allDataRows {
-						if col >= len(row) {
-							continue
-						}
-						val := row[col]
-						if val == "" {
-							continue
-						}
-
-						if isInt {
-							if _, err := strconv.ParseInt(val, 10, 64); err != nil {
-								isInt = false
-							}
-						}
-						if isFloat {
-							if _, err := strconv.ParseFloat(val, 64); err != nil {
-								isFloat = false
-							}
-						}
-
-						if !isInt && !isFloat {
-							break
-						}
+					if !colSeenNonEmpty[col] {
+						continue
 					}
-
-					if isInt {
+					if colIsInt[col] {
 						colTypes[col] = FSKindInt64
-					} else if isFloat {
+					} else if colIsFloat[col] {
 						colTypes[col] = FSKindFloat64
 					}
 				}
