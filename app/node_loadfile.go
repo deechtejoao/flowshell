@@ -184,7 +184,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			} else if wireVal.Type.Kind == FSKindBytes {
 				paths = []string{string(wireVal.BytesValue)}
 			} else {
-				res.Err = fmt.Errorf("unsupported input type %s", wireVal.Type.Kind)
+				res.Err = fmt.Errorf("unsupported input type %v", wireVal.Type.Kind)
 				return
 			}
 		} else {
@@ -245,7 +245,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
 					return
 				}
-				
+
 				r := csv.NewReader(f)
 				r.FieldsPerRecord = -1 // Allow variable number of fields
 				records, err := r.ReadAll()
@@ -426,7 +426,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
 					return
 				}
-				
+
 				var v any
 				decoder := json.NewDecoder(f)
 				if err := decoder.Decode(&v); err != nil {
