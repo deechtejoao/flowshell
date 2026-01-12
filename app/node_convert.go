@@ -10,8 +10,11 @@ import (
 
 // GEN:NodeAction
 type ConvertAction struct {
-	TargetKind FlowTypeKind
-	dropdown   UIDropdown
+	TargetKind     FlowTypeKind
+	targetDropdown UIDropdown
+
+	Column      string
+	colDropdown UIDropdown
 }
 
 var convertOptions = []UIDropdownOption{
@@ -23,11 +26,14 @@ var convertOptions = []UIDropdownOption{
 func NewConvertNode() *Node {
 	action := ConvertAction{
 		TargetKind: FSKindBytes, // Default
-		dropdown: UIDropdown{
+		targetDropdown: UIDropdown{
 			Options: convertOptions,
 		},
+		colDropdown: UIDropdown{
+			Options: []UIDropdownOption{},
+		},
 	}
-	action.dropdown.SelectByValue(FSKindBytes)
+	action.targetDropdown.SelectByValue(FSKindBytes)
 
 	return &Node{
 		ID:   NewNodeID(),
@@ -50,23 +56,73 @@ var _ NodeAction = &ConvertAction{}
 
 func (c *ConvertAction) Serialize(s *Serializer) bool {
 	SInt(s, (*int)(&c.TargetKind))
+	SStr(s, &c.Column)
 	return s.Ok()
 }
 
 func (c *ConvertAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
-	// Ensure dropdown matches state (if loaded from save)
-	if c.dropdown.Selected == -1 {
-		c.dropdown.SelectByValue(c.TargetKind)
+
+	// Ensure target dropdown matches state
+	if c.targetDropdown.Selected == -1 {
+		c.targetDropdown.SelectByValue(c.TargetKind)
 	} else {
-		c.TargetKind = c.dropdown.GetSelectedOption().Value.(FlowTypeKind)
+		c.TargetKind = c.targetDropdown.GetSelectedOption().Value.(FlowTypeKind)
 	}
 
-	n.OutputPorts[0].Type = FlowType{Kind: c.TargetKind}
+	// Update input/output types and column dropdown
+	if n.InputIsWired(0) {
+		inputType := n.InputPorts[0].Type
+		if inputType.Kind == FSKindTable && inputType.ContainedType != nil && inputType.ContainedType.Kind == FSKindRecord {
+			// Populate column dropdown
+			var options []UIDropdownOption
+			for _, field := range inputType.ContainedType.Fields {
+				options = append(options, UIDropdownOption{Name: field.Name, Value: field.Name})
+			}
+			c.colDropdown.Options = options
+
+			if c.Column == "" && len(options) > 0 {
+				c.Column = options[0].Value.(string)
+			}
+			if !c.colDropdown.SelectByValue(c.Column) {
+				if len(options) > 0 {
+					c.Column = options[0].Value.(string)
+					c.colDropdown.Selected = 0
+				} else {
+					c.Column = ""
+				}
+			} else {
+				c.Column = c.colDropdown.GetSelectedOption().Value.(string)
+			}
+
+			// Update output type to be Table with modified column
+			newFields := make([]FlowField, len(inputType.ContainedType.Fields))
+			copy(newFields, inputType.ContainedType.Fields)
+			for i, f := range newFields {
+				if f.Name == c.Column {
+					newFields[i].Type = &FlowType{Kind: c.TargetKind}
+					break
+				}
+			}
+			n.OutputPorts[0].Type = FlowType{
+				Kind: FSKindTable,
+				ContainedType: &FlowType{
+					Kind:   FSKindRecord,
+					Fields: newFields,
+				},
+			}
+		} else {
+			// Scalar conversion
+			n.OutputPorts[0].Type = FlowType{Kind: c.TargetKind}
+		}
+	} else {
+		// Not wired, assume scalar
+		n.OutputPorts[0].Type = FlowType{Kind: c.TargetKind}
+	}
 }
 
 func (c *ConvertAction) UI(n *Node) {
-	c.dropdown.Do(clay.IDI("ConvertTargetKind", n.ID), UIDropdownConfig{
+	c.targetDropdown.Do(clay.IDI("ConvertTargetKind", n.ID), UIDropdownConfig{
 		El: clay.EL{
 			Layout: clay.LAY{Sizing: GROWH},
 		},
@@ -75,6 +131,23 @@ func (c *ConvertAction) UI(n *Node) {
 			n.Action.UpdateAndValidate(n)
 		},
 	})
+
+	if n.InputIsWired(0) && n.InputPorts[0].Type.Kind == FSKindTable {
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{Padding: clay.Padding{Bottom: S2}},
+		}, func() {
+			clay.TEXT("Column:", clay.TextElementConfig{TextColor: White})
+		})
+		c.colDropdown.Do(clay.IDI("ConvertColumn", n.ID), UIDropdownConfig{
+			El: clay.EL{
+				Layout: clay.LAY{Sizing: GROWH},
+			},
+			OnChange: func(before, after any) {
+				c.Column = after.(string)
+				n.Action.UpdateAndValidate(n)
+			},
+		})
+	}
 }
 
 func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
@@ -102,14 +175,86 @@ func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActi
 			return
 		}
 
-		resVal, err := ConvertValue(input, c.TargetKind)
-		if err != nil {
-			res.Err = err
-			return
-		}
+		if input.Type.Kind == FSKindTable {
+			// Table conversion
+			if c.Column == "" {
+				res.Err = fmt.Errorf("no column selected for conversion")
+				return
+			}
 
-		res = NodeActionResult{
-			Outputs: []FlowValue{resVal},
+			// Find column index
+			colIndex := -1
+			fields := input.Type.ContainedType.Fields
+			for i, f := range fields {
+				if f.Name == c.Column {
+					colIndex = i
+					break
+				}
+			}
+			if colIndex == -1 {
+				res.Err = fmt.Errorf("column %s not found in input table", c.Column)
+				return
+			}
+
+			// Create new output type
+			newFields := make([]FlowField, len(fields))
+			copy(newFields, fields)
+			newFields[colIndex].Type = &FlowType{Kind: c.TargetKind}
+			outputType := &FlowType{
+				Kind: FSKindTable,
+				ContainedType: &FlowType{
+					Kind:   FSKindRecord,
+					Fields: newFields,
+				},
+			}
+
+			// Iterate rows and convert specific column
+			var newRows [][]FlowValueField
+			rows := input.TableValue
+			for _, row := range rows {
+				// Check context periodically
+				select {
+				case <-ctx.Done():
+					res.Err = ctx.Err()
+					return
+				default:
+				}
+
+				newRow := make([]FlowValueField, len(row))
+				copy(newRow, row)
+
+				// Convert the specific column
+				if colIndex < len(row) {
+					convertedVal, err := ConvertValue(row[colIndex].Value, c.TargetKind)
+					if err != nil {
+						// For now, fail on error. Could add option to ignore/nullify.
+						res.Err = fmt.Errorf("conversion failed for value %v: %w", row[colIndex].Value, err)
+						return
+					}
+					newRow[colIndex].Value = convertedVal
+				}
+
+				newRows = append(newRows, newRow)
+			}
+
+			res = NodeActionResult{
+				Outputs: []FlowValue{{
+					Type:       outputType,
+					TableValue: newRows,
+				}},
+			}
+
+		} else {
+			// Scalar conversion
+			resVal, err := ConvertValue(input, c.TargetKind)
+			if err != nil {
+				res.Err = err
+				return
+			}
+
+			res = NodeActionResult{
+				Outputs: []FlowValue{resVal},
+			}
 		}
 	}()
 	return done
