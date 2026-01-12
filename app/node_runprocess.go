@@ -13,9 +13,6 @@ import (
 // GEN:NodeAction
 type RunProcessAction struct {
 	CmdString string
-
-	state             RunProcessActionRuntimeState
-	outputStreamMutex sync.Mutex
 }
 
 func NewRunProcessNode(cmd string) *Node {
@@ -37,6 +34,10 @@ func NewRunProcessNode(cmd string) *Node {
 				Name: "Combined Stdout/Stderr",
 				Type: FlowType{Kind: FSKindBytes},
 			},
+			{
+				Name: "Exit Code",
+				Type: FlowType{Kind: FSKindInt64},
+			},
 		},
 
 		Action: &RunProcessAction{
@@ -46,19 +47,6 @@ func NewRunProcessNode(cmd string) *Node {
 }
 
 var _ NodeAction = &RunProcessAction{}
-
-// The state that gets reset every time you run a command
-type RunProcessActionRuntimeState struct {
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
-
-	stdout   []byte
-	stderr   []byte
-	combined []byte
-
-	err      error
-	exitCode int
-}
 
 func (c *RunProcessAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
@@ -86,6 +74,7 @@ func (c *RunProcessAction) UI(n *Node) {
 			UIOutputPort(n, 0)
 			UIOutputPort(n, 1)
 			UIOutputPort(n, 2)
+			UIOutputPort(n, 3)
 		})
 	})
 }
@@ -105,25 +94,26 @@ func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 	cmdCtx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(cmdCtx, pieces[0], pieces[1:]...)
 
-	c.state = RunProcessActionRuntimeState{
-		cmd:    cmd,
-		cancel: cancel,
-	}
+	var stdout, stderr, combined []byte
+	var exitCode int64
+	var runErr error
+	var mu sync.Mutex
 
 	cmd.Stdout = &multiSliceWriter{
-		mu: &c.outputStreamMutex,
-		a:  &c.state.stdout,
-		b:  &c.state.combined,
+		mu: &mu,
+		a:  &stdout,
+		b:  &combined,
 	}
 	cmd.Stderr = &multiSliceWriter{
-		mu: &c.outputStreamMutex,
-		a:  &c.state.stderr,
-		b:  &c.state.combined,
+		mu: &mu,
+		a:  &stderr,
+		b:  &combined,
 	}
 
 	go func() {
 		var res NodeActionResult
 		defer close(done)
+		defer cancel()
 		defer func() {
 			if r := recover(); r != nil {
 				res = NodeActionResult{Err: fmt.Errorf("panic in node %s: %v", n.Name, r)}
@@ -138,36 +128,40 @@ func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 		default:
 		}
 
-		c.state.err = c.state.cmd.Run()
-		if c.state.err != nil {
-			if exitErr, ok := c.state.err.(*exec.ExitError); ok {
-				c.state.exitCode = exitErr.ExitCode()
+		runErr = cmd.Run()
+		if runErr != nil {
+			if exitErr, ok := runErr.(*exec.ExitError); ok {
+				exitCode = int64(exitErr.ExitCode())
+				runErr = nil // We captured the exit code, so the node execution is "successful"
 			} else {
-				c.state.exitCode = -1 // Unknown error or signal
+				exitCode = -1 // Unknown error or signal
 			}
 		} else {
-			c.state.exitCode = 0
+			exitCode = 0
 		}
 
 		res = NodeActionResult{
-			Err: c.state.err,
+			Err: runErr,
 			Outputs: []FlowValue{
 				{
 					Type:       &FlowType{Kind: FSKindBytes},
-					BytesValue: c.state.stdout,
+					BytesValue: stdout,
 				},
 				{
 					Type:       &FlowType{Kind: FSKindBytes},
-					BytesValue: c.state.stderr,
+					BytesValue: stderr,
 				},
 				{
 					Type:       &FlowType{Kind: FSKindBytes},
-					BytesValue: c.state.combined,
+					BytesValue: combined,
+				},
+				{
+					Type:       &FlowType{Kind: FSKindInt64},
+					Int64Value: exitCode,
 				},
 			},
 		}
 	}()
-
 	return done
 }
 
