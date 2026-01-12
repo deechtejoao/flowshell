@@ -209,6 +209,13 @@ func beforeLayout() {
 		}
 	}
 
+	if rl.IsKeyPressed(rl.KeyC) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+		Copy()
+	}
+	if rl.IsKeyPressed(rl.KeyV) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+		Paste()
+	}
+
 	if rl.IsKeyPressed(rl.KeyG) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
 		CreateGroup()
 	}

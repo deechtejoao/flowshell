@@ -41,7 +41,7 @@
 ## UI/UX Enhancements
 - [x] Box Selection: Drag on canvas to select multiple nodes.
 - [x] Grouping/Containers: Visual containers to organize related nodes.
-- [ ] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
+- [x] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
 - [ ] Zoom: Canvas zooming support.
 - [ ] Minimap: Navigation aid for large flows.
 - [ ] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
