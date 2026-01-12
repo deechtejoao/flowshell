@@ -320,7 +320,6 @@ type NodeAction interface {
 	UpdateAndValidate(n *Node)
 	UI(n *Node)
 	Run(n *Node) <-chan NodeActionResult
-	// TODO: Cancellation!
 	Tag() string // This is implemented automatically by go:generate.
 	Serializable
 }
