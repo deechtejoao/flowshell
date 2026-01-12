@@ -27,7 +27,7 @@ func SnapToGrid(v V2) V2 {
 
 const NodeMinWidth = 360
 
-var nodes []*Node
+var currentGraph = NewGraph()
 
 type NodeType struct {
 	Name   string
@@ -82,32 +82,14 @@ nextrank:
 	return res
 }
 
-var wires []*Wire
-
 var selectedNodeID = 0
 
 func GetSelectedNode() (*Node, bool) {
-	for _, node := range nodes {
-		if node.ID == selectedNodeID {
-			return node, true
-		}
-	}
-	return nil, false
-}
-
-func NodeInputs(n *Node) []*Node {
-	var res []*Node
-	for _, wire := range wires {
-		if wire.EndNode == n && !slices.Contains(res, wire.StartNode) {
-			res = append(res, wire.StartNode)
-		}
-	}
-	return res
+	return currentGraph.GetNode(selectedNodeID)
 }
 
 func DeleteNode(id int) {
-	nodes = slices.DeleteFunc(nodes, func(node *Node) bool { return node.ID == id })
-	wires = slices.DeleteFunc(wires, func(wire *Wire) bool { return wire.StartNode.ID == id || wire.EndNode.ID == id })
+	currentGraph.DeleteNode(id)
 }
 
 var UICursor rl.MouseCursor
@@ -153,7 +135,7 @@ func beforeLayout() {
 			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 				n.Pos = SnapToGrid(n.Pos)
 			}
-			nodes = append(nodes, n)
+			currentGraph.AddNode(n)
 			selectedNodeID = n.ID
 		}
 	}
@@ -331,10 +313,10 @@ var OutputWindowWidth float32 = windowWidth * 0.30
 
 func ui() {
 	// Sweep the graph, validating all nodes
-	sortedNodes, topoErr := Toposort(nodes, wires)
+	sortedNodes, topoErr := Toposort(currentGraph.Nodes, currentGraph.Wires)
 	if topoErr != nil {
 		// If there is a cycle, we can't toposort. Just use the default order.
-		sortedNodes = nodes
+		sortedNodes = currentGraph.Nodes
 	}
 	for _, node := range sortedNodes {
 		node.Action.UpdateAndValidate(node)
@@ -404,7 +386,7 @@ func ui() {
 			Layout: clay.LAY{Sizing: GROWALL},
 			Clip:   clay.CLIP{Horizontal: true, Vertical: true},
 		}, func() {
-			for _, node := range nodes {
+			for _, node := range currentGraph.Nodes {
 				UINode(node, topoErr != nil)
 			}
 
@@ -460,7 +442,7 @@ func ui() {
 						addNodeFromMatch := func(nt NodeType) {
 							newNode := nt.Create()
 							newNode.Pos = SnapToGrid(V2{X: 200, Y: 200})
-							nodes = append(nodes, newNode)
+							currentGraph.AddNode(newNode)
 							selectedNodeID = newNode.ID
 						}
 
@@ -607,14 +589,14 @@ func ui() {
 }
 
 func afterLayout() {
-	for _, node := range nodes {
+	for _, node := range currentGraph.Nodes {
 		node.UpdateLayoutInfo()
 	}
 }
 
 func renderOverlays() {
 	// Render wires
-	for _, wire := range wires {
+	for _, wire := range currentGraph.Wires {
 		color := util.Tern(wire.StartNode.ResultAvailable && wire.StartNode.Result.Err != nil, Red, LightGray)
 		rl.DrawLineBezier(
 			rl.Vector2(wire.StartNode.OutputPortPositions[wire.StartPort]),
@@ -632,7 +614,7 @@ func renderOverlays() {
 		)
 	}
 
-	for _, node := range nodes {
+	for _, node := range currentGraph.Nodes {
 		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
 			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
 		}

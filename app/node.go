@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -37,6 +38,8 @@ type Node struct {
 	InputPortPositions  []V2
 	OutputPortPositions []V2
 	DragRect            rl.Rectangle
+
+	Graph *Graph
 
 	// Map from output port name to output state. Names are used because they are
 	// more stable than port number in the face of polymorhpic nodes.
@@ -174,7 +177,7 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 
 		// Wait on input ports
 		var inputRuns []<-chan struct{}
-		for _, inputNode := range NodeInputs(n) {
+		for _, inputNode := range n.Inputs() {
 			rerunThisNode := rerunInputs && !inputNode.Pinned
 			if rerunThisNode || !inputNode.ResultAvailable {
 				fmt.Printf("Node %s wants node %s to run\n", n, inputNode)
@@ -192,7 +195,7 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 		}
 
 		// If any inputs have errors, stop.
-		for _, inputNode := range NodeInputs(n) {
+		for _, inputNode := range n.Inputs() {
 			if !inputNode.ResultAvailable || inputNode.Result.Err != nil {
 				return
 			}
@@ -238,8 +241,24 @@ func (n *Node) ClearResult() {
 	n.Result = NodeActionResult{}
 }
 
+func (n *Node) Inputs() []*Node {
+	var res []*Node
+	if n.Graph == nil {
+		return nil
+	}
+	for _, wire := range n.Graph.Wires {
+		if wire.EndNode == n && !slices.Contains(res, wire.StartNode) {
+			res = append(res, wire.StartNode)
+		}
+	}
+	return res
+}
+
 func (n *Node) GetInputWire(port int) (*Wire, bool) {
-	for _, wire := range wires {
+	if n.Graph == nil {
+		return nil, false
+	}
+	for _, wire := range n.Graph.Wires {
 		if wire.EndNode == n && wire.EndPort == port {
 			return wire, true
 		}
@@ -257,7 +276,11 @@ func (n *Node) GetInputValue(port int) (FlowValue, bool, error) {
 		panic(fmt.Errorf("node %s has no port %d", n, port))
 	}
 
-	for _, wire := range wires {
+	if n.Graph == nil {
+		return FlowValue{}, false, nil
+	}
+
+	for _, wire := range n.Graph.Wires {
 		if wire.EndNode == n && wire.EndPort == port {
 			wireValue, ok := wire.StartNode.GetOutputValue(wire.StartPort)
 			if !ok {
@@ -348,13 +371,6 @@ func GetNodeActionMeta(tag string) NodeActionMeta {
 }
 
 // See node_actions_gen.go for the definition of allNodeActions.
-
-var nodeID = 0
-
-func NewNodeID() int {
-	nodeID++
-	return nodeID
-}
 
 func Toposort(nodes []*Node, wires []*Wire) ([]*Node, error) {
 	nodeMap := make(map[int]*Node)
