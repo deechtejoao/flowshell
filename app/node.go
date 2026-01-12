@@ -196,7 +196,14 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 
 		// If any inputs have errors, stop.
 		for _, inputNode := range n.Inputs() {
-			if !inputNode.ResultAvailable || inputNode.Result.Err != nil {
+			if !inputNode.ResultAvailable {
+				n.Result = NodeActionResult{Err: fmt.Errorf("input node %s produced no result", inputNode)}
+				n.ResultAvailable = true
+				return
+			}
+			if inputNode.Result.Err != nil {
+				n.Result = NodeActionResult{Err: fmt.Errorf("input node %s failed: %w", inputNode, inputNode.Result.Err)}
+				n.ResultAvailable = true
 				return
 			}
 		}
