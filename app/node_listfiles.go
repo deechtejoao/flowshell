@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"path/filepath"
+
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
 )
@@ -83,7 +85,8 @@ func (c *ListFilesAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 			res.Err = err
 			return
 		}
-		entries, err := os.ReadDir(util.Tern(hasWire, string(wireDir.BytesValue), c.Dir))
+		dir := util.Tern(hasWire, string(wireDir.BytesValue), c.Dir)
+		entries, err := os.ReadDir(dir)
 		if err != nil {
 			res.Err = err
 			return
@@ -102,6 +105,7 @@ func (c *ListFilesAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 
 			row := []FlowValueField{
 				{Name: "name", Value: NewStringValue(entry.Name())},
+				{Name: "path", Value: NewStringValue(filepath.Join(dir, entry.Name()))},
 				{Name: "type", Value: NewStringValue(util.Tern(entry.IsDir(), "dir", "file"))},
 				{Name: "size", Value: NewInt64Value(info.Size(), FSUnitBytes)},
 				{Name: "modified", Value: NewTimestampValue(info.ModTime())},

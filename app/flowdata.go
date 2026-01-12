@@ -255,6 +255,7 @@ var FSFile = &FlowType{
 	Kind: FSKindRecord,
 	Fields: []FlowField{
 		{Name: "name", Type: &FlowType{Kind: FSKindBytes}},
+		{Name: "path", Type: &FlowType{Kind: FSKindBytes}},
 		{Name: "type", Type: &FlowType{Kind: FSKindBytes}},
 		{Name: "size", Type: &FlowType{Kind: FSKindInt64, Unit: FSUnitBytes}},
 		{Name: "modified", Type: FSTimestamp},
