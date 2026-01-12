@@ -57,7 +57,7 @@ func frame() {
 
 	// Handle Zoom Input
 	wheel := rl.GetMouseWheelMove()
-	if wheel != 0 {
+	if wheel != 0 && !IsHoveringUI {
 		Camera.ZoomAt(rl.GetMousePosition(), util.Tern(wheel > 0, float32(1.1), float32(0.9)))
 	}
 
@@ -78,6 +78,18 @@ func frame() {
 	}
 	UIInput.BeginFrame(clayPointerMouseDown)
 
+	// --- Layout 2: Overlay (Screen Space) ---
+	clay.SetPointerState(
+		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
+		clayPointerMouseDown,
+	)
+	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
+	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())
+
+	clay.BeginLayout()
+	UIOverlay(topoErr)
+	overlayCommands := clay.EndLayout()
+
 	// --- Layout 1: Nodes (World Space) ---
 	worldMouse := Camera.ScreenToWorld(rl.GetMousePosition())
 	clay.SetPointerState(
@@ -92,18 +104,6 @@ func frame() {
 	clay.BeginLayout()
 	UINodes(topoErr)
 	nodeCommands := clay.EndLayout()
-
-	// --- Layout 2: Overlay (Screen Space) ---
-	clay.SetPointerState(
-		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
-		clayPointerMouseDown,
-	)
-	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
-	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())
-
-	clay.BeginLayout()
-	UIOverlay(topoErr)
-	overlayCommands := clay.EndLayout()
 
 	afterLayout()
 	UIInput.EndFrame()
