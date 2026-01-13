@@ -2249,7 +2249,11 @@ func PortAnchorID(node *Node, isOutput bool, port int) clay.ElementID {
 func PortAnchor(node *Node, isOutput bool, port int) {
 	// Give it a small non-zero size to ensure it has a valid bounding box for layout calculations
 	// 12x12 ensures easy clicking
-	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{Layout: clay.LAY{Sizing: WH(12, 12)}})
+	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{
+		Layout:          clay.LAY{Sizing: WH(12, 12)},
+		BackgroundColor: LightGray,
+		CornerRadius:    RA(6),
+	})
 }
 
 func FormatBytes(n int64) string {
