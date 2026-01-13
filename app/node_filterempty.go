@@ -52,18 +52,18 @@ func (c *FilterEmptyAction) UpdateAndValidate(n *Node) {
 func (c *FilterEmptyAction) UI(n *Node) {
 	input, wired := n.GetInputWire(0)
 
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("FilterEmptyContainer", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("FilterEmptyRow1", n.ID), clay.EL{
 			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("FilterEmptySpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 

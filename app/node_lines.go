@@ -45,10 +45,10 @@ func (c *LinesAction) UpdateAndValidate(n *Node) {
 }
 
 func (l *LinesAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("LinesUI", n.ID), clay.EL{
 		Layout: clay.LAY{Sizing: GROWH, ChildGap: S2},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{ // inputs
+		clay.CLAY(clay.IDI("LinesInputCol", n.ID), clay.EL{ // inputs
 			Layout: clay.LAY{
 				LayoutDirection: clay.TopToBottom,
 				Sizing:          GROWH,
@@ -57,7 +57,7 @@ func (l *LinesAction) UI(n *Node) {
 		}, func() {
 			UIInputPort(n, 0)
 		})
-		clay.CLAY_AUTO_ID(clay.EL{ // outputs
+		clay.CLAY(clay.IDI("LinesOutputCol", n.ID), clay.EL{ // outputs
 			Layout: clay.LAY{
 				LayoutDirection: clay.TopToBottom,
 				Sizing:          GROWH,
@@ -68,15 +68,15 @@ func (l *LinesAction) UI(n *Node) {
 		})
 	})
 
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("LinesOptionsRow", n.ID), clay.EL{
 		Layout: clay.LAY{ChildGap: S1, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
 	}, func() {
-		UIButton(clay.AUTO_ID, UIButtonConfig{
+		UIButton(clay.IDI("LinesCRToggle", n.ID), UIButtonConfig{
 			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 				l.IncludeCarriageReturns = !l.IncludeCarriageReturns
 			},
 		}, func() {
-			clay.CLAY_AUTO_ID(clay.EL{
+			clay.CLAY(clay.IDI("LinesCRIndicator", n.ID), clay.EL{
 				Layout:          clay.LAY{Sizing: WH(16, 16), ChildAlignment: ALLCENTER},
 				Border:          clay.B{Width: BA, Color: White},
 				BackgroundColor: util.Tern(l.IncludeCarriageReturns, White, clay.Color{}),

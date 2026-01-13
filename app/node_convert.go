@@ -135,21 +135,21 @@ func (c *ConvertAction) UI(n *Node) {
 		},
 	})
 
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("ConvertIgnoreErrorsRow", n.ID), clay.EL{
 		Layout: clay.LAY{ChildGap: S1, ChildAlignment: YCENTER, Padding: clay.Padding{Top: S2}},
 	}, func() {
-		UIButton(clay.AUTO_ID, UIButtonConfig{
+		UIButton(clay.IDI("ConvertIgnoreErrorsBtn", n.ID), UIButtonConfig{
 			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 				c.IgnoreErrors = !c.IgnoreErrors
 			},
 		}, func() {
-			UIImage(clay.AUTO_ID, util.Tern(c.IgnoreErrors, ImgToggleDown, ImgToggleRight), clay.EL{})
+			UIImage(clay.IDI("ConvertIgnoreErrorsIcon", n.ID), util.Tern(c.IgnoreErrors, ImgToggleDown, ImgToggleRight), clay.EL{})
 		})
 		clay.TEXT("Ignore Errors", clay.TextElementConfig{TextColor: White})
 	})
 
 	if wire, ok := n.GetInputWire(0); ok && wire.Type().Kind == FSKindTable {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("ConvertColumnLabelRow", n.ID), clay.EL{
 			Layout: clay.LAY{Padding: clay.Padding{Bottom: S2}},
 		}, func() {
 			clay.TEXT("Column:", clay.TextElementConfig{TextColor: White})

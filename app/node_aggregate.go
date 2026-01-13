@@ -74,25 +74,25 @@ func (a *AggregateAction) UpdateAndValidate(n *Node) {
 }
 
 func (a *AggregateAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("AggregateUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("AggregateRow1", n.ID), clay.EL{
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				ChildAlignment: YCENTER,
 			},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("AggregateSpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 
-		a.ops.Do(clay.AUTO_ID, UIDropdownConfig{
+		a.ops.Do(clay.IDI("AggregateDropdown", n.ID), UIDropdownConfig{
 			El: clay.EL{
 				Layout: clay.LAY{Sizing: GROWH},
 			},

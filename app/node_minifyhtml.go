@@ -45,14 +45,14 @@ func (a *MinifyHTMLAction) UpdateAndValidate(n *Node) {
 }
 
 func (a *MinifyHTMLAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("MinifyHTMLUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         GROWH,
 			ChildAlignment: YCENTER,
 		},
 	}, func() {
 		UIInputPort(n, 0)
-		UISpacer(clay.AUTO_ID, GROWH)
+		UISpacer(clay.IDI("MinifyHTMLSpacer", n.ID), GROWH)
 		UIOutputPort(n, 0)
 	})
 }

@@ -40,7 +40,9 @@ func readAllWithLimit(path string, limit int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	r := io.Reader(f)
 	if limit > 0 {
@@ -133,14 +135,14 @@ func (c *LoadFileAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *LoadFileAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("LoadFileContainer", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("LoadFileRow1", n.ID), clay.EL{
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				ChildAlignment: YCENTER,
@@ -153,11 +155,11 @@ func (c *LoadFileAction) UI(n *Node) {
 				},
 				Disabled: n.InputIsWired(0),
 			})
-			UISpacer(clay.AUTO_ID, W2)
+			UISpacer(clay.IDI("LoadFileSpacer", n.ID), W2)
 			UIOutputPort(n, 0)
 		})
 
-		c.format.Do(clay.AUTO_ID, UIDropdownConfig{
+		c.format.Do(clay.IDI("LoadFileFormat", n.ID), UIDropdownConfig{
 			El: clay.EL{
 				Layout: clay.LAY{Sizing: GROWH},
 			},
@@ -199,7 +201,8 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 		}
 
 		if hasWire {
-			if wireVal.Type.Kind == FSKindList {
+			switch wireVal.Type.Kind {
+			case FSKindList:
 				for _, v := range wireVal.ListValue {
 					if v.Type.Kind == FSKindBytes {
 						paths = append(paths, string(v.BytesValue))
@@ -212,9 +215,9 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 						paths = append(paths, fmt.Sprintf("%v", v)) // TODO: Better string conversion
 					}
 				}
-			} else if wireVal.Type.Kind == FSKindBytes {
-				paths = []string{string(wireVal.BytesValue)}
-			} else {
+			case FSKindBytes:
+				paths = append(paths, string(wireVal.BytesValue))
+			default:
 				res.Err = fmt.Errorf("unsupported input type %v", wireVal.Type.Kind)
 				return
 			}
@@ -278,7 +281,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 
 				header, err := r.Read()
 				if err != nil {
-					f.Close()
+					_ = f.Close()
 					if err == io.EOF {
 						continue
 					}
@@ -298,7 +301,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					}
 				} else {
 					if len(header) != len(allHeader) {
-						f.Close()
+						_ = f.Close()
 						res.Err = fmt.Errorf("CSV header mismatch in %s: expected %d columns, got %d", path, len(allHeader), len(header))
 						return
 					}
@@ -307,7 +310,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 				for {
 					select {
 					case <-ctx.Done():
-						f.Close()
+						_ = f.Close()
 						res.Err = ctx.Err()
 						return
 					default:
@@ -315,7 +318,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 
 					record, err := r.Read()
 					if err != nil {
-						f.Close()
+						_ = f.Close()
 						if err == io.EOF {
 							break
 						}
@@ -350,7 +353,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					}
 				}
 
-				f.Close()
+				_ = f.Close()
 			}
 
 			if len(allHeader) == 0 {
@@ -488,11 +491,11 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 				var v any
 				decoder := json.NewDecoder(f)
 				if err := decoder.Decode(&v); err != nil {
-					f.Close()
+					_ = f.Close()
 					res.Err = fmt.Errorf("failed to decode JSON %s: %w", path, err)
 					return
 				}
-				f.Close()
+				_ = f.Close()
 
 				fv, err := NativeToFlowValue(v)
 				if err != nil {

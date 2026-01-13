@@ -79,26 +79,26 @@ func (c *SelectColumnsAction) UpdateAndValidate(n *Node) {
 func (c *SelectColumnsAction) UI(n *Node) {
 	input, wired := n.GetInputWire(0)
 	
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("SelectColumnsUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("SelectColumnsInOut", n.ID), clay.EL{
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				ChildAlignment: YCENTER,
 			},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("SelectColumnsSpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 
 		if wired && input.Type().Kind == FSKindTable {
-			clay.CLAY_AUTO_ID(clay.EL{
+			clay.CLAY(clay.IDI("SelectColumnsList", n.ID), clay.EL{
 				Layout: clay.LAY{
 					LayoutDirection: clay.TopToBottom,
 					ChildGap:        S1,
@@ -106,10 +106,10 @@ func (c *SelectColumnsAction) UI(n *Node) {
 			}, func() {
 				clay.TEXT("Columns:", clay.TextElementConfig{TextColor: LightGray, FontSize: F1})
 				
-				for _, field := range input.Type().ContainedType.Fields {
+				for i, field := range input.Type().ContainedType.Fields {
 					isSelected := slices.Contains(c.SelectedColumns, field.Name)
 					
-					UIButton(clay.AUTO_ID, UIButtonConfig{
+					UIButton(clay.IDI(fmt.Sprintf("SelectColBtn%d", i), n.ID), UIButtonConfig{
 						El: clay.EL{
 							Layout: clay.LAY{ChildGap: S2, ChildAlignment: YCENTER},
 						},
@@ -123,7 +123,7 @@ func (c *SelectColumnsAction) UI(n *Node) {
 						},
 					}, func() {
 						// Checkbox
-						clay.CLAY_AUTO_ID(clay.EL{
+						clay.CLAY(clay.IDI(fmt.Sprintf("SelectColCheck%d", i), n.ID), clay.EL{
 							Layout:          clay.LAY{Sizing: WH(16, 16)},
 							Border:          clay.B{Width: BA, Color: White},
 							BackgroundColor: util.Tern(isSelected, Blue, clay.Color{}),

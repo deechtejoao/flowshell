@@ -41,7 +41,7 @@ func (c *ValueAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *ValueAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("ValueUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         GROWH,
 			ChildAlignment: YCENTER,
@@ -49,7 +49,7 @@ func (c *ValueAction) UI(n *Node) {
 	}, func() {
 		// Just show the value
 		UIFlowValue(c.Value)
-		UISpacer(clay.AUTO_ID, GROWH)
+		UISpacer(clay.IDI("ValueSpacer", n.ID), GROWH)
 		UIOutputPort(n, 0)
 	})
 }

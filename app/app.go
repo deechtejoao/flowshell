@@ -57,7 +57,8 @@ func frame() {
 
 	// Handle Zoom Input
 	wheel := rl.GetMouseWheelMove()
-	if wheel != 0 && !IsHoveringUI {
+	shouldZoom := wheel != 0 && !IsHoveringUI
+	if shouldZoom {
 		Camera.ZoomAt(rl.GetMousePosition(), util.Tern(wheel > 0, float32(1.1), float32(0.9)))
 	}
 
@@ -84,7 +85,11 @@ func frame() {
 		clayPointerMouseDown,
 	)
 	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
-	clay.UpdateScrollContainers(false, clay.Vector2(rl.GetMouseWheelMoveV()).Times(4), rl.GetFrameTime())
+	scrollDelta := clay.Vector2{X: 0, Y: 0}
+	if !shouldZoom {
+		scrollDelta = clay.Vector2(rl.GetMouseWheelMoveV()).Times(4)
+	}
+	clay.UpdateScrollContainers(false, scrollDelta, rl.GetFrameTime())
 
 	clay.BeginLayout()
 	UIOverlay(topoErr)

@@ -43,7 +43,7 @@ func (c *ListFilesAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *ListFilesAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("ListFilesUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         GROWH,
 			ChildAlignment: YCENTER,
@@ -54,7 +54,7 @@ func (c *ListFilesAction) UI(n *Node) {
 			El:       clay.EL{Layout: clay.LAY{Sizing: GROWH}},
 			Disabled: n.InputIsWired(0),
 		})
-		UISpacer(clay.AUTO_ID, W2)
+		UISpacer(clay.IDI("ListFilesSpacer", n.ID), W2)
 		UIOutputPort(n, 0)
 	})
 }

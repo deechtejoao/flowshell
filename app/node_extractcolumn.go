@@ -73,18 +73,18 @@ func (c *ExtractColumnAction) UpdateAndValidate(n *Node) {
 func (c *ExtractColumnAction) UI(n *Node) {
 	input, wired := n.GetInputWire(0)
 
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("ExtractColumnUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("ExtractColumnRow", n.ID), clay.EL{
 			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("ExtractColumnSpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 

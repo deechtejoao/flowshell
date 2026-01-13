@@ -49,7 +49,7 @@ func (c *SaveFileAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *SaveFileAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("SaveFileContainer", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:          GROWH,
 			ChildAlignment:  YCENTER,
@@ -58,13 +58,13 @@ func (c *SaveFileAction) UI(n *Node) {
 		},
 	}, func() {
 		// Input Port
-		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildAlignment: YCENTER, Sizing: GROWH}}, func() {
+		clay.CLAY(clay.IDI("SaveFileInputRow", n.ID), clay.EL{Layout: clay.LAY{ChildAlignment: YCENTER, Sizing: GROWH}}, func() {
 			UIInputPort(n, 0)
 			clay.TEXT("Data", clay.TextElementConfig{TextColor: White})
 		})
 
 		// Path Input
-		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
+		clay.CLAY(clay.IDI("SaveFilePathRow", n.ID), clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
 			clay.TEXT("Path:", clay.TextElementConfig{TextColor: LightGray})
 			UITextBox(clay.IDI("SaveFilePath", n.ID), &c.Path, UITextBoxConfig{
 				El: clay.EL{
@@ -74,11 +74,11 @@ func (c *SaveFileAction) UI(n *Node) {
 		})
 
 		// Format Selection
-		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
+		clay.CLAY(clay.IDI("SaveFileFormatRow", n.ID), clay.EL{Layout: clay.LAY{ChildGap: S2, Sizing: GROWH}}, func() {
 			clay.TEXT("Format:", clay.TextElementConfig{TextColor: LightGray})
 			// Simple dropdown or toggle for now.
 			// Let's use a simple cycle button for MVP.
-			UIButton(clay.AUTO_ID, UIButtonConfig{
+			UIButton(clay.IDI("SaveFileFormatBtn", n.ID), UIButtonConfig{
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 					switch c.Format {
 					case "raw":
@@ -131,7 +131,7 @@ func (c *SaveFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			res.Err = fmt.Errorf("failed to create file: %w", err)
 			return
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		switch c.Format {
 		case "raw":

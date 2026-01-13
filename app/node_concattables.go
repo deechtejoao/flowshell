@@ -51,14 +51,14 @@ func (a *ConcatTablesAction) UpdateAndValidate(n *Node) {
 }
 
 func (a *ConcatTablesAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("ConcatTablesUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("ConcatTablesRow1", n.ID), clay.EL{
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				ChildAlignment: YCENTER,
@@ -73,7 +73,7 @@ func (a *ConcatTablesAction) UI(n *Node) {
 			}
 			buttonTextConfig := clay.T{FontID: InterSemibold, FontSize: F2, TextColor: White}
 
-			UIButton(clay.AUTO_ID, UIButtonConfig{ // -
+			UIButton(clay.IDI("ConcatMinus", n.ID), UIButtonConfig{ // -
 				El: buttonStyle,
 				OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 					if len(n.InputPorts) > 1 {
@@ -88,8 +88,8 @@ func (a *ConcatTablesAction) UI(n *Node) {
 			}, func() {
 				clay.TEXT("-", buttonTextConfig)
 			})
-			UISpacer(clay.AUTO_ID, W1)
-			UIButton(clay.AUTO_ID, UIButtonConfig{ // +
+			UISpacer(clay.IDI("ConcatMinusSpacer", n.ID), W1)
+			UIButton(clay.IDI("ConcatPlus", n.ID), UIButtonConfig{ // +
 				El: buttonStyle,
 				OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 					n.InputPorts = append(n.InputPorts, NodePort{
@@ -100,7 +100,7 @@ func (a *ConcatTablesAction) UI(n *Node) {
 			}, func() {
 				clay.TEXT("+", buttonTextConfig)
 			})
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("ConcatPlusSpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 

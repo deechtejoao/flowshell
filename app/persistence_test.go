@@ -17,7 +17,7 @@ func TestSaveLoadGraph(t *testing.T) {
 	}
 
 	tmpFile := "test_graph.flow"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Save
 	err := SaveGraph(tmpFile, g)
@@ -76,7 +76,7 @@ func TestSaveLoadGraphComplex(t *testing.T) {
 	// No wires needed for this test, just testing node state serialization
 
 	tmpFile := "test_graph_complex.flow"
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Save
 	if err := SaveGraph(tmpFile, g); err != nil {

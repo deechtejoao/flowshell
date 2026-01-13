@@ -56,30 +56,30 @@ func (c *SortAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *SortAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("SortActionUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         GROWH,
 			ChildAlignment: YCENTER,
 		},
 	}, func() {
 		UIInputPort(n, 0)
-		UISpacer(clay.AUTO_ID, GROWH)
+		UISpacer(clay.IDI("SortSpacerInput", n.ID), GROWH)
 
 		// Reverse Checkbox
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("SortReverseContainer", n.ID), clay.EL{
 			Layout: clay.LAY{ChildGap: S1, ChildAlignment: YCENTER},
 		}, func() {
-			UIButton(clay.AUTO_ID, UIButtonConfig{
+			UIButton(clay.IDI("SortReverseBtn", n.ID), UIButtonConfig{
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 					c.Reverse = !c.Reverse
 				},
 			}, func() {
-				UIImage(clay.AUTO_ID, util.Tern(c.Reverse, ImgToggleDown, ImgToggleRight), clay.EL{}) // Using toggle icons for checkbox for now
+				UIImage(clay.IDI("SortReverseIcon", n.ID), util.Tern(c.Reverse, ImgToggleDown, ImgToggleRight), clay.EL{}) // Using toggle icons for checkbox for now
 			})
 			clay.TEXT("Reverse", clay.TextElementConfig{TextColor: White})
 		})
 
-		UISpacer(clay.AUTO_ID, GROWH)
+		UISpacer(clay.IDI("SortSpacerOutput", n.ID), GROWH)
 		UIOutputPort(n, 0)
 	})
 }

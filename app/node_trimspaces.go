@@ -62,14 +62,14 @@ func (c *TrimSpacesAction) UpdateAndValidate(n *Node) {
 }
 
 func (l *TrimSpacesAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("TrimSpacesUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         GROWH,
 			ChildAlignment: YCENTER,
 		},
 	}, func() {
 		UIInputPort(n, 0)
-		UISpacer(clay.AUTO_ID, GROWH)
+		UISpacer(clay.IDI("TrimSpacesSpacer", n.ID), GROWH)
 		UIOutputPort(n, 0)
 	})
 }

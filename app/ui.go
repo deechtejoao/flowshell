@@ -28,6 +28,18 @@ func SnapToGrid(v V2) V2 {
 const NodeMinWidth = 360
 
 var currentGraph = NewGraph()
+var History *HistoryManager
+
+func InitHistory() {
+	History = NewHistoryManager(currentGraph)
+}
+
+func PushHistory() {
+	if History == nil {
+		InitHistory()
+	}
+	History.Push(currentGraph)
+}
 
 type NodeType struct {
 	Name   string
@@ -201,7 +213,7 @@ func beforeLayout() {
 	}
 
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
-		SaveGraph("saved.flow", currentGraph)
+		_ = SaveGraph("saved.flow", currentGraph)
 	}
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
 		if g, err := LoadGraph("saved.flow"); err == nil {
@@ -598,7 +610,7 @@ func UIOverlay(topoErr error) {
 						El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Red, CornerRadius: RA1},
 						OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 							ShowLoadConfirmation = false
-							LoadGraph("saved.flow")
+							_, _ = LoadGraph("saved.flow")
 						},
 					}, func() {
 						clay.TEXT("Load", clay.TextElementConfig{TextColor: White})
@@ -615,7 +627,7 @@ func UIOverlay(topoErr error) {
 			})
 		}
 
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.ID("NewNodeContainer"), clay.EL{
 			Layout: clay.LAY{
 				Sizing:  GROWH,
 				Padding: PA3,
@@ -644,7 +656,6 @@ func UIOverlay(topoErr error) {
 				// Before UI: defocus textbox
 				if shortcut && IsFocused(textboxID) {
 					UIFocus = nil
-					shortcut = false
 				}
 
 				UIButton(clay.ID("NewNode"), UIButtonConfig{
@@ -707,7 +718,7 @@ func UIOverlay(topoErr error) {
 
 							matches := SearchNodeTypes(NewNodeName)
 							for i := len(matches) - 1; i >= 0; i-- {
-								UIButton(clay.AUTO_ID, UIButtonConfig{
+								UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
 									El: clay.EL{
 										Layout: clay.LAY{
 											Padding: PVH(S1, S2),
@@ -719,6 +730,7 @@ func UIOverlay(topoErr error) {
 										addNodeFromMatch(matches[userData.(int)])
 										UIFocus = nil
 									},
+									OnClickUserData: i,
 								}, func() {
 									clay.TEXT(matches[i].Name, clay.T{TextColor: White})
 								})
@@ -731,7 +743,6 @@ func UIOverlay(topoErr error) {
 				if shortcut && !IsFocused(textboxID) {
 					UIFocus = &textboxID
 					NewNodeName = ""
-					shortcut = false
 				}
 			})
 		})
@@ -1254,6 +1265,7 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 			}
 
 			if !config.Disabled && UIInput.IsClick(elementID, pointerData) {
+				UIFocus = nil
 				if config.OnClick != nil {
 					config.OnClick(elementID, pointerData, config.OnClickUserData)
 				}
@@ -1544,47 +1556,4 @@ func FormatBytes(n int64) string {
 	}
 }
 
-func menu() {
-	clay.CLAY(clay.ID("RightClickMenu"), clay.EL{
-		Layout: clay.LAY{
-			LayoutDirection: clay.TopToBottom,
-			Sizing:          clay.Sizing{Width: clay.SizingFit(MenuMinWidth, MenuMaxWidth)},
-		},
-		Floating:        clay.FloatingElementConfig{AttachTo: clay.AttachToRoot, Offset: clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())}},
-		BackgroundColor: DarkGray,
-	}, func() {
-		clay.CLAY(clay.ID("thing"), clay.EL{Layout: clay.LayoutConfig{Padding: PVH(S2, S3)}}, func() {
-			clay.TEXT("Hi! I'm text!", clay.TextElementConfig{TextColor: White})
-		})
-	})
-}
 
-func clayExample() {
-	var ColorLight = clay.Color{R: 224, G: 215, B: 210, A: 255}
-	var ColorRed = clay.Color{R: 168, G: 66, B: 28, A: 255}
-	var ColorOrange = clay.Color{R: 225, G: 138, B: 50, A: 255}
-
-	sidebarItemComponent := func() {
-		clay.CLAY_AUTO_ID(clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingFixed(50)}}, BackgroundColor: ColorOrange})
-	}
-
-	clay.CLAY(clay.ID("OuterContainer"), clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16}, BackgroundColor: clay.Color{R: 250, G: 250, B: 255, A: 255}}, func() {
-		clay.CLAY(clay.ID("Sidebar"), clay.EL{
-			Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16},
-			BackgroundColor: ColorLight,
-		}, func() {
-			clay.CLAY(clay.ID("ProfilePictureOuter"), clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 16, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}}, BackgroundColor: ColorRed}, func() {
-				clay.TEXT("Clay - UI Library", clay.TextElementConfig{FontID: InterBold, FontSize: 24, TextColor: clay.Color{R: 255, G: 255, B: 255, A: 255}})
-			})
-
-			for range 5 {
-				sidebarItemComponent()
-			}
-		})
-		clay.CLAY(clay.ID("MainContent"), clay.EL{Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 0), Height: clay.SizingGrow(0, 0)}, Padding: clay.PaddingAll(16), ChildGap: 8}, BackgroundColor: ColorLight}, func() {
-			for f := range FontsEnd {
-				clay.TEXT(fontFiles[f], clay.TextElementConfig{FontID: f, TextColor: clay.Color{R: 0, G: 0, B: 0, A: 255}})
-			}
-		})
-	})
-}

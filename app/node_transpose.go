@@ -62,21 +62,21 @@ func (c *TransposeAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *TransposeAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("TransposeUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("TransposePorts", n.ID), clay.EL{
 			Layout: clay.LAY{
 				Sizing:         GROWH,
 				ChildAlignment: YCENTER,
 			},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("TransposeSpacer", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 	})

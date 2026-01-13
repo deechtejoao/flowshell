@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("expected exactly one package in directory")
 	}
 
-	var pkg *ast.Package
+	var pkg *ast.Package //nolint:staticcheck
 	for _, p := range pkgs {
 		pkg = p
 		break

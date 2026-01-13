@@ -52,7 +52,7 @@ func (c *RunProcessAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *RunProcessAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("RunProcessUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
@@ -63,7 +63,7 @@ func (c *RunProcessAction) UI(n *Node) {
 			El: clay.EL{Layout: clay.LAY{Sizing: GROWH}},
 		})
 
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("RunProcessOutputs", n.ID), clay.EL{
 			Layout: clay.LAY{
 				LayoutDirection: clay.TopToBottom,
 				Sizing:          GROWH,

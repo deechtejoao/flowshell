@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func SaveGraph(path string, g *Graph) error {
+func SerializeGraph(g *Graph) ([]byte, error) {
 	s := NewEncoder(3)
 
 	// Nodes
@@ -33,18 +33,13 @@ func SaveGraph(path string, g *Graph) error {
 	}
 
 	if !s.Ok() {
-		return fmt.Errorf("serialization failed: %v", s.Errs)
+		return nil, fmt.Errorf("serialization failed: %v", s.Errs)
 	}
 
-	return os.WriteFile(path, s.Bytes(), 0644)
+	return s.Bytes(), nil
 }
 
-func LoadGraph(path string) (*Graph, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
+func DeserializeGraph(data []byte) (*Graph, error) {
 	s := NewDecoder(data)
 
 	// Read into temporary variables first to avoid destroying state on failure
@@ -130,4 +125,20 @@ func LoadGraph(path string) (*Graph, error) {
 	}
 
 	return g, nil
+}
+
+func SaveGraph(path string, g *Graph) error {
+	data, err := SerializeGraph(g)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+func LoadGraph(path string) (*Graph, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return DeserializeGraph(data)
 }

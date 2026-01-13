@@ -70,29 +70,29 @@ func (c *AddColumnAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *AddColumnAction) UI(n *Node) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI("AddColumnUI", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          GROWH,
 			ChildGap:        S2,
 		},
 	}, func() {
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("AddColumnRow1", n.ID), clay.EL{
 			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
 		}, func() {
 			UIInputPort(n, 0)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("AddColumnSpacer1", n.ID), GROWH)
 			UIOutputPort(n, 0)
 		})
 
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("AddColumnRow2", n.ID), clay.EL{
 			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
 		}, func() {
 			UIInputPort(n, 1)
-			UISpacer(clay.AUTO_ID, GROWH)
+			UISpacer(clay.IDI("AddColumnSpacer2", n.ID), GROWH)
 		})
 
-		clay.CLAY_AUTO_ID(clay.EL{
+		clay.CLAY(clay.IDI("AddColumnRow3", n.ID), clay.EL{
 			Layout: clay.LAY{Sizing: GROWH},
 		}, func() {
 			UITextBox(clay.IDI("NewColumnName", n.ID), &c.NewColumnName, UITextBoxConfig{
