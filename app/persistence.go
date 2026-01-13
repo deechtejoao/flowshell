@@ -6,7 +6,7 @@ import (
 )
 
 func SerializeGraph(g *Graph) ([]byte, error) {
-	s := NewEncoder(3)
+	s := NewEncoder(4)
 
 	// Nodes
 	nodeCount := len(g.Nodes)
@@ -31,6 +31,9 @@ func SerializeGraph(g *Graph) ([]byte, error) {
 	for _, grp := range g.Groups {
 		SThing(s, grp)
 	}
+
+	// Variables
+	SMapStrStr(s, &g.Variables)
 
 	if !s.Ok() {
 		return nil, fmt.Errorf("serialization failed: %v", s.Errs)
@@ -118,6 +121,11 @@ func DeserializeGraph(data []byte) (*Graph, error) {
 			}
 		}
 		g.NextGroupID = maxGroupID
+	}
+
+	// Variables
+	if s.Version >= 4 {
+		SMapStrStr(s, &g.Variables)
 	}
 
 	if !s.Ok() {

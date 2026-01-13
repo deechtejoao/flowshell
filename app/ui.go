@@ -84,6 +84,7 @@ var nodeTypes = []NodeType{
 	{Name: "Parse Time", Create: func() *Node { return NewParseTimeNode() }},
 	{Name: "JSON Query", Create: func() *Node { return NewJsonQueryNode() }},
 	{Name: "XML Query", Create: func() *Node { return NewXmlQueryNode() }},
+	{Name: "Get Variable", Create: func() *Node { return NewGetVariableNode() }},
 }
 
 func CreateGroup() {
@@ -742,6 +743,10 @@ var NewWireSourcePort int
 var NewNodeName string
 
 var ShowLoadConfirmation bool
+var ShowVariables bool
+var NewVarKey string
+var NewVarValue string
+
 var ConnectionError string
 var ConnectionErrorTime time.Time
 
@@ -859,6 +864,122 @@ func UIOverlay(topoErr error) {
 			})
 		}
 
+		if ShowVariables {
+			WithZIndex(ZTOP, func() {
+				clay.CLAY(clay.ID("VariablesPanel"), clay.EL{
+					Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, Padding: PA3, ChildGap: S2},
+					BackgroundColor: Charcoal,
+					Border:          clay.BorderElementConfig{Width: BA2, Color: Gray},
+					CornerRadius:    RA2,
+					Floating: clay.FLOAT{
+						AttachTo: clay.AttachToParent,
+						AttachPoints: clay.FloatingAttachPoints{
+							Element: clay.AttachPointCenterCenter,
+							Parent:  clay.AttachPointCenterCenter,
+						},
+						ZIndex:             ZTOP,
+						PointerCaptureMode: clay.PointercaptureModePassthrough,
+					},
+				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
+					
+					// Header
+					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2}}, func() {
+						clay.TEXT("Variables", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
+						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}, nil) // Spacer
+						UIButton(clay.ID("CloseVariables"), UIButtonConfig{
+							El: clay.EL{Layout: clay.LAY{Padding: PA1}, BackgroundColor: Red, CornerRadius: RA1},
+							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+								ShowVariables = false
+							},
+						}, func() {
+							clay.TEXT("X", clay.TextElementConfig{TextColor: White})
+						})
+					})
+
+					// List
+					currentGraph.VarMutex.RLock()
+					keys := make([]string, 0, len(currentGraph.Variables))
+					for k := range currentGraph.Variables {
+						keys = append(keys, k)
+					}
+					slices.Sort(keys)
+					
+					// Scrollable area? For now just list them, assuming not too many.
+					clay.CLAY(clay.ID("VariablesList"), clay.EL{
+						Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1},
+					}, func() {
+						for _, k := range keys {
+							v := currentGraph.Variables[k]
+							key := k // Capture for closure
+							clay.CLAY(clay.ID("VarRow"+key), clay.EL{
+								Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2, Padding: PA1},
+								BackgroundColor: clay.Color{R: 60, G: 60, B: 60, A: 255},
+								CornerRadius: RA1,
+							}, func() {
+								clay.TEXT(key, clay.TextElementConfig{TextColor: Yellow, FontID: InterBold})
+								clay.TEXT("=", clay.TextElementConfig{TextColor: Gray})
+								clay.TEXT(v, clay.TextElementConfig{TextColor: White})
+								clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}, nil) // Spacer
+								UIButton(clay.ID("DeleteVar"+key), UIButtonConfig{
+									El: clay.EL{Layout: clay.LAY{Padding: PA1}, BackgroundColor: Red, CornerRadius: RA1},
+									OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+										PushHistory()
+										currentGraph.VarMutex.Lock()
+										delete(currentGraph.Variables, key)
+										currentGraph.VarMutex.Unlock()
+									},
+								}, func() {
+									clay.TEXT("Del", clay.TextElementConfig{TextColor: White, FontSize: 12})
+								})
+							})
+						}
+					})
+					currentGraph.VarMutex.RUnlock()
+
+					// Add New
+					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1, Padding: PA1}, Border: clay.BorderElementConfig{Width: BA, Color: Gray}, CornerRadius: RA1}, func() {
+						clay.TEXT("Add New Variable", clay.TextElementConfig{TextColor: Gray, FontSize: 12})
+						
+						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, ChildGap: S2, Sizing: GROWH}}, func() {
+							// Key Input
+							clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0)}, ChildGap: S1}}, func() {
+								clay.TEXT("Key", clay.TextElementConfig{TextColor: Gray, FontSize: 10})
+								UITextBox(clay.ID("NewVarKeyInput"), &NewVarKey, UITextBoxConfig{
+									El: clay.EL{Layout: clay.LAY{Sizing: GROWH, Padding: PA1}, BackgroundColor: clay.Color{R: 40, G: 40, B: 40, A: 255}, CornerRadius: RA1},
+								})
+							})
+							// Value Input
+							clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0)}, ChildGap: S1}}, func() {
+								clay.TEXT("Value", clay.TextElementConfig{TextColor: Gray, FontSize: 10})
+								UITextBox(clay.ID("NewVarValueInput"), &NewVarValue, UITextBoxConfig{
+									El: clay.EL{Layout: clay.LAY{Sizing: GROWH, Padding: PA1}, BackgroundColor: clay.Color{R: 40, G: 40, B: 40, A: 255}, CornerRadius: RA1},
+								})
+							})
+						})
+						
+						UIButton(clay.ID("AddVariable"), UIButtonConfig{
+							El: clay.EL{Layout: clay.LAY{Padding: PA2, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: ALLCENTER}, BackgroundColor: Green, CornerRadius: RA1},
+							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+								if NewVarKey != "" {
+									PushHistory()
+									currentGraph.VarMutex.Lock()
+									currentGraph.Variables[NewVarKey] = NewVarValue
+									currentGraph.VarMutex.Unlock()
+									NewVarKey = ""
+									NewVarValue = ""
+								}
+							},
+						}, func() {
+							clay.TEXT("Add Variable", clay.TextElementConfig{TextColor: White, FontID: InterBold})
+						})
+					})
+				})
+			})
+		}
+
 		// Check expansion state for New Node Menu
 		textboxID := clay.ID("NewNodeName")
 		isFocused := IsFocused(textboxID)
@@ -924,6 +1045,21 @@ func UIOverlay(topoErr error) {
 						},
 					}, func() {
 						clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
+					})
+
+					UIButton(clay.ID("OpenVariables"), UIButtonConfig{
+						El: clay.EL{
+							Layout: clay.LAY{
+								Sizing:         WH(36, 36),
+								ChildAlignment: ALLCENTER,
+							},
+							Border: clay.B{Width: BA, Color: Gray},
+						},
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							ShowVariables = !ShowVariables
+						},
+					}, func() {
+						clay.TEXT("V", clay.T{FontID: InterBold, FontSize: 24, TextColor: White})
 					})
 					if IsFocused(textboxID) {
 						addNodeFromMatch := func(nt NodeType) {

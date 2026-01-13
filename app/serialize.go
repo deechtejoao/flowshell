@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"slices"
 
 	"github.com/bvisness/flowshell/trace"
 	"github.com/bvisness/flowshell/util"
@@ -260,6 +261,40 @@ func SSlice[T any, PT PSerializable[T]](s *Serializer, slice *[]T) bool {
 	for i := range n {
 		if ok := SThing(s, PT(&(*slice)[i])); !ok {
 			return false
+		}
+	}
+	return true
+}
+
+func SMapStrStr(s *Serializer, m *map[string]string) bool {
+	if !s.Ok() {
+		return false
+	}
+
+	count := len(*m)
+	if ok := SInt(s, &count); !ok {
+		return false
+	}
+
+	if s.Encode {
+		keys := make([]string, 0, len(*m))
+		for k := range *m {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+
+		for _, k := range keys {
+			v := (*m)[k]
+			SStr(s, &k)
+			SStr(s, &v)
+		}
+	} else {
+		*m = make(map[string]string, count)
+		for range count {
+			var k, v string
+			SStr(s, &k)
+			SStr(s, &v)
+			(*m)[k] = v
 		}
 	}
 	return true

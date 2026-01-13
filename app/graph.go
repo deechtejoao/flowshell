@@ -3,6 +3,8 @@ package app
 import (
 	"slices"
 
+	"sync"
+
 	"github.com/bvisness/flowshell/clay"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -11,15 +13,18 @@ type Graph struct {
 	Nodes      []*Node
 	Wires      []*Wire
 	Groups     []*Group
+	Variables  map[string]string
+	VarMutex   sync.RWMutex
 	NextNodeID int
 	NextGroupID int
 }
 
 func NewGraph() *Graph {
 	return &Graph{
-		Nodes:  []*Node{},
-		Wires:  []*Wire{},
-		Groups: []*Group{},
+		Nodes:     []*Node{},
+		Wires:     []*Wire{},
+		Groups:    []*Group{},
+		Variables: make(map[string]string),
 	}
 }
 
