@@ -62,3 +62,13 @@ func (m *InputManager) IsClick(owner clay.ElementID, pointerData clay.PointerDat
 	}
 	return m.pointerDownOwnerID == owner.ID
 }
+
+func (m *InputManager) IsPressed(owner clay.ElementID) bool {
+	if !m.pointerPressedThisFrame {
+		return false
+	}
+	if !m.pointerDownOwnerSet {
+		return false
+	}
+	return m.pointerDownOwnerID == owner.ID
+}

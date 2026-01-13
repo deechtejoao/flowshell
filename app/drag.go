@@ -39,9 +39,10 @@ var drag DragState = DragState{
 type DragState struct {
 	Input InputProvider
 
-	Dragging bool
-	Pending  bool
-	Canceled bool
+	Dragging    bool
+	WasDragging bool
+	Pending     bool
+	Canceled    bool
 
 	Thing any
 	Key   string
@@ -52,12 +53,19 @@ type DragState struct {
 
 // Call once per frame at the start of the frame.
 func (d *DragState) Update() {
+	d.WasDragging = false
 	if d.Input.IsKeyPressed(rl.KeyEscape) {
 		d.Dragging = false
 		d.Canceled = true
 	} else if d.Input.IsMouseButtonReleased(rl.MouseLeftButton) {
+		if d.Dragging {
+			d.WasDragging = true
+		}
 		d.Dragging = false
 	} else if d.Input.IsMouseButtonUp(rl.MouseLeftButton) {
+		if d.Dragging {
+			d.WasDragging = true
+		}
 		d.Dragging = false
 		d.Pending = false
 		d.Canceled = true

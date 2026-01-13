@@ -333,6 +333,16 @@ func processInput() {
 		}
 	}
 
+	// Selection on Mouse Down (Immediate feedback)
+	for _, n := range currentGraph.Nodes {
+		if UIInput.IsPressed(n.ClayID()) {
+			multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
+			if !IsNodeSelected(n.ID) {
+				SelectNode(n.ID, multi)
+			}
+		}
+	}
+
 	for _, n := range currentGraph.Nodes {
 		// Starting new wires (Prioritize over node drag)
 		for i, portPos := range n.OutputPortPositions {
@@ -1239,7 +1249,7 @@ func UINode(node *Node, disabled bool) {
 			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 				IsHoveringPanel = true
 				UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
-				if UIInput.IsClick(elementID, pointerData) {
+				if UIInput.IsClick(elementID, pointerData) && !drag.WasDragging {
 					UIFocus = nil
 					multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 					SelectNode(node.ID, multi)
@@ -1257,7 +1267,7 @@ func UINode(node *Node, disabled bool) {
 				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
 					IsHoveringPanel = true
 					UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
-					if UIInput.IsClick(elementID, pointerData) {
+					if UIInput.IsClick(elementID, pointerData) && !drag.WasDragging {
 						UIFocus = nil
 						multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 						SelectNode(node.ID, multi)
