@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/bvisness/flowshell/clay"
@@ -245,110 +247,52 @@ func processInput() {
 		DeleteSelectedNodes()
 	}
 
-	if rl.IsFileDropped() && !IsHoveringUI && !IsHoveringPanel {
-		for i, filename := range rl.LoadDroppedFiles() {
-			n := NewLoadFileNode(filename)
-			n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
-			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-				n.Pos = SnapToGrid(n.Pos)
+	if rl.IsFileDropped() {
+		files := rl.LoadDroppedFiles()
+		handled := false
+
+		// Check if we dropped onto a Load File node
+		if len(files) > 0 && IsHoveringPanel {
+			mousePos := rl.GetMousePosition()
+			// Find the top-most node under the mouse
+			// (Iterating in reverse order usually gives top-most if rendered in order, 
+			// but Graph.Nodes order isn't strictly Z-order. 
+			// However, picking *any* collided node is better than nothing.)
+			for i := len(currentGraph.Nodes) - 1; i >= 0; i-- {
+				n := currentGraph.Nodes[i]
+				if data, ok := clay.GetElementData(n.ClayID()); ok {
+					if rl.CheckCollisionPointRec(mousePos, rl.Rectangle(data.BoundingBox)) {
+						if loadAction, ok := n.Action.(*LoadFileAction); ok {
+							loadAction.path = files[0]
+							// Auto-select format based on extension
+							if ext := strings.ToLower(filepath.Ext(files[0])); ext != "" {
+								loadAction.format.SelectByValue(ext[1:])
+							}
+							handled = true
+							// Force re-validation
+							n.ClearResult()
+						}
+						break // Only handle for the top-most node (or first found)
+					}
+				}
 			}
-			currentGraph.AddNode(n)
-			SelectNode(n.ID, false)
+		}
+
+		if !handled && !IsHoveringUI && !IsHoveringPanel {
+			for i, filename := range files {
+				n := NewLoadFileNode(filename)
+				n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
+				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+					n.Pos = SnapToGrid(n.Pos)
+				}
+				currentGraph.AddNode(n)
+				SelectNode(n.ID, false)
+			}
 		}
 	}
 
 	for _, n := range currentGraph.Nodes {
-		// Node drag and drop
-		if !IsHoveringUI {
-			drag.TryStartDrag(n, n.DragRect, n.Pos)
-		}
-		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
-			// If we start dragging a node that isn't selected, select it (and deselect others)
-			// UNLESS we are dragging a selected node, then we move all selected nodes.
-			if !IsNodeSelected(n.ID) {
-				SelectNode(n.ID, false)
-			}
-
-			// Calculate delta
-			delta := rl.Vector2Subtract(drag.NewObjPosition(), n.Pos)
-
-			// Apply delta to all selected nodes
-			for id := range selectedNodes {
-				if node, ok := currentGraph.GetNode(id); ok {
-					node.Pos = rl.Vector2Add(node.Pos, delta)
-					// Snap to grid (hold Shift to disable)
-					if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-						node.Pos = SnapToGrid(node.Pos)
-					}
-				}
-			}
-
-			// Reset drag state for this node so we don't double apply?
-			// Wait, the drag state gives absolute position.
-			// Re-thinking: drag.NewObjPosition() returns the new position for THE dragged object.
-			// We need to calculate the delta and apply to others.
-
-			// Actually, let's simplify. The `drag` helper manages position for `n`.
-			// If we want to move multiple nodes, we should probably manually handle the delta.
-			// But `drag` helper is convenient.
-
-			// If we are dragging `n`, `drag.State(n)` returns true.
-			// `drag.NewObjPosition()` is where `n` should be.
-			// So `delta = drag.NewObjPosition() - n.Pos`.
-			// BUT `n.Pos` is updated in the next lines in original code.
-
-			// Original:
-			// n.Pos = drag.NewObjPosition()
-			// ... snap ...
-
-			// New Logic:
-			// We need to move ALL selected nodes by the same delta that `n` moved.
-			// But `n` is moving based on mouse delta?
-			// `drag.NewObjPosition()` = `ObjStart + (MousePos - MouseStart)`.
-
-			// So `TargetPos = ObjStart + DragDelta`.
-			// `CurrentPos` might be different if we snapped?
-
-			// Let's rely on `drag` helper for the *active* node `n`.
-			// Then calculate the effective delta for `n`, and apply that to others.
-
-			targetPos := drag.NewObjPosition()
-			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-				targetPos = SnapToGrid(targetPos)
-			}
-
-			posDelta := rl.Vector2Subtract(targetPos, n.Pos)
-
-			// Apply to all selected nodes
-			for id := range selectedNodes {
-				if node, ok := currentGraph.GetNode(id); ok {
-					node.Pos = rl.Vector2Add(node.Pos, posDelta)
-				}
-			}
-
-			if done {
-				if canceled {
-					// Revert all
-					// This is tricky because we don't store start pos for all.
-					// But `drag` only stores start pos for `n`.
-					// We might need to store start pos for all selected nodes when drag starts.
-					// For now, let's just revert `n` (which is what original code did)
-					// and maybe accept that others stay?
-					// Or better: Revert is rare (ESC).
-					// If we want to support revert, we need to capture state.
-					n.Pos = drag.ObjStart // This only reverts n.
-				}
-			}
-		}
-
-		// Selected node keyboard shortcuts
-		if IsNodeSelected(n.ID) {
-			if rl.IsKeyPressed(rl.KeyR) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
-				n.Run(context.Background(), rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift))
-			}
-		}
-
-		// Starting new wires
+		// Starting new wires (Prioritize over node drag)
 		for i, portPos := range n.OutputPortPositions {
 			portRect := rl.Rectangle{
 				X:      portPos.X - PortDragRadius,
@@ -374,6 +318,53 @@ func processInput() {
 					NewWireSourceNode = wire.StartNode
 					NewWireSourcePort = wire.StartPort
 				}
+			}
+		}
+
+		// Node drag and drop
+		if !IsHoveringUI {
+			drag.TryStartDrag(n, n.DragRect, n.Pos)
+		}
+		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
+			// If we start dragging a node that isn't selected, select it (and deselect others)
+			// UNLESS we are dragging a selected node, then we move all selected nodes.
+			if !IsNodeSelected(n.ID) {
+				SelectNode(n.ID, false)
+			}
+
+			// Calculate delta
+			delta := rl.Vector2Subtract(drag.NewObjPosition(), n.Pos)
+
+			// Apply delta to all selected nodes
+			for id := range selectedNodes {
+				if node, ok := currentGraph.GetNode(id); ok {
+					node.Pos = rl.Vector2Add(node.Pos, delta)
+					// Snap to grid (hold Shift to disable)
+					if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
+						node.Pos = SnapToGrid(node.Pos)
+					}
+				}
+			}
+
+			if done {
+				if canceled {
+					// Revert all
+					// This is tricky because we don't store start pos for all.
+					// But `drag` only stores start pos for `n`.
+					// We might need to store start pos for all selected nodes when drag starts.
+					// For now, let's just revert `n` (which is what original code did)
+					// and maybe accept that others stay?
+					// Or better: Revert is rare (ESC).
+					// If we want to support revert, we need to capture state.
+					n.Pos = drag.ObjStart // This only reverts n.
+				}
+			}
+		}
+
+		// Selected node keyboard shortcuts
+		if IsNodeSelected(n.ID) {
+			if rl.IsKeyPressed(rl.KeyR) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+				n.Run(context.Background(), rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift))
 			}
 		}
 	}
