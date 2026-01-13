@@ -298,6 +298,16 @@ func (n *Node) SetResult(res NodeActionResult) {
 func (n *Node) ClearResult() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+
+	// Close any open streams in the result
+	if n.resultAvailable {
+		for _, output := range n.result.Outputs {
+			if output.Type != nil && output.Type.Kind == FSKindStream && output.StreamValue != nil {
+				_ = output.StreamValue.Close()
+			}
+		}
+	}
+
 	n.resultAvailable = false
 	n.result = NodeActionResult{}
 }
@@ -334,7 +344,7 @@ func (n *Node) InputIsWired(port int) bool {
 
 func (n *Node) GetInputValue(port int) (FlowValue, bool, error) {
 	if port >= len(n.InputPorts) {
-		panic(fmt.Errorf("node %s has no port %d", n, port))
+		return FlowValue{}, false, fmt.Errorf("node %s has no input port %d", n, port)
 	}
 
 	if n.Graph == nil {
@@ -343,7 +353,10 @@ func (n *Node) GetInputValue(port int) (FlowValue, bool, error) {
 
 	for _, wire := range n.Graph.Wires {
 		if wire.EndNode == n && wire.EndPort == port {
-			wireValue, ok := wire.StartNode.GetOutputValue(wire.StartPort)
+			wireValue, ok, err := wire.StartNode.GetOutputValue(wire.StartPort)
+			if err != nil {
+				return FlowValue{}, false, fmt.Errorf("failed to get output value from upstream node %s: %w", wire.StartNode, err)
+			}
 			if !ok {
 				return FlowValue{}, false, nil
 			}
@@ -356,21 +369,21 @@ func (n *Node) GetInputValue(port int) (FlowValue, bool, error) {
 	return FlowValue{}, false, nil
 }
 
-func (n *Node) GetOutputValue(port int) (FlowValue, bool) {
+func (n *Node) GetOutputValue(port int) (FlowValue, bool, error) {
 	if port >= len(n.OutputPorts) {
-		panic(fmt.Errorf("node %s has no port %d", n, port))
+		return FlowValue{}, false, fmt.Errorf("node %s has no output port %d", n, port)
 	}
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
 	if !n.resultAvailable {
-		return FlowValue{}, false
+		return FlowValue{}, false, nil
 	}
 	if len(n.OutputPorts) != len(n.result.Outputs) {
-		panic(fmt.Errorf("incorrect number of output values for %s: got %d, expected %d", n, len(n.result.Outputs), len(n.OutputPorts)))
+		return FlowValue{}, false, fmt.Errorf("incorrect number of output values for %s: got %d, expected %d", n, len(n.result.Outputs), len(n.OutputPorts))
 	}
-	return n.result.Outputs[port], true
+	return n.result.Outputs[port], true, nil
 }
 
 // Update cached positions and rectangles and so on based on layout

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ type FlowValue struct {
 	Type *FlowType
 
 	BytesValue   []byte
+	StreamValue  io.ReadCloser
 	Int64Value   int64
 	Float64Value float64
 	ListValue    []FlowValue
@@ -99,6 +101,11 @@ func (v *FlowValue) Serialize(s *Serializer) bool {
 				return s.Error(err)
 			}
 		}
+	case FSKindStream:
+		// Streams are not serializable.
+		// On Encode: we just skip it (or maybe we should read it? No, that consumes it).
+		// On Decode: we produce an empty stream or nil.
+		// For now, do nothing.
 	case FSKindInt64:
 		SInt(s, &v.Int64Value)
 	case FSKindFloat64:
@@ -126,6 +133,7 @@ type FlowTypeKind int
 const (
 	FSKindAny FlowTypeKind = iota // not valid for use on a FlowValue
 	FSKindBytes
+	FSKindStream
 	FSKindInt64
 	FSKindFloat64
 	FSKindList
@@ -169,6 +177,8 @@ func (t FlowType) String() string {
 		return "Any"
 	case FSKindBytes:
 		return "Bytes"
+	case FSKindStream:
+		return "Stream"
 	case FSKindInt64:
 		return "Int64"
 	case FSKindFloat64:

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
 	"strconv"
 
 	"github.com/bvisness/flowshell/clay"
@@ -317,6 +318,15 @@ func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {
 		switch v.Type.Kind {
 		case FSKindBytes:
 			return v, nil
+		case FSKindStream:
+			if v.StreamValue == nil {
+				return NewStringValue(""), nil
+			}
+			b, err := io.ReadAll(v.StreamValue)
+			if err != nil {
+				return FlowValue{}, err
+			}
+			str = string(b)
 		case FSKindInt64:
 			str = strconv.FormatInt(v.Int64Value, 10)
 		case FSKindFloat64:
@@ -341,6 +351,24 @@ func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {
 					return FlowValue{}, err
 				}
 			}
+		case FSKindStream:
+			if v.StreamValue == nil {
+				val = 0
+			} else {
+				b, err2 := io.ReadAll(v.StreamValue)
+				if err2 != nil {
+					return FlowValue{}, err2
+				}
+				val, err = strconv.ParseInt(string(b), 10, 64)
+				if err != nil {
+					f, err3 := strconv.ParseFloat(string(b), 64)
+					if err3 == nil {
+						val = int64(f)
+					} else {
+						return FlowValue{}, err
+					}
+				}
+			}
 		case FSKindInt64:
 			return v, nil
 		case FSKindFloat64:
@@ -358,6 +386,19 @@ func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {
 			val, err = strconv.ParseFloat(string(v.BytesValue), 64)
 			if err != nil {
 				return FlowValue{}, err
+			}
+		case FSKindStream:
+			if v.StreamValue == nil {
+				val = 0
+			} else {
+				b, err2 := io.ReadAll(v.StreamValue)
+				if err2 != nil {
+					return FlowValue{}, err2
+				}
+				val, err = strconv.ParseFloat(string(b), 64)
+				if err != nil {
+					return FlowValue{}, err
+				}
 			}
 		case FSKindInt64:
 			val = float64(v.Int64Value)

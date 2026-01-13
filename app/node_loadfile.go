@@ -61,6 +61,7 @@ func readAllWithLimit(path string, limit int64) ([]byte, error) {
 
 var loadFileFormatOptions = []UIDropdownOption{
 	{Name: "Raw bytes", Value: "raw"},
+	{Name: "Stream", Value: "stream"},
 	{Name: "CSV", Value: "csv"},
 	{Name: "JSON", Value: "json"},
 }
@@ -120,6 +121,12 @@ func (c *LoadFileAction) UpdateAndValidate(n *Node) {
 			n.OutputPorts[0].Type = NewListType(FlowType{Kind: FSKindBytes})
 		} else {
 			n.OutputPorts[0].Type = FlowType{Kind: FSKindBytes}
+		}
+	case "stream":
+		if isListInput {
+			n.OutputPorts[0].Type = NewListType(FlowType{Kind: FSKindStream})
+		} else {
+			n.OutputPorts[0].Type = FlowType{Kind: FSKindStream}
 		}
 	case "csv":
 		n.OutputPorts[0].Type = FlowType{Kind: FSKindTable, ContainedType: &FlowType{Kind: FSKindAny}}
@@ -253,6 +260,45 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
 				} else {
 					// Should not happen given logic above
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				}
+			}
+
+		case "stream":
+			var outputs []FlowValue
+			for _, path := range paths {
+				if ctx.Err() != nil {
+					// Close already opened files
+					for _, out := range outputs {
+						_ = out.StreamValue.Close()
+					}
+					res.Err = ctx.Err()
+					return
+				}
+
+				f, err := os.Open(path)
+				if err != nil {
+					// Close already opened files
+					for _, out := range outputs {
+						_ = out.StreamValue.Close()
+					}
+					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
+					return
+				}
+				outputs = append(outputs, FlowValue{
+					Type:        &FlowType{Kind: FSKindStream},
+					StreamValue: f,
+				})
+			}
+
+			if hasWire && wireVal.Type.Kind == FSKindList {
+				res = NodeActionResult{
+					Outputs: []FlowValue{NewListValue(FlowType{Kind: FSKindStream}, outputs)},
+				}
+			} else {
+				if len(outputs) == 1 {
+					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
+				} else {
 					res = NodeActionResult{Outputs: []FlowValue{outputs[0]}}
 				}
 			}

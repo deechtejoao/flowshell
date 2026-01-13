@@ -59,8 +59,8 @@
 
 - [x] Race Condition Safety: `Node` struct fields (especially `Running` and `Result`) are accessed by multiple goroutines without protection. Use `sync.Mutex` or `atomic` values. `app/node.go`
 - [x] Panic Stack Traces: `Run` method's `recover()` block swallows stack traces. Use `debug.Stack()` for better debugging. `app/node.go`
-- [ ] True Streaming Support: Current "Large File Handling" loads files into RAM (or caps them). Implement `io.Reader` based data passing between nodes for true large file support. `app/node_loadfile.go`, `app/node_runprocess.go`
-- [ ] Input Validation: `GetInputValue` panics on invalid port access. Return error instead. `app/node.go`
+- [x] True Streaming Support: Current "Large File Handling" loads files into RAM (or caps them). Implement `io.Reader` based data passing between nodes for true large file support. `app/node_loadfile.go`, `app/node_runprocess.go`
+- [x] Input Validation: `GetInputValue` panics on invalid port access. Return error instead. `app/node.go`
 - [ ] Variables / Secrets: Global key-value store for API keys, environment variables, and constants.
 - [ ] Control Flow (Loop / Map): Iterate over lists and execute sub-graphs for each item.
 - [ ] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.

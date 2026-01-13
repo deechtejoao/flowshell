@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -14,8 +15,10 @@ import (
 
 // GEN:NodeAction
 type RunProcessAction struct {
-	CmdString string
-	UseShell  bool
+	CmdString    string
+	UseShell     bool
+	UseStdin     bool
+	StreamOutput bool
 }
 
 func NewRunProcessNode(cmd string) *Node {
@@ -52,6 +55,27 @@ var _ NodeAction = &RunProcessAction{}
 
 func (c *RunProcessAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
+
+	if c.UseStdin {
+		if len(n.InputPorts) == 0 {
+			n.InputPorts = []NodePort{{
+				Name: "Stdin",
+				Type: FlowType{Kind: FSKindAny}, // Accept Bytes or Stream
+			}}
+		}
+	} else {
+		n.InputPorts = nil
+	}
+
+	outKind := FSKindBytes
+	if c.StreamOutput {
+		outKind = FSKindStream
+	}
+
+	n.OutputPorts[0].Type = FlowType{Kind: outKind} // Stdout
+	n.OutputPorts[1].Type = FlowType{Kind: outKind} // Stderr
+	n.OutputPorts[2].Type = FlowType{Kind: outKind} // Combined
+	// ExitCode remains Int64
 }
 
 func (c *RunProcessAction) UI(n *Node) {
@@ -82,6 +106,40 @@ func (c *RunProcessAction) UI(n *Node) {
 			clay.TEXT("Use Shell", clay.TextElementConfig{TextColor: White})
 		})
 
+		UIButton(clay.IDI("RunProcessStdinBtn", n.ID), UIButtonConfig{
+			El: clay.EL{
+				Layout: clay.LAY{ChildGap: S2, ChildAlignment: YCENTER},
+			},
+			OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				c.UseStdin = !c.UseStdin
+				c.UpdateAndValidate(n)
+			},
+		}, func() {
+			clay.CLAY(clay.IDI("RunProcessStdinCheck", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: WH(16, 16)},
+				Border:          clay.B{Width: BA, Color: White},
+				BackgroundColor: util.Tern(c.UseStdin, Blue, clay.Color{}),
+			})
+			clay.TEXT("Use Stdin", clay.TextElementConfig{TextColor: White})
+		})
+
+		UIButton(clay.IDI("RunProcessStreamBtn", n.ID), UIButtonConfig{
+			El: clay.EL{
+				Layout: clay.LAY{ChildGap: S2, ChildAlignment: YCENTER},
+			},
+			OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				c.StreamOutput = !c.StreamOutput
+				c.UpdateAndValidate(n)
+			},
+		}, func() {
+			clay.CLAY(clay.IDI("RunProcessStreamCheck", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: WH(16, 16)},
+				Border:          clay.B{Width: BA, Color: White},
+				BackgroundColor: util.Tern(c.StreamOutput, Blue, clay.Color{}),
+			})
+			clay.TEXT("Stream Output", clay.TextElementConfig{TextColor: White})
+		})
+
 		clay.CLAY(clay.IDI("RunProcessOutputs", n.ID), clay.EL{
 			Layout: clay.LAY{
 				LayoutDirection: clay.TopToBottom,
@@ -89,6 +147,9 @@ func (c *RunProcessAction) UI(n *Node) {
 				ChildAlignment:  XRIGHT,
 			},
 		}, func() {
+			if c.UseStdin {
+				UIInputPort(n, 0)
+			}
 			UIOutputPort(n, 0)
 			UIOutputPort(n, 1)
 			UIOutputPort(n, 2)
@@ -120,6 +181,81 @@ func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 			return done
 		}
 		cmd = exec.CommandContext(cmdCtx, pieces[0], pieces[1:]...)
+	}
+
+	// Handle Stdin
+	if c.UseStdin {
+		input, ok, err := n.GetInputValue(0)
+		if err != nil {
+			go func() {
+				done <- NodeActionResult{Err: err}
+				close(done)
+			}()
+			cancel()
+			return done
+		}
+		if ok {
+			switch input.Type.Kind {
+			case FSKindBytes:
+				cmd.Stdin = strings.NewReader(string(input.BytesValue))
+			case FSKindStream:
+				if input.StreamValue != nil {
+					cmd.Stdin = input.StreamValue
+				}
+			}
+		}
+	}
+
+	if c.StreamOutput {
+		// Setup pipes
+		stdoutPR, stdoutPW := io.Pipe()
+		stderrPR, stderrPW := io.Pipe()
+		combinedPR, combinedPW := io.Pipe()
+
+		cmd.Stdout = io.MultiWriter(stdoutPW, combinedPW)
+		cmd.Stderr = io.MultiWriter(stderrPW, combinedPW)
+
+		// Start command
+		if err := cmd.Start(); err != nil {
+			// Close all pipe ends to prevent leaks
+			_ = stdoutPR.Close()
+			_ = stdoutPW.Close()
+			_ = stderrPR.Close()
+			_ = stderrPW.Close()
+			_ = combinedPR.Close()
+			_ = combinedPW.Close()
+
+			go func() {
+				done <- NodeActionResult{Err: err}
+				close(done)
+			}()
+			cancel()
+			return done
+		}
+
+		// Return streams immediately
+		go func() {
+			done <- NodeActionResult{
+				Outputs: []FlowValue{
+					{Type: &FlowType{Kind: FSKindStream}, StreamValue: stdoutPR},
+					{Type: &FlowType{Kind: FSKindStream}, StreamValue: stderrPR},
+					{Type: &FlowType{Kind: FSKindStream}, StreamValue: combinedPR},
+					{Type: &FlowType{Kind: FSKindInt64}, Int64Value: 0}, // Exit code unavailable
+				},
+			}
+			close(done)
+
+			// Wait for command in background to close pipes
+			go func() {
+				defer cancel() // Ensure context is cancelled eventually
+				_ = cmd.Wait()
+				_ = stdoutPW.Close()
+				_ = stderrPW.Close()
+				_ = combinedPW.Close()
+			}()
+		}()
+
+		return done
 	}
 
 	var stdout, stderr, combined []byte
@@ -207,10 +343,21 @@ func (c *RunProcessAction) Serialize(s *Serializer) bool {
 
 	if !s.Encode && s.Buf.Len() == 0 {
 		c.UseShell = false
+		c.UseStdin = false
+		c.StreamOutput = false
 		return s.Ok()
 	}
 
 	SBool(s, &c.UseShell)
+
+	if !s.Encode && s.Buf.Len() == 0 {
+		c.UseStdin = false
+		c.StreamOutput = false
+		return s.Ok()
+	}
+
+	SBool(s, &c.UseStdin)
+	SBool(s, &c.StreamOutput)
 	return s.Ok()
 }
 
