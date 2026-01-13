@@ -85,6 +85,9 @@ var nodeTypes = []NodeType{
 	{Name: "JSON Query", Create: func() *Node { return NewJsonQueryNode() }},
 	{Name: "XML Query", Create: func() *Node { return NewXmlQueryNode() }},
 	{Name: "Get Variable", Create: func() *Node { return NewGetVariableNode() }},
+	{Name: "Map", Create: func() *Node { return NewMapNode() }},
+	{Name: "Graph Input", Create: func() *Node { return NewGraphInputNode() }},
+	{Name: "Graph Output", Create: func() *Node { return NewGraphOutputNode() }},
 }
 
 func CreateGroup() {

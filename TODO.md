@@ -62,7 +62,7 @@
 - [x] True Streaming Support: Current "Large File Handling" loads files into RAM (or caps them). Implement `io.Reader` based data passing between nodes for true large file support. `app/node_loadfile.go`, `app/node_runprocess.go`
 - [x] Input Validation: `GetInputValue` panics on invalid port access. Return error instead. `app/node.go`
 - [x] Variables / Secrets: Global key-value store for API keys, environment variables, constants.
-- [ ] Control Flow (Loop / Map): Iterate over lists and execute sub-graphs for each item.
+- [x] Control Flow (Loop / Map): Iterate over lists and execute sub-graphs for each item.
 - [ ] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.
 - [ ] Interactive Input: "Prompt User" node to ask for text/confirmation during execution.
 - [ ] Undo/Redo Properties: Extend Undo/Redo to cover node property changes (currently handles graph topology).
