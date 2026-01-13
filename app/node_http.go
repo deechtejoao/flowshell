@@ -203,10 +203,6 @@ func (a *HTTPRequestAction) RunContext(ctx context.Context, n *Node) <-chan Node
 	return done
 }
 
-func (a *HTTPRequestAction) Tag() string {
-	return "HTTPRequest"
-}
-
 func (a *HTTPRequestAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }

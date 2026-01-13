@@ -99,7 +99,6 @@ func (a *ParseTimeAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 	return a.Run(n)
 }
 
-func (a *ParseTimeAction) Tag() string { return "ParseTime" }
 func (a *ParseTimeAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.Format)
 	return s.Ok()

@@ -141,10 +141,6 @@ func (a *MapAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionRe
 	return done
 }
 
-func (a *MapAction) Tag() string {
-	return "Map"
-}
-
 func (a *MapAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.SubflowPath)
 	return s.Ok()

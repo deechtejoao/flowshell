@@ -88,6 +88,9 @@ var nodeTypes = []NodeType{
 	{Name: "Map", Create: func() *Node { return NewMapNode() }},
 	{Name: "Graph Input", Create: func() *Node { return NewGraphInputNode() }},
 	{Name: "Graph Output", Create: func() *Node { return NewGraphOutputNode() }},
+	{Name: "Line Chart", Create: func() *Node { return NewLineChartNode() }},
+	{Name: "Bar Chart", Create: func() *Node { return NewBarChartNode() }},
+	{Name: "Scatter Plot", Create: func() *Node { return NewScatterPlotNode() }},
 }
 
 func CreateGroup() {
@@ -887,7 +890,7 @@ func UIOverlay(topoErr error) {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 						IsHoveringUI = true
 					}, nil)
-					
+
 					// Header
 					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2}}, func() {
 						clay.TEXT("Variables", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
@@ -909,7 +912,7 @@ func UIOverlay(topoErr error) {
 						keys = append(keys, k)
 					}
 					slices.Sort(keys)
-					
+
 					// Scrollable area? For now just list them, assuming not too many.
 					clay.CLAY(clay.ID("VariablesList"), clay.EL{
 						Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1},
@@ -918,9 +921,9 @@ func UIOverlay(topoErr error) {
 							v := currentGraph.Variables[k]
 							key := k // Capture for closure
 							clay.CLAY(clay.ID("VarRow"+key), clay.EL{
-								Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2, Padding: PA1},
+								Layout:          clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2, Padding: PA1},
 								BackgroundColor: clay.Color{R: 60, G: 60, B: 60, A: 255},
-								CornerRadius: RA1,
+								CornerRadius:    RA1,
 							}, func() {
 								clay.TEXT(key, clay.TextElementConfig{TextColor: Yellow, FontID: InterBold})
 								clay.TEXT("=", clay.TextElementConfig{TextColor: Gray})
@@ -945,7 +948,7 @@ func UIOverlay(topoErr error) {
 					// Add New
 					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1, Padding: PA1}, Border: clay.BorderElementConfig{Width: BA, Color: Gray}, CornerRadius: RA1}, func() {
 						clay.TEXT("Add New Variable", clay.TextElementConfig{TextColor: Gray, FontSize: 12})
-						
+
 						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, ChildGap: S2, Sizing: GROWH}}, func() {
 							// Key Input
 							clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0)}, ChildGap: S1}}, func() {
@@ -962,7 +965,7 @@ func UIOverlay(topoErr error) {
 								})
 							})
 						})
-						
+
 						UIButton(clay.ID("AddVariable"), UIButtonConfig{
 							El: clay.EL{Layout: clay.LAY{Padding: PA2, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: ALLCENTER}, BackgroundColor: Green, CornerRadius: RA1},
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {

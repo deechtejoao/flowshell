@@ -89,10 +89,6 @@ func (a *RegexMatchAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 	return a.Run(n)
 }
 
-func (a *RegexMatchAction) Tag() string {
-	return "RegexMatch"
-}
-
 func (a *RegexMatchAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
@@ -176,10 +172,6 @@ func (a *RegexFindAllAction) Run(n *Node) <-chan NodeActionResult {
 
 func (a *RegexFindAllAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	return a.Run(n)
-}
-
-func (a *RegexFindAllAction) Tag() string {
-	return "RegexFindAll"
 }
 
 func (a *RegexFindAllAction) Serialize(s *Serializer) bool {
@@ -271,10 +263,6 @@ func (a *RegexReplaceAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 	return a.Run(n)
 }
 
-func (a *RegexReplaceAction) Tag() string {
-	return "RegexReplace"
-}
-
 func (a *RegexReplaceAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
@@ -358,10 +346,6 @@ func (a *RegexSplitAction) Run(n *Node) <-chan NodeActionResult {
 
 func (a *RegexSplitAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	return a.Run(n)
-}
-
-func (a *RegexSplitAction) Tag() string {
-	return "RegexSplit"
 }
 
 func (a *RegexSplitAction) Serialize(s *Serializer) bool {

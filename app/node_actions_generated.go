@@ -5,21 +5,44 @@ package app
 var allNodeActions = [...]NodeActionMeta{
 	{Tag: "AddColumnAction", Alloc: func() NodeAction { return &AddColumnAction{} }},
 	{Tag: "AggregateAction", Alloc: func() NodeAction { return &AggregateAction{} }},
+	{Tag: "BarChartAction", Alloc: func() NodeAction { return &BarChartAction{} }},
+	{Tag: "CaseConvertAction", Alloc: func() NodeAction { return &CaseConvertAction{} }},
 	{Tag: "ConcatTablesAction", Alloc: func() NodeAction { return &ConcatTablesAction{} }},
 	{Tag: "ConvertAction", Alloc: func() NodeAction { return &ConvertAction{} }},
 	{Tag: "ExtractColumnAction", Alloc: func() NodeAction { return &ExtractColumnAction{} }},
 	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
+	{Tag: "FormatStringAction", Alloc: func() NodeAction { return &FormatStringAction{} }},
+	{Tag: "FormulaAction", Alloc: func() NodeAction { return &FormulaAction{} }},
+	{Tag: "GetMousePositionAction", Alloc: func() NodeAction { return &GetMousePositionAction{} }},
+	{Tag: "GetVariableAction", Alloc: func() NodeAction { return &GetVariableAction{} }},
+	{Tag: "GraphInputAction", Alloc: func() NodeAction { return &GraphInputAction{} }},
+	{Tag: "GraphOutputAction", Alloc: func() NodeAction { return &GraphOutputAction{} }},
+	{Tag: "HTTPRequestAction", Alloc: func() NodeAction { return &HTTPRequestAction{} }},
+	{Tag: "JoinTextAction", Alloc: func() NodeAction { return &JoinTextAction{} }},
+	{Tag: "JsonQueryAction", Alloc: func() NodeAction { return &JsonQueryAction{} }},
+	{Tag: "LineChartAction", Alloc: func() NodeAction { return &LineChartAction{} }},
 	{Tag: "LinesAction", Alloc: func() NodeAction { return &LinesAction{} }},
 	{Tag: "ListFilesAction", Alloc: func() NodeAction { return &ListFilesAction{} }},
 	{Tag: "LoadFileAction", Alloc: func() NodeAction { return &LoadFileAction{} }},
+	{Tag: "MapAction", Alloc: func() NodeAction { return &MapAction{} }},
 	{Tag: "MinifyHTMLAction", Alloc: func() NodeAction { return &MinifyHTMLAction{} }},
+	{Tag: "ParseTimeAction", Alloc: func() NodeAction { return &ParseTimeAction{} }},
+	{Tag: "PluginAction", Alloc: func() NodeAction { return &PluginAction{} }},
+	{Tag: "RegexFindAllAction", Alloc: func() NodeAction { return &RegexFindAllAction{} }},
+	{Tag: "RegexMatchAction", Alloc: func() NodeAction { return &RegexMatchAction{} }},
+	{Tag: "RegexReplaceAction", Alloc: func() NodeAction { return &RegexReplaceAction{} }},
+	{Tag: "RegexSplitAction", Alloc: func() NodeAction { return &RegexSplitAction{} }},
 	{Tag: "RunProcessAction", Alloc: func() NodeAction { return &RunProcessAction{} }},
 	{Tag: "SaveFileAction", Alloc: func() NodeAction { return &SaveFileAction{} }},
+	{Tag: "ScatterPlotAction", Alloc: func() NodeAction { return &ScatterPlotAction{} }},
 	{Tag: "SelectColumnsAction", Alloc: func() NodeAction { return &SelectColumnsAction{} }},
 	{Tag: "SortAction", Alloc: func() NodeAction { return &SortAction{} }},
+	{Tag: "SplitTextAction", Alloc: func() NodeAction { return &SplitTextAction{} }},
 	{Tag: "TransposeAction", Alloc: func() NodeAction { return &TransposeAction{} }},
 	{Tag: "TrimSpacesAction", Alloc: func() NodeAction { return &TrimSpacesAction{} }},
 	{Tag: "ValueAction", Alloc: func() NodeAction { return &ValueAction{} }},
+	{Tag: "WaitForClickAction", Alloc: func() NodeAction { return &WaitForClickAction{} }},
+	{Tag: "XmlQueryAction", Alloc: func() NodeAction { return &XmlQueryAction{} }},
 }
 
 func (a *AddColumnAction) Tag() string {
@@ -28,6 +51,14 @@ func (a *AddColumnAction) Tag() string {
 
 func (a *AggregateAction) Tag() string {
 	return "AggregateAction"
+}
+
+func (a *BarChartAction) Tag() string {
+	return "BarChartAction"
+}
+
+func (a *CaseConvertAction) Tag() string {
+	return "CaseConvertAction"
 }
 
 func (a *ConcatTablesAction) Tag() string {
@@ -46,6 +77,46 @@ func (a *FilterEmptyAction) Tag() string {
 	return "FilterEmptyAction"
 }
 
+func (a *FormatStringAction) Tag() string {
+	return "FormatStringAction"
+}
+
+func (a *FormulaAction) Tag() string {
+	return "FormulaAction"
+}
+
+func (a *GetMousePositionAction) Tag() string {
+	return "GetMousePositionAction"
+}
+
+func (a *GetVariableAction) Tag() string {
+	return "GetVariableAction"
+}
+
+func (a *GraphInputAction) Tag() string {
+	return "GraphInputAction"
+}
+
+func (a *GraphOutputAction) Tag() string {
+	return "GraphOutputAction"
+}
+
+func (a *HTTPRequestAction) Tag() string {
+	return "HTTPRequestAction"
+}
+
+func (a *JoinTextAction) Tag() string {
+	return "JoinTextAction"
+}
+
+func (a *JsonQueryAction) Tag() string {
+	return "JsonQueryAction"
+}
+
+func (a *LineChartAction) Tag() string {
+	return "LineChartAction"
+}
+
 func (a *LinesAction) Tag() string {
 	return "LinesAction"
 }
@@ -58,8 +129,36 @@ func (a *LoadFileAction) Tag() string {
 	return "LoadFileAction"
 }
 
+func (a *MapAction) Tag() string {
+	return "MapAction"
+}
+
 func (a *MinifyHTMLAction) Tag() string {
 	return "MinifyHTMLAction"
+}
+
+func (a *ParseTimeAction) Tag() string {
+	return "ParseTimeAction"
+}
+
+func (a *PluginAction) Tag() string {
+	return "PluginAction"
+}
+
+func (a *RegexFindAllAction) Tag() string {
+	return "RegexFindAllAction"
+}
+
+func (a *RegexMatchAction) Tag() string {
+	return "RegexMatchAction"
+}
+
+func (a *RegexReplaceAction) Tag() string {
+	return "RegexReplaceAction"
+}
+
+func (a *RegexSplitAction) Tag() string {
+	return "RegexSplitAction"
 }
 
 func (a *RunProcessAction) Tag() string {
@@ -70,12 +169,20 @@ func (a *SaveFileAction) Tag() string {
 	return "SaveFileAction"
 }
 
+func (a *ScatterPlotAction) Tag() string {
+	return "ScatterPlotAction"
+}
+
 func (a *SelectColumnsAction) Tag() string {
 	return "SelectColumnsAction"
 }
 
 func (a *SortAction) Tag() string {
 	return "SortAction"
+}
+
+func (a *SplitTextAction) Tag() string {
+	return "SplitTextAction"
 }
 
 func (a *TransposeAction) Tag() string {
@@ -88,4 +195,12 @@ func (a *TrimSpacesAction) Tag() string {
 
 func (a *ValueAction) Tag() string {
 	return "ValueAction"
+}
+
+func (a *WaitForClickAction) Tag() string {
+	return "WaitForClickAction"
+}
+
+func (a *XmlQueryAction) Tag() string {
+	return "XmlQueryAction"
 }

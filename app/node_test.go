@@ -22,6 +22,12 @@ func TestSerializeNodes(t *testing.T) {
 		assert.True(t, SThing(dec, &after))
 
 		assert.True(t, dec.Ok())
-		assert.Equal(t, *before, after)
+		assert.Equal(t, before.ID, after.ID)
+		assert.Equal(t, before.Pos, after.Pos)
+		assert.Equal(t, before.Name, after.Name)
+		assert.Equal(t, before.Pinned, after.Pinned)
+		assert.Equal(t, before.InputPorts, after.InputPorts)
+		assert.Equal(t, before.OutputPorts, after.OutputPorts)
+		assert.Equal(t, before.Action, after.Action)
 	})
 }

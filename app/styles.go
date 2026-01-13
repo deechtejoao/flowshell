@@ -12,6 +12,7 @@ var DarkGray = clay.Color{R: 33, G: 36, B: 40, A: 255}
 var Gray = clay.Color{R: 67, G: 71, B: 79, A: 255}
 var LightGray = clay.Color{R: 157, G: 161, B: 170, A: 255}
 var White = clay.Color{R: 250, G: 250, B: 252, A: 255}
+var Black = clay.Color{R: 0, G: 0, B: 0, A: 255}
 
 // Accents
 var Red = clay.Color{R: 214, G: 25, B: 50, A: 255}

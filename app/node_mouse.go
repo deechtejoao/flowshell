@@ -58,10 +58,6 @@ func (a *GetMousePositionAction) RunContext(ctx context.Context, n *Node) <-chan
 	return nil
 }
 
-func (a *GetMousePositionAction) Tag() string {
-	return "GetMousePosition"
-}
-
 func (a *GetMousePositionAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
@@ -151,10 +147,6 @@ func (a *WaitForClickAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 		}
 	}()
 	return done
-}
-
-func (a *WaitForClickAction) Tag() string {
-	return "WaitForClick"
 }
 
 func (a *WaitForClickAction) Serialize(s *Serializer) bool {

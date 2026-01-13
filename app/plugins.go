@@ -134,10 +134,6 @@ func (a *PluginAction) RunContext(ctx context.Context, n *Node) <-chan NodeActio
 	return a.Run(n)
 }
 
-func (a *PluginAction) Tag() string {
-	return "Plugin:" + a.Path
-}
-
 func (a *PluginAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.Path)
 	// We might store metadata too or reload it?

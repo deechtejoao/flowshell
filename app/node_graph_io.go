@@ -46,10 +46,6 @@ func (a *GraphInputAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 	return done
 }
 
-func (a *GraphInputAction) Tag() string {
-	return "GraphInput"
-}
-
 func (a *GraphInputAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
@@ -100,10 +96,6 @@ func (a *GraphOutputAction) RunContext(ctx context.Context, n *Node) <-chan Node
 		close(done)
 	}()
 	return done
-}
-
-func (a *GraphOutputAction) Tag() string {
-	return "GraphOutput"
 }
 
 func (a *GraphOutputAction) Serialize(s *Serializer) bool {

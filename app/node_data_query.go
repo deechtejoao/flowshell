@@ -102,7 +102,6 @@ func (a *JsonQueryAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 	return a.Run(n)
 }
 
-func (a *JsonQueryAction) Tag() string { return "JsonQuery" }
 func (a *JsonQueryAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.Query)
 	return s.Ok()
@@ -202,7 +201,6 @@ func (a *XmlQueryAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 	return a.Run(n)
 }
 
-func (a *XmlQueryAction) Tag() string { return "XmlQuery" }
 func (a *XmlQueryAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.XPath)
 	return s.Ok()

@@ -90,10 +90,6 @@ func (a *GetVariableAction) RunContext(ctx context.Context, n *Node) <-chan Node
 	return done
 }
 
-func (a *GetVariableAction) Tag() string {
-	return "GetVariable"
-}
-
 func (a *GetVariableAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.VariableName)
 	return s.Ok()

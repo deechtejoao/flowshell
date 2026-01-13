@@ -92,6 +92,9 @@ func renderClayCommands(commands []clay.RenderCommand) {
 			if data, ok := config.CustomData.(*MinimapRenderData); ok {
 				RenderMinimap(bbox, data)
 			}
+			if data, ok := config.CustomData.(*ChartRenderData); ok {
+				RenderChart(bbox, data)
+			}
 		}
 	}
 }

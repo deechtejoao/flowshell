@@ -63,7 +63,7 @@
 - [x] Input Validation: `GetInputValue` panics on invalid port access. Return error instead. `app/node.go`
 - [x] Variables / Secrets: Global key-value store for API keys, environment variables, constants.
 - [x] Control Flow (Loop / Map): Iterate over lists and execute sub-graphs for each item.
-- [ ] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.
+- [x] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.
 - [ ] Interactive Input: "Prompt User" node to ask for text/confirmation during execution.
 - [ ] Undo/Redo Properties: Extend Undo/Redo to cover node property changes (currently handles graph topology).
 - [ ] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).

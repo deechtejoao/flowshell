@@ -96,7 +96,6 @@ func (a *JoinTextAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 	return a.Run(n)
 }
 
-func (a *JoinTextAction) Tag() string                  { return "JoinText" }
 func (a *JoinTextAction) Serialize(s *Serializer) bool { return s.Ok() }
 
 // --- Split Text ---
@@ -171,7 +170,6 @@ func (a *SplitTextAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 	return a.Run(n)
 }
 
-func (a *SplitTextAction) Tag() string                  { return "SplitText" }
 func (a *SplitTextAction) Serialize(s *Serializer) bool { return s.Ok() }
 
 // --- Case Convert ---
@@ -274,7 +272,6 @@ func (a *CaseConvertAction) RunContext(ctx context.Context, n *Node) <-chan Node
 	return a.Run(n)
 }
 
-func (a *CaseConvertAction) Tag() string { return "CaseConvert" }
 func (a *CaseConvertAction) Serialize(s *Serializer) bool {
 	SInt(s, &a.Mode)
 	return s.Ok()
@@ -349,7 +346,6 @@ func (a *FormatStringAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 	return a.Run(n)
 }
 
-func (a *FormatStringAction) Tag() string { return "FormatString" }
 func (a *FormatStringAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.Format)
 	return s.Ok()

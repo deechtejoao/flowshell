@@ -9,10 +9,6 @@ import (
 )
 
 const windowWidth = 1920
-const windowHeight = 1080
-
-// const windowWidth = 1280
-// const windowHeight = 720
 
 func Main() {
 	CurrentSettings = LoadSettings()

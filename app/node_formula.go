@@ -69,8 +69,8 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 		}
 
 		// Compile Expression
-		program, err := expr.Compile(a.Expression, expr.Env(map[string]interface{}{
-			"col": func(name string) interface{} { return nil }, // Dummy environment for checking
+		program, err := expr.Compile(a.Expression, expr.Env(map[string]any{
+			"col": func(name string) any { return nil }, // Dummy environment for checking
 		}))
 		program, err = expr.Compile(a.Expression)
 		if err != nil {
@@ -80,10 +80,10 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 
 		// Helper to evaluate single item
 		eval := func(item FlowValue) (FlowValue, error) {
-			env := make(map[string]interface{})
+			env := make(map[string]any)
 
 			// Helper to access columns
-			env["col"] = func(name string) interface{} {
+			env["col"] = func(name string) any {
 				// Access field from Record or Table Row
 				if item.Type.Kind == FSKindRecord {
 					// Scan fields
@@ -107,7 +107,8 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 
 		// Process
 		var result FlowValue
-		if valInput.Type.Kind == FSKindTable {
+		switch valInput.Type.Kind {
+		case FSKindTable:
 			// Iterate rows
 			var resList []FlowValue
 			for _, row := range valInput.TableValue {
@@ -140,7 +141,7 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 			}
 			result = NewListValue(resType, resList)
 
-		} else if valInput.Type.Kind == FSKindList {
+		case FSKindList:
 			// Map over list
 			var resList []FlowValue
 			for _, item := range valInput.ListValue {
@@ -156,7 +157,8 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 				resType = *resList[0].Type
 			}
 			result = NewListValue(resType, resList)
-		} else {
+
+		default:
 			// Single Item
 			res, err := eval(valInput)
 			if err != nil {
@@ -175,10 +177,6 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 
 func (a *FormulaAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	return a.Run(n)
-}
-
-func (a *FormulaAction) Tag() string {
-	return "Formula"
 }
 
 func (a *FormulaAction) Serialize(s *Serializer) bool {
