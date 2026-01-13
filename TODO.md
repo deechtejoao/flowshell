@@ -54,7 +54,7 @@
 - [x] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
 - [x] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
 - [x] Text Operations: Split lines, Join, String formatting, Case conversion.
-- [ ] JSON/XML Query: Extract data using JSONPath or XPath.
+- [x] JSON/XML Query: Extract data using JSONPath or XPath.
 - [x] Date/Time Parsing: Parse strings to Timestamps with format strings.
 
 ## System & Core

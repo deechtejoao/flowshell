@@ -82,6 +82,8 @@ var nodeTypes = []NodeType{
 	{Name: "Change Case", Create: func() *Node { return NewCaseConvertNode() }},
 	{Name: "Format String", Create: func() *Node { return NewFormatStringNode() }},
 	{Name: "Parse Time", Create: func() *Node { return NewParseTimeNode() }},
+	{Name: "JSON Query", Create: func() *Node { return NewJsonQueryNode() }},
+	{Name: "XML Query", Create: func() *Node { return NewXmlQueryNode() }},
 }
 
 func CreateGroup() {
