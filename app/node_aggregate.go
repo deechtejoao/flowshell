@@ -120,7 +120,7 @@ func (a *AggregateAction) RunContext(ctx context.Context, n *Node) <-chan NodeAc
 		default:
 		}
 
-		util.Assert(n.Action != nil && n.Action.Tag() == "Aggregate", fmt.Sprintf("expected aggregate node, got %v", n))
+		util.Assert(n.Action != nil && n.Action.Tag() == "AggregateAction", fmt.Sprintf("expected aggregate node, got %v", n))
 
 		input, ok, err := n.GetInputValue(0)
 		if !ok {
