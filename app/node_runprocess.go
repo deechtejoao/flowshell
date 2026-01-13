@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/bvisness/flowshell/clay"
+	"github.com/bvisness/flowshell/util"
 )
 
 // GEN:NodeAction
 type RunProcessAction struct {
 	CmdString string
+	UseShell  bool
 }
 
 func NewRunProcessNode(cmd string) *Node {
@@ -63,6 +66,22 @@ func (c *RunProcessAction) UI(n *Node) {
 			El: clay.EL{Layout: clay.LAY{Sizing: GROWH}},
 		})
 
+		UIButton(clay.IDI("RunProcessShellBtn", n.ID), UIButtonConfig{
+			El: clay.EL{
+				Layout: clay.LAY{ChildGap: S2, ChildAlignment: YCENTER},
+			},
+			OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				c.UseShell = !c.UseShell
+			},
+		}, func() {
+			clay.CLAY(clay.IDI("RunProcessShellCheck", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: WH(16, 16)},
+				Border:          clay.B{Width: BA, Color: White},
+				BackgroundColor: util.Tern(c.UseShell, Blue, clay.Color{}),
+			})
+			clay.TEXT("Use Shell", clay.TextElementConfig{TextColor: White})
+		})
+
 		clay.CLAY(clay.IDI("RunProcessOutputs", n.ID), clay.EL{
 			Layout: clay.LAY{
 				LayoutDirection: clay.TopToBottom,
@@ -81,17 +100,27 @@ func (c *RunProcessAction) UI(n *Node) {
 func (c *RunProcessAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult)
 
-	pieces := parseCommand(c.CmdString)
-	if len(pieces) == 0 {
-		go func() {
-			done <- NodeActionResult{Err: nil} // Or error?
-			close(done)
-		}()
-		return done
-	}
-
 	cmdCtx, cancel := context.WithCancel(ctx)
-	cmd := exec.CommandContext(cmdCtx, pieces[0], pieces[1:]...)
+	var cmd *exec.Cmd
+
+	if c.UseShell {
+		if runtime.GOOS == "windows" {
+			cmd = exec.CommandContext(cmdCtx, "powershell", "-Command", c.CmdString)
+		} else {
+			cmd = exec.CommandContext(cmdCtx, "sh", "-c", c.CmdString)
+		}
+	} else {
+		pieces := parseCommand(c.CmdString)
+		if len(pieces) == 0 {
+			go func() {
+				done <- NodeActionResult{Err: nil} // Or error?
+				close(done)
+			}()
+			cancel()
+			return done
+		}
+		cmd = exec.CommandContext(cmdCtx, pieces[0], pieces[1:]...)
+	}
 
 	var stdout, stderr, combined []byte
 	var exitCode int64
@@ -175,6 +204,13 @@ func (c *RunProcessAction) Run(n *Node) <-chan NodeActionResult {
 
 func (c *RunProcessAction) Serialize(s *Serializer) bool {
 	SStr(s, &c.CmdString)
+
+	if !s.Encode && s.Buf.Len() == 0 {
+		c.UseShell = false
+		return s.Ok()
+	}
+
+	SBool(s, &c.UseShell)
 	return s.Ok()
 }
 

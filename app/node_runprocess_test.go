@@ -5,21 +5,25 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
 
 // TestRunProcess_ExitCode verifies that the RunProcess node correctly outputs the exit code.
 func TestRunProcess_ExitCode(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("Skipping Windows-specific test on non-Windows OS")
+	var cmdExit0, cmdExit1 string
+	if runtime.GOOS == "windows" {
+		cmdExit0 = "powershell -Command \"exit 0\""
+		cmdExit1 = "powershell -Command \"exit 1\""
+	} else {
+		cmdExit0 = "sh -c \"exit 0\""
+		cmdExit1 = "sh -c \"exit 1\""
 	}
 
 	// 1. Test successful exit (0)
 	t.Run("Exit Code 0", func(t *testing.T) {
-		// PowerShell command that exits with 0
-		cmd := "powershell -Command \"exit 0\""
-		node := NewRunProcessNode(cmd)
+		node := NewRunProcessNode(cmdExit0)
 		action := node.Action.(*RunProcessAction)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -48,9 +52,7 @@ func TestRunProcess_ExitCode(t *testing.T) {
 
 	// 2. Test failure exit (1)
 	t.Run("Exit Code 1", func(t *testing.T) {
-		// PowerShell command that exits with 1
-		cmd := "powershell -Command \"exit 1\""
-		node := NewRunProcessNode(cmd)
+		node := NewRunProcessNode(cmdExit1)
 		action := node.Action.(*RunProcessAction)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -72,6 +74,39 @@ func TestRunProcess_ExitCode(t *testing.T) {
 			exitCodeVal := res.Outputs[3]
 			if exitCodeVal.Int64Value != 1 {
 				t.Errorf("Expected Exit Code 1, got %d", exitCodeVal.Int64Value)
+			}
+		case <-ctx.Done():
+			t.Fatal("Test timed out")
+		}
+	})
+}
+
+func TestRunProcess_UseShell(t *testing.T) {
+	var cmdPipe string
+	if runtime.GOOS == "windows" {
+		cmdPipe = "echo 'hello' | Write-Output"
+	} else {
+		cmdPipe = "echo 'hello' | cat"
+	}
+
+	t.Run("Shell Pipe", func(t *testing.T) {
+		node := NewRunProcessNode(cmdPipe)
+		action := node.Action.(*RunProcessAction)
+		action.UseShell = true
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		done := action.RunContext(ctx, node)
+		select {
+		case res := <-done:
+			if res.Err != nil {
+				t.Fatalf("Node execution failed: %v", res.Err)
+			}
+			stdout := string(res.Outputs[0].BytesValue)
+			// PowerShell might output CRLF
+			if strings.TrimSpace(stdout) != "hello" {
+				t.Errorf("Expected 'hello', got '%s'", stdout)
 			}
 		case <-ctx.Done():
 			t.Fatal("Test timed out")

@@ -14,6 +14,7 @@ var LightGray = clay.Color{R: 157, G: 161, B: 170, A: 255}
 var White = clay.Color{R: 250, G: 250, B: 252, A: 255}
 var Red = clay.Color{R: 214, G: 25, B: 50, A: 255}
 var Blue = clay.Color{R: 11, G: 88, B: 183, A: 255}
+var Yellow = clay.Color{R: 242, G: 199, B: 68, A: 255}
 
 var PlayButtonGreen = clay.Color{R: 61, G: 159, B: 72, A: 255}
 var HoverWhite = clay.Color{R: 255, G: 255, B: 255, A: 20}

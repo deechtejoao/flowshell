@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,29 +45,31 @@ func PushHistory() {
 }
 
 type NodeType struct {
-	Name   string
-	Create func() *Node
+	Name         string
+	Create       func() *Node
+	ShortcutKey  int32
+	ShortcutMods []int32
 }
 
 var nodeTypes = []NodeType{
-	{"Run Process", func() *Node { return NewRunProcessNode(util.Tern(runtime.GOOS == "Windows", "dir", "ls")) }},
-	{"List Files", func() *Node { return NewListFilesNode(".") }},
-	{"Lines", func() *Node { return NewLinesNode() }},
-	{"Load File", func() *Node { return NewLoadFileNode("") }},
-	{"Save File", func() *Node { return NewSaveFileNode() }},
-	{"Trim Spaces", func() *Node { return NewTrimSpacesNode() }},
-	{"Min", func() *Node { return NewAggregateNode("Min") }},
-	{"Max", func() *Node { return NewAggregateNode("Max") }},
-	{"Mean (Average)", func() *Node { return NewAggregateNode("Mean") }},
-	{"Concatenate Tables (Combine Rows)", func() *Node { return NewConcatTablesNode() }},
-	{"Filter Empty", func() *Node { return NewFilterEmptyNode() }},
-	{"Sort", func() *Node { return NewSortNode() }},
-	{"Select Columns", func() *Node { return NewSelectColumnsNode() }},
-	{"Extract Column", func() *Node { return NewExtractColumnNode() }},
-	{"Add Column", func() *Node { return NewAddColumnNode() }},
-	{"Convert Type", func() *Node { return NewConvertNode() }},
-	{"Transpose", func() *Node { return NewTransposeNode() }},
-	{"Minify HTML", func() *Node { return NewMinifyHTMLNode() }},
+	{Name: "Run Process", Create: func() *Node { return NewRunProcessNode(util.Tern(runtime.GOOS == "Windows", "dir", "ls")) }},
+	{Name: "List Files", Create: func() *Node { return NewListFilesNode(".") }},
+	{Name: "Lines", Create: func() *Node { return NewLinesNode() }},
+	{Name: "Load File", Create: func() *Node { return NewLoadFileNode("") }},
+	{Name: "Save File", Create: func() *Node { return NewSaveFileNode() }},
+	{Name: "Trim Spaces", Create: func() *Node { return NewTrimSpacesNode() }},
+	{Name: "Min", Create: func() *Node { return NewAggregateNode("Min") }},
+	{Name: "Max", Create: func() *Node { return NewAggregateNode("Max") }},
+	{Name: "Mean (Average)", Create: func() *Node { return NewAggregateNode("Mean") }},
+	{Name: "Concatenate Tables (Combine Rows)", Create: func() *Node { return NewConcatTablesNode() }},
+	{Name: "Filter Empty", Create: func() *Node { return NewFilterEmptyNode() }},
+	{Name: "Sort", Create: func() *Node { return NewSortNode() }},
+	{Name: "Select Columns", Create: func() *Node { return NewSelectColumnsNode() }},
+	{Name: "Extract Column", Create: func() *Node { return NewExtractColumnNode() }},
+	{Name: "Add Column", Create: func() *Node { return NewAddColumnNode() }},
+	{Name: "Convert Type", Create: func() *Node { return NewConvertNode() }},
+	{Name: "Transpose", Create: func() *Node { return NewTransposeNode() }},
+	{Name: "Minify HTML", Create: func() *Node { return NewMinifyHTMLNode() }},
 }
 
 func CreateGroup() {
@@ -110,7 +113,19 @@ func CreateGroup() {
 	})
 }
 
-func SearchNodeTypes(search string) []NodeType {
+func parseNodeSearch(input string) (string, int) {
+	input = strings.TrimSpace(input)
+	parts := strings.SplitN(input, " ", 2)
+	if len(parts) > 1 {
+		if count, err := strconv.Atoi(parts[0]); err == nil && count > 0 {
+			return parts[1], count
+		}
+	}
+	return input, 1
+}
+
+func SearchNodeTypes(searchInput string) []NodeType {
+	search, _ := parseNodeSearch(searchInput)
 	var names []string
 	for _, t := range nodeTypes {
 		names = append(names, t.Name)
@@ -243,6 +258,28 @@ func processInput() {
 		CreateGroup()
 	}
 
+	// Create node shortcuts
+	if !IsHoveringUI && UIFocus == nil {
+		for _, nt := range nodeTypes {
+			if nt.ShortcutKey != 0 {
+				modsDown := true
+				for _, mod := range nt.ShortcutMods {
+					if !rl.IsKeyDown(mod) {
+						modsDown = false
+						break
+					}
+				}
+				if modsDown && rl.IsKeyPressed(nt.ShortcutKey) {
+					newNode := nt.Create()
+					// Create at mouse position
+					newNode.Pos = SnapToGrid(V2(rl.GetMousePosition()))
+					currentGraph.AddNode(newNode)
+					selectedNodeID = newNode.ID
+				}
+			}
+		}
+	}
+
 	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && len(selectedNodes) > 0 {
 		DeleteSelectedNodes()
 	}
@@ -255,8 +292,8 @@ func processInput() {
 		if len(files) > 0 && IsHoveringPanel {
 			mousePos := rl.GetMousePosition()
 			// Find the top-most node under the mouse
-			// (Iterating in reverse order usually gives top-most if rendered in order, 
-			// but Graph.Nodes order isn't strictly Z-order. 
+			// (Iterating in reverse order usually gives top-most if rendered in order,
+			// but Graph.Nodes order isn't strictly Z-order.
 			// However, picking *any* collided node is better than nothing.)
 			for i := len(currentGraph.Nodes) - 1; i >= 0; i-- {
 				n := currentGraph.Nodes[i]
@@ -286,7 +323,7 @@ func processInput() {
 					n.Pos = SnapToGrid(n.Pos)
 				}
 				currentGraph.AddNode(n)
-				SelectNode(n.ID, false)
+				SelectNode(n.ID, i > 0)
 			}
 		}
 	}
@@ -706,30 +743,56 @@ func UIOverlay(topoErr error) {
 					})
 					if IsFocused(textboxID) {
 						addNodeFromMatch := func(nt NodeType) {
-							newNode := nt.Create()
-							centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
+							_, count := parseNodeSearch(NewNodeName)
 
-							pos := SnapToGrid(centerWorld)
-							// Simple collision avoidance: cascade
-							for i := 0; i < 50; i++ {
-								overlap := false
-								for _, n := range currentGraph.Nodes {
-									// Check if pos is exactly same as n.Pos (since both are snapped)
-									if n.Pos == pos {
-										overlap = true
-										break
+							prevPos := V2{}
+
+							for i := 0; i < count; i++ {
+								newNode := nt.Create()
+
+								var pos V2
+								if i == 0 {
+									centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
+									pos = SnapToGrid(centerWorld)
+									// Simple collision avoidance: cascade
+									for j := 0; j < 50; j++ {
+										overlap := false
+										for _, n := range currentGraph.Nodes {
+											if n.Pos == pos {
+												overlap = true
+												break
+											}
+										}
+										if !overlap {
+											break
+										}
+										pos.X += GridSize
+										pos.Y += GridSize
+									}
+								} else {
+									// Place next to previous
+									// We don't know the exact width until first frame, but we can guess or use a standard width
+									// NodeMinWidth is 360.
+									pos = prevPos
+									pos.X += NodeMinWidth + GridSize*2 // Add some padding
+								}
+
+								newNode.Pos = pos
+								prevPos = pos
+
+								// Special handling for batch SaveFile nodes
+								if count > 1 {
+									if saveAction, ok := newNode.Action.(*SaveFileAction); ok {
+										// Split extension
+										ext := filepath.Ext(saveAction.Path)
+										base := strings.TrimSuffix(saveAction.Path, ext)
+										saveAction.Path = fmt.Sprintf("%s_%d%s", base, i+1, ext)
 									}
 								}
-								if !overlap {
-									break
-								}
-								pos.X += GridSize
-								pos.Y += GridSize
-							}
 
-							newNode.Pos = pos
-							currentGraph.AddNode(newNode)
-							selectedNodeID = newNode.ID
+								currentGraph.AddNode(newNode)
+								selectedNodeID = newNode.ID
+							}
 						}
 
 						UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
@@ -785,6 +848,32 @@ func UIOverlay(topoErr error) {
 											OnClickUserData: i,
 										}, func() {
 											clay.TEXT(matches[i].Name, clay.T{TextColor: White})
+											_, count := parseNodeSearch(NewNodeName)
+											if count > 1 {
+												clay.TEXT(fmt.Sprintf(" (x%d)", count), clay.T{TextColor: Yellow, FontSize: 14})
+											}
+											if matches[i].ShortcutKey != 0 {
+												// Just render the text, no spacer for now to debug
+												keyName := ""
+												if matches[i].ShortcutKey >= 32 && matches[i].ShortcutKey <= 126 {
+													keyName = string(rune(matches[i].ShortcutKey))
+												} else {
+													keyName = fmt.Sprintf("K%d", matches[i].ShortcutKey)
+												}
+
+												modStr := ""
+												for _, mod := range matches[i].ShortcutMods {
+													switch mod {
+													case rl.KeyLeftControl, rl.KeyRightControl:
+														modStr += "Ctrl+"
+													case rl.KeyLeftAlt, rl.KeyRightAlt:
+														modStr += "Alt+"
+													case rl.KeyLeftShift, rl.KeyRightShift:
+														modStr += "Shift+"
+													}
+												}
+												clay.TEXT("  "+modStr+keyName, clay.T{TextColor: Gray, FontSize: 10})
+											}
 										})
 									}
 								})
