@@ -440,7 +440,8 @@ func processInput() {
 						targetType := node.InputPorts[port].Type
 						if err := Typecheck(sourceType, targetType); err != nil {
 							fmt.Printf("Cannot connect: %v\n", err)
-							// TODO: Show visual feedback?
+							ConnectionError = fmt.Sprintf("Cannot connect: %s", err.Error())
+							ConnectionErrorTime = time.Now()
 						} else {
 							// Delete existing wires into that port
 							currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
@@ -598,6 +599,8 @@ var NewWireSourcePort int
 var NewNodeName string
 
 var ShowLoadConfirmation bool
+var ConnectionError string
+var ConnectionErrorTime time.Time
 
 var OutputWindowWidth float32 = windowWidth * 0.30
 
@@ -1060,6 +1063,23 @@ func UIOverlay(topoErr error) {
 				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
 				Camera.Pan(delta)
 				LastPanMousePosition = mousePos
+			}
+
+			// Render Connection Error
+			if time.Since(ConnectionErrorTime) < 2*time.Second {
+				clay.CLAY_AUTO_ID(clay.EL{
+					Floating: clay.FloatingElementConfig{
+						AttachTo: clay.AttachToRoot,
+						Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 16, Y: 16}),
+						ZIndex:   ZTOP,
+					},
+					Layout:          clay.LAY{Padding: PA1},
+					BackgroundColor: Red,
+					Border:          clay.BorderElementConfig{Color: White, Width: BA},
+					CornerRadius:    RA1,
+				}, func() {
+					clay.TEXT(ConnectionError, clay.TextElementConfig{TextColor: White, FontID: InterBold})
+				})
 			}
 		}
 	})
