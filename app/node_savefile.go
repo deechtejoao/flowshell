@@ -165,7 +165,7 @@ func (c *SaveFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			// Let's make a helper toToNative(FlowValue) interface{}
 
 			// Quick implementation of ToNative
-			native := flowValueToNative(input)
+			native := FlowValueToNative(input)
 			enc := json.NewEncoder(f)
 			enc.SetIndent("", "  ")
 			err = enc.Encode(native)
@@ -241,37 +241,3 @@ func (c *SaveFileAction) Run(n *Node) <-chan NodeActionResult {
 	return c.RunContext(context.Background(), n)
 }
 
-func flowValueToNative(v FlowValue) any {
-	switch v.Type.Kind {
-	case FSKindBytes:
-		return string(v.BytesValue)
-	case FSKindInt64:
-		return v.Int64Value
-	case FSKindFloat64:
-		return v.Float64Value
-	case FSKindList:
-		var list []any
-		for _, item := range v.ListValue {
-			list = append(list, flowValueToNative(item))
-		}
-		return list
-	case FSKindRecord:
-		rec := make(map[string]any)
-		for _, f := range v.RecordValue {
-			rec[f.Name] = flowValueToNative(f.Value)
-		}
-		return rec
-	case FSKindTable:
-		var table []map[string]any
-		for _, row := range v.TableValue {
-			rec := make(map[string]any)
-			for _, f := range row {
-				rec[f.Name] = flowValueToNative(f.Value)
-			}
-			table = append(table, rec)
-		}
-		return table
-	default:
-		return nil
-	}
-}

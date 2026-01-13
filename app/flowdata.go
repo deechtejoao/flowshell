@@ -405,3 +405,37 @@ func NativeToFlowValue(v any) (FlowValue, error) {
 		return FlowValue{}, fmt.Errorf("unsupported type %T", v)
 	}
 }
+
+func FlowValueToNative(v FlowValue) interface{} {
+	switch v.Type.Kind {
+	case FSKindInt64:
+		return v.Int64Value
+	case FSKindFloat64:
+		return v.Float64Value
+	case FSKindBytes:
+		return string(v.BytesValue) // Expose as string
+	case FSKindList:
+		list := make([]interface{}, len(v.ListValue))
+		for i, item := range v.ListValue {
+			list[i] = FlowValueToNative(item)
+		}
+		return list
+	case FSKindRecord:
+		rec := make(map[string]interface{})
+		for _, field := range v.RecordValue {
+			rec[field.Name] = FlowValueToNative(field.Value)
+		}
+		return rec
+	case FSKindTable:
+		table := make([]interface{}, len(v.TableValue))
+		for i, row := range v.TableValue {
+			rec := make(map[string]interface{})
+			for _, field := range row {
+				rec[field.Name] = FlowValueToNative(field.Value)
+			}
+			table[i] = rec
+		}
+		return table
+	}
+	return nil
+}

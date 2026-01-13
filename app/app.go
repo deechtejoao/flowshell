@@ -51,6 +51,14 @@ func Main() {
 
 	initImages()
 
+	// Load Plugins
+	pluginNodes, err := LoadPlugins("plugins")
+	if err != nil {
+		fmt.Printf("Error loading plugins: %v\n", err)
+	} else {
+		nodeTypes = append(nodeTypes, pluginNodes...)
+	}
+
 	clay.SetMaxElementCount(1 << 16)
 	arena := clay.CreateArenaWithCapacity(uintptr(clay.MinMemorySize()))
 	clay.Initialize(
