@@ -98,6 +98,8 @@ var nodeTypes = []NodeType{
 	{Name: "Scatter Plot", Category: "Visualization", Create: func() *Node { return NewScatterPlotNode() }},
 	{Name: "Prompt User", Category: "Core", Create: func() *Node { return NewPromptUserNode() }},
 	{Name: "If / Else", Category: "Logic", Create: func() *Node { return NewIfElseNode() }},
+	{Name: "Gate", Category: "Logic", Create: func() *Node { return NewGateNode() }},
+	{Name: "Merge", Category: "Logic", Create: func() *Node { return NewMergeNode() }},
 }
 
 func init() {

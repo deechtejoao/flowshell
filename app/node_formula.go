@@ -69,10 +69,14 @@ func (a *FormulaAction) Run(n *Node) <-chan NodeActionResult {
 		}
 
 		// Compile Expression
-		program, err := expr.Compile(a.Expression, expr.Env(map[string]any{
+		_, err = expr.Compile(a.Expression, expr.Env(map[string]any{
 			"col": func(name string) any { return nil }, // Dummy environment for checking
 		}))
-		program, err = expr.Compile(a.Expression)
+		if err != nil {
+			done <- NodeActionResult{Err: fmt.Errorf("bad expression: %v", err)}
+			return
+		}
+		program, err := expr.Compile(a.Expression)
 		if err != nil {
 			done <- NodeActionResult{Err: fmt.Errorf("bad expression: %v", err)}
 			return

@@ -117,7 +117,7 @@ func (a *HTTPRequestAction) Run(n *Node) <-chan NodeActionResult {
 			done <- NodeActionResult{Err: fmt.Errorf("request failed: %v", err)}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Read Response
 		respBody, err := io.ReadAll(resp.Body)
@@ -185,7 +185,7 @@ func (a *HTTPRequestAction) RunContext(ctx context.Context, n *Node) <-chan Node
 			done <- NodeActionResult{Err: fmt.Errorf("request failed: %v", err)}
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {

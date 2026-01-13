@@ -43,7 +43,9 @@ func Main() {
 		CurrentSettings.WindowWidth = rl.GetScreenWidth()
 		CurrentSettings.WindowHeight = rl.GetScreenHeight()
 		CurrentSettings.WindowMaximized = rl.IsWindowMaximized()
-		SaveSettings(CurrentSettings)
+		if err := SaveSettings(CurrentSettings); err != nil {
+			fmt.Printf("Error saving settings: %v\n", err)
+		}
 	}()
 
 	initImages()

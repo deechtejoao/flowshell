@@ -28,9 +28,11 @@ type Node struct {
 	InputPorts  []NodePort
 	OutputPorts []NodePort
 
-	Action NodeAction
-	Valid  bool
+	Action              NodeAction
+	Valid               bool
+	HandleSkippedInputs bool
 
+	// Runtime state
 	mu      sync.Mutex
 	Running bool
 	done    chan struct{}

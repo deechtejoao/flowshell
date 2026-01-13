@@ -122,12 +122,10 @@ func ExtractChartData(n *Node, xCol, yCol string, chartType ChartType) *ChartRen
 	xRange := renderData.MaxX - renderData.MinX
 	yRange := renderData.MaxY - renderData.MinY
 	if xRange == 0 {
-		xRange = 1
 		renderData.MinX -= 0.5
 		renderData.MaxX += 0.5
 	}
 	if yRange == 0 {
-		yRange = 1
 		renderData.MinY -= 0.5
 		renderData.MaxY += 0.5
 	}
@@ -166,8 +164,6 @@ type LineChartAction struct {
 	XColumn string
 	YColumn string
 	// UI State
-	xColInput string
-	yColInput string
 }
 
 func NewLineChartNode() *Node {

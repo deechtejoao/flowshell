@@ -55,7 +55,9 @@ func TestFilesystemNodes(t *testing.T) {
 	t.Run("Copy File", func(t *testing.T) {
 		srcPath := filepath.Join(tmpDir, "src.txt")
 		dstPath := filepath.Join(tmpDir, "dst.txt")
-		os.WriteFile(srcPath, []byte("hello"), 0644)
+		if err := os.WriteFile(srcPath, []byte("hello"), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		node := NewCopyFileNode()
 		action := node.Action.(*CopyFileAction)
@@ -87,7 +89,9 @@ func TestFilesystemNodes(t *testing.T) {
 	t.Run("Move File", func(t *testing.T) {
 		srcPath := filepath.Join(tmpDir, "move_src.txt")
 		dstPath := filepath.Join(tmpDir, "move_dst.txt")
-		os.WriteFile(srcPath, []byte("move me"), 0644)
+		if err := os.WriteFile(srcPath, []byte("move me"), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		node := NewMoveFileNode()
 		action := node.Action.(*MoveFileAction)
@@ -120,8 +124,10 @@ func TestFilesystemNodes(t *testing.T) {
 	})
 
 	t.Run("Delete File", func(t *testing.T) {
-		delPath := filepath.Join(tmpDir, "delete_me.txt")
-		os.WriteFile(delPath, []byte("bye"), 0644)
+		delPath := filepath.Join(tmpDir, "del.txt")
+		if err := os.WriteFile(delPath, []byte("bye"), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		node := NewDeleteFileNode()
 		action := node.Action.(*DeleteFileAction)

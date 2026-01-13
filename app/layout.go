@@ -37,14 +37,7 @@ func LayoutGraph(g *Graph) {
 
 	// 2. Assign Ranks (Longest Path Layering)
 	// Nodes with 0 in-degree are sources at rank 0.
-	// We use a queue for processing.
-	queue := []int{}
-	for id, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, id)
-		}
-	}
-
+	
 	// "Push" approach (BFS-like) works better with established adj list
 	// Iterate queue.
 	nodeCount := len(g.Nodes)

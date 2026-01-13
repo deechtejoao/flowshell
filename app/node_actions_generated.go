@@ -15,6 +15,7 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
 	{Tag: "FormatStringAction", Alloc: func() NodeAction { return &FormatStringAction{} }},
 	{Tag: "FormulaAction", Alloc: func() NodeAction { return &FormulaAction{} }},
+	{Tag: "GateAction", Alloc: func() NodeAction { return &GateAction{} }},
 	{Tag: "GetMousePositionAction", Alloc: func() NodeAction { return &GetMousePositionAction{} }},
 	{Tag: "GetVariableAction", Alloc: func() NodeAction { return &GetVariableAction{} }},
 	{Tag: "GraphInputAction", Alloc: func() NodeAction { return &GraphInputAction{} }},
@@ -29,6 +30,7 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "LoadFileAction", Alloc: func() NodeAction { return &LoadFileAction{} }},
 	{Tag: "MakeDirAction", Alloc: func() NodeAction { return &MakeDirAction{} }},
 	{Tag: "MapAction", Alloc: func() NodeAction { return &MapAction{} }},
+	{Tag: "MergeAction", Alloc: func() NodeAction { return &MergeAction{} }},
 	{Tag: "MinifyHTMLAction", Alloc: func() NodeAction { return &MinifyHTMLAction{} }},
 	{Tag: "MoveFileAction", Alloc: func() NodeAction { return &MoveFileAction{} }},
 	{Tag: "ParseTimeAction", Alloc: func() NodeAction { return &ParseTimeAction{} }},
@@ -99,6 +101,10 @@ func (a *FormulaAction) Tag() string {
 	return "FormulaAction"
 }
 
+func (a *GateAction) Tag() string {
+	return "GateAction"
+}
+
 func (a *GetMousePositionAction) Tag() string {
 	return "GetMousePositionAction"
 }
@@ -153,6 +159,10 @@ func (a *MakeDirAction) Tag() string {
 
 func (a *MapAction) Tag() string {
 	return "MapAction"
+}
+
+func (a *MergeAction) Tag() string {
+	return "MergeAction"
 }
 
 func (a *MinifyHTMLAction) Tag() string {

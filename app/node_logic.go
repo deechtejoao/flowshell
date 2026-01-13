@@ -73,7 +73,7 @@ func (a *IfElseAction) RunContext(ctx context.Context, n *Node) <-chan NodeActio
 			// If GetInputValue returns false, it means no wire connected or no value produced?
 			// Actually, engine waits for inputs. GetInputValue checks wire.
 			// If no wire connected, we can't run.
-			done <- NodeActionResult{Err: fmt.Errorf("Missing inputs")}
+			done <- NodeActionResult{Err: fmt.Errorf("missing inputs")}
 			return
 		}
 

@@ -98,14 +98,14 @@ func (a *CopyFileAction) RunContext(ctx context.Context, n *Node) <-chan NodeAct
 			done <- NodeActionResult{Err: fmt.Errorf("failed to open source: %w", err)}
 			return
 		}
-		defer sourceFile.Close()
+		defer func() { _ = sourceFile.Close() }()
 
 		destFile, err := os.Create(dstPath)
 		if err != nil {
 			done <- NodeActionResult{Err: fmt.Errorf("failed to create destination: %w", err)}
 			return
 		}
-		defer destFile.Close()
+		defer func() { _ = destFile.Close() }()
 
 		if _, err := io.Copy(destFile, sourceFile); err != nil {
 			done <- NodeActionResult{Err: fmt.Errorf("failed to copy: %w", err)}
