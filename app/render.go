@@ -88,6 +88,10 @@ func renderClayCommands(commands []clay.RenderCommand) {
 			} else {
 				rl.DrawRectangle(int32(bbox.X), int32(bbox.Y), int32(bbox.Width), int32(bbox.Height), config.BackgroundColor.RGBA())
 			}
+
+			if data, ok := config.CustomData.(*MinimapRenderData); ok {
+				RenderMinimap(bbox, data)
+			}
 		}
 	}
 }

@@ -47,7 +47,7 @@
 - [x] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
 - [x] Undo/Redo: Global history stack for graph mutations.
 - [x] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
-- [ ] Rendering: Custom rendering implementation. `app/render.go:86`
+- [x] Rendering: Custom rendering implementation. `app/render.go:86`
 
 ## New Native Nodes
 - [x] Regex: Match, Find All, Replace, Split.

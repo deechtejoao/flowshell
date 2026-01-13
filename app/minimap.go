@@ -184,9 +184,7 @@ type MinimapRenderData struct {
 }
 
 // GEN:CustomRender
-func RenderMinimap(bbox clay.BoundingBox, config clay.CustomElementConfig) {
-	data := config.CustomData.(*MinimapRenderData)
-
+func RenderMinimap(bbox clay.BoundingBox, data *MinimapRenderData) {
 	originX := bbox.X
 	originY := bbox.Y
 
