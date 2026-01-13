@@ -167,7 +167,6 @@ func frame() {
 	renderScreenOverlays()
 
 	rl.EndDrawing()
-	rl.EndDrawing()
 	clay.ReleaseFrameMemory()
 
 	// Update focus tracking
