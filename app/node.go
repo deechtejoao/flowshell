@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"slices"
 	"sync"
 
@@ -166,11 +167,12 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 			defer n.mu.Unlock()
 
 			if r := recover(); r != nil {
+				stack := debug.Stack()
 				var err error
 				if e, ok := r.(error); ok {
-					err = e
+					err = fmt.Errorf("panic: %w\n%s", e, stack)
 				} else {
-					err = fmt.Errorf("panic: %v", r)
+					err = fmt.Errorf("panic: %v\n%s", r, stack)
 				}
 				n.result = NodeActionResult{Err: err}
 				n.resultAvailable = true
