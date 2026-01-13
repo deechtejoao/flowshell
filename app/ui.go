@@ -515,6 +515,13 @@ func processInput() {
 					}
 				}
 
+			}
+
+			if done {
+				if canceled {
+					n.Pos = drag.ObjStart
+				}
+			}
 		}
 
 		// Selected node keyboard shortcuts

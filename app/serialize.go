@@ -227,11 +227,14 @@ func SMaybeFixed[T any](s *Serializer, v **T) bool {
 		return false
 	}
 
-	exists := v != nil
+	exists := *v != nil
 	if ok := SBool(s, &exists); !ok {
 		return false
 	}
 	if exists {
+		if !s.Encode && *v == nil {
+			*v = new(T)
+		}
 		return SFixed(s, *v)
 	}
 	return true

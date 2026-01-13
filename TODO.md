@@ -65,7 +65,7 @@
 - [ ] Headless Mode: Run a flow file from CLI without UI (e.g. `flowshell run mygraph.flow`).
 
 ## Engineering & Infra
-- [ ] Unit Tests: specifically for `drag.go` state machine and `serialize.go` edge cases.
+- [x] Unit Tests: specifically for `drag.go` state machine and `serialize.go` edge cases.
 - [x] Refactor Globals: Move `nodes`, `wires`, and `nodeID` into a `Graph` struct.
 - [x] Action Tests: Add unit tests for `NodeAction.Run` logic independent of the UI/Raylib.
 - [ ] Linter: Add `golangci-lint` configuration.

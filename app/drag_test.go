@@ -132,3 +132,68 @@ func TestDragState_Cancel(t *testing.T) {
 		t.Error("Should be marked as canceled")
 	}
 }
+
+func TestDragState_WasDragging(t *testing.T) {
+	mock := NewMockInput()
+	d := DragState{Input: mock}
+
+	// 1. Click sequence (Down -> Up immediately)
+	mock.ButtonsDown[rl.MouseLeftButton] = true
+	d.Update() // Pending
+	mock.ButtonsDown[rl.MouseLeftButton] = false
+	mock.ButtonsReleased[rl.MouseLeftButton] = true
+	d.Update()
+
+	if d.WasDragging {
+		t.Error("Should not have been dragging for a simple click")
+	}
+
+	// 2. Drag sequence (Down -> Move -> Release)
+	d = DragState{Input: mock} // Reset
+	mock = NewMockInput()      // Reset inputs
+	d.Input = mock
+
+	mock.ButtonsDown[rl.MouseLeftButton] = true
+	mock.MousePos = rl.Vector2{X: 100, Y: 100}
+	d.Update() // Pending
+
+	mock.MousePos = rl.Vector2{X: 110, Y: 110}
+	d.TryStartDrag("thing", rl.Rectangle{X: 0, Y: 0, Width: 200, Height: 200}, rl.Vector2{})
+
+	if !d.Dragging {
+		t.Fatal("Failed to start drag")
+	}
+
+	// Release
+	mock.ButtonsDown[rl.MouseLeftButton] = false
+	mock.ButtonsReleased[rl.MouseLeftButton] = true
+	d.Update()
+
+	if !d.WasDragging {
+		t.Error("WasDragging should be true after dragging")
+	}
+	if d.Dragging {
+		t.Error("Dragging should be false after release")
+	}
+}
+
+func TestDragState_Concurrent(t *testing.T) {
+	mock := NewMockInput()
+	d := DragState{Input: mock}
+
+	mock.ButtonsDown[rl.MouseLeftButton] = true
+	mock.MousePos = rl.Vector2{X: 100, Y: 100}
+	d.Update()
+
+	mock.MousePos = rl.Vector2{X: 110, Y: 110}
+
+	// Start first drag
+	if !d.TryStartDrag("thing1", rl.Rectangle{X: 0, Y: 0, Width: 200, Height: 200}, rl.Vector2{}) {
+		t.Fatal("First drag should start")
+	}
+
+	// Try start second drag
+	if d.TryStartDrag("thing2", rl.Rectangle{X: 0, Y: 0, Width: 200, Height: 200}, rl.Vector2{}) {
+		t.Error("Second drag should fail to start while another is active")
+	}
+}
