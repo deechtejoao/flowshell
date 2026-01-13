@@ -71,6 +71,10 @@ var nodeTypes = []NodeType{
 	{Name: "Transpose", Create: func() *Node { return NewTransposeNode() }},
 	{Name: "Minify HTML", Create: func() *Node { return NewMinifyHTMLNode() }},
 	{Name: "Wait For Click", Create: func() *Node { return NewWaitForClickNode() }},
+	{Name: "Regex Match", Create: func() *Node { return NewRegexMatchNode() }},
+	{Name: "Regex Find All", Create: func() *Node { return NewRegexFindAllNode() }},
+	{Name: "Regex Replace", Create: func() *Node { return NewRegexReplaceNode() }},
+	{Name: "Regex Split", Create: func() *Node { return NewRegexSplitNode() }},
 }
 
 func CreateGroup() {
