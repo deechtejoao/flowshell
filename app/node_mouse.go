@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 
+	"github.com/bvisness/flowshell/clay"
 	hook "github.com/robotn/gohook"
 )
 
@@ -26,7 +27,26 @@ func (a *GetMousePositionAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *GetMousePositionAction) UI(n *Node) {}
+func (a *GetMousePositionAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("GetMousePosition", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER, ChildGap: S2},
+		}, func() {
+			UISpacer(clay.AUTO_ID, GROWH)
+			clay.TEXT("X", clay.TextElementConfig{TextColor: White})
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER, ChildGap: S2},
+		}, func() {
+			UISpacer(clay.AUTO_ID, GROWH)
+			clay.TEXT("Y", clay.TextElementConfig{TextColor: White})
+			UIOutputPort(n, 1)
+		})
+	})
+}
 
 func (a *GetMousePositionAction) Run(n *Node) <-chan NodeActionResult {
 	// Not used since we use RunContext
@@ -66,7 +86,26 @@ func (a *WaitForClickAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *WaitForClickAction) UI(n *Node) {}
+func (a *WaitForClickAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("WaitForClick", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER, ChildGap: S2},
+		}, func() {
+			UISpacer(clay.AUTO_ID, GROWH)
+			clay.TEXT("X", clay.TextElementConfig{TextColor: White})
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER, ChildGap: S2},
+		}, func() {
+			UISpacer(clay.AUTO_ID, GROWH)
+			clay.TEXT("Y", clay.TextElementConfig{TextColor: White})
+			UIOutputPort(n, 1)
+		})
+	})
+}
 
 func (a *WaitForClickAction) Run(n *Node) <-chan NodeActionResult {
 	return nil

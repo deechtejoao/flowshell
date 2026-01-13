@@ -34,7 +34,31 @@ func (a *HTTPRequestAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *HTTPRequestAction) UI(n *Node) {}
+func (a *HTTPRequestAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("HTTPRequest", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 1)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 1)
+		})
+		clay.CLAY(clay.IDI("Row3", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 2)
+		})
+	})
+}
 
 func (a *HTTPRequestAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult, 1)

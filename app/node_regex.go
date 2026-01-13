@@ -31,7 +31,24 @@ func (a *RegexMatchAction) UpdateAndValidate(n *Node) {
 	n.Valid = true // Validation could check if pattern compiles
 }
 
-func (a *RegexMatchAction) UI(n *Node) {}
+func (a *RegexMatchAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("RegexMatch", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 1)
+		})
+	})
+}
 
 func (a *RegexMatchAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult, 1)
@@ -103,7 +120,24 @@ func (a *RegexFindAllAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *RegexFindAllAction) UI(n *Node) {}
+func (a *RegexFindAllAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("RegexFindAll", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 1)
+		})
+	})
+}
 
 func (a *RegexFindAllAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult, 1)
@@ -176,7 +210,29 @@ func (a *RegexReplaceAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *RegexReplaceAction) UI(n *Node) {}
+func (a *RegexReplaceAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("RegexReplace", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 1)
+		})
+		clay.CLAY(clay.IDI("Row3", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 2)
+		})
+	})
+}
 
 func (a *RegexReplaceAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult, 1)
