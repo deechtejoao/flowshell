@@ -66,8 +66,6 @@ var loadFileFormatOptions = []UIDropdownOption{
 	{Name: "JSON", Value: "json"},
 }
 
-// TODO: Make this node polymorphic on lists of strings
-// (rename to "Load Files" dynamically)
 func NewLoadFileNode(path string) *Node {
 	formatDropdown := UIDropdown{
 		Options: loadFileFormatOptions,
