@@ -11,6 +11,8 @@ import (
 type FlowValue struct {
 	Type *FlowType
 
+	Skipped bool
+
 	BytesValue   []byte
 	StreamValue  io.ReadCloser
 	Int64Value   int64
@@ -49,6 +51,7 @@ func (v FlowValue) String() string {
 
 func (v *FlowValue) Serialize(s *Serializer) bool {
 	SMaybeThing(s, &v.Type)
+	SBool(s, &v.Skipped)
 
 	if s.Version < 2 {
 		// BytesValue

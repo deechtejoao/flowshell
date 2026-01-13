@@ -233,6 +233,29 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 			}
 		}
 
+		// Check for skipped inputs
+		anySkipped := false
+		for i := range n.InputPorts {
+			if val, ok, _ := n.GetInputValue(i); ok && val.Skipped {
+				anySkipped = true
+				break
+			}
+		}
+
+		if anySkipped {
+			fmt.Printf("Node %s: skipping execution due to skipped input\n", n)
+			outputs := make([]FlowValue, len(n.OutputPorts))
+			for i := range outputs {
+				outputs[i] = FlowValue{Type: &n.OutputPorts[i].Type, Skipped: true}
+			}
+
+			n.mu.Lock()
+			n.result = NodeActionResult{Outputs: outputs}
+			n.resultAvailable = true
+			n.mu.Unlock()
+			return
+		}
+
 		fmt.Printf("Node %s: all inputs are done\n", n)
 
 		// Run action
