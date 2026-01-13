@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -28,6 +29,13 @@ func (hm *HistoryManager) Push(g *Graph) {
 	if err != nil {
 		fmt.Printf("History Push failed: %v\n", err)
 		return
+	}
+
+	// Deduplication: Don't push if identical to current snapshot
+	if hm.pointer >= 0 && hm.pointer < len(hm.snapshots) {
+		if bytes.Equal(hm.snapshots[hm.pointer], data) {
+			return
+		}
 	}
 
 	// Truncate redo history

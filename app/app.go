@@ -167,7 +167,16 @@ func frame() {
 	renderScreenOverlays()
 
 	rl.EndDrawing()
+	rl.EndDrawing()
 	clay.ReleaseFrameMemory()
+
+	// Update focus tracking
+	if UIFocus != nil {
+		LastUIFocus = *UIFocus
+		LastUIFocusValid = true
+	} else {
+		LastUIFocusValid = false
+	}
 }
 
 func handleClayErrors(errorData clay.ErrorData) {

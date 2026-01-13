@@ -274,6 +274,11 @@ func DuplicateNode(original *Node) {
 }
 
 var UICursor rl.MouseCursor
+
+// Focus tracking for Undo/Redo
+var LastUIFocus clay.ElementID
+var LastUIFocusValid bool
+
 var UIFocus *clay.ElementID
 
 var CurrentZIndex int16
@@ -2050,6 +2055,7 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 				if config.OnSubmit != nil {
 					config.OnSubmit(*str)
 				}
+				PushHistory() // Snapshot history on Submit
 
 				UIFocus = nil
 			} else {
@@ -2063,6 +2069,11 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 				}
 			}
 		}
+	}
+
+	// Detect Blur
+	if LastUIFocusValid && LastUIFocus == id && !IsFocused(id) {
+		PushHistory()
 	}
 
 	clay.CLAY_LATE(id, func() clay.EL {
@@ -2243,6 +2254,9 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 									selectedBefore := d.Selected
 									d.Selected = userData.(int)
 									d.open = false
+									if d.Selected != selectedBefore {
+										PushHistory()
+									}
 									if config.OnChange != nil {
 										config.OnChange(d.GetOption(selectedBefore).Value, d.GetOption(d.Selected).Value)
 									}
@@ -2289,6 +2303,7 @@ func UICheckbox(id clay.ElementID, checked *bool, label string) {
 		UIButton(id, UIButtonConfig{
 			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 				*checked = !*checked
+				PushHistory()
 			},
 		}, func() {
 			UIImage(clay.AUTO_ID, util.Tern(*checked, ImgToggleDown, ImgToggleRight), clay.EL{})
