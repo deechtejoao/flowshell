@@ -55,7 +55,7 @@
 - [x] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
 - [x] Text Operations: Split lines, Join, String formatting, Case conversion.
 - [ ] JSON/XML Query: Extract data using JSONPath or XPath.
-- [ ] Date/Time Parsing: Parse strings to Timestamps with format strings.
+- [x] Date/Time Parsing: Parse strings to Timestamps with format strings.
 
 ## System & Core
 - [ ] Plugin System: Load dynamic libraries or external binaries as nodes.

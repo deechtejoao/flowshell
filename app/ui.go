@@ -81,6 +81,7 @@ var nodeTypes = []NodeType{
 	{Name: "Split Text", Create: func() *Node { return NewSplitTextNode() }},
 	{Name: "Change Case", Create: func() *Node { return NewCaseConvertNode() }},
 	{Name: "Format String", Create: func() *Node { return NewFormatStringNode() }},
+	{Name: "Parse Time", Create: func() *Node { return NewParseTimeNode() }},
 }
 
 func CreateGroup() {
