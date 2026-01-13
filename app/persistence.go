@@ -142,3 +142,58 @@ func LoadGraph(path string) (*Graph, error) {
 	}
 	return DeserializeGraph(data)
 }
+
+func MergeGraph(target *Graph, source *Graph) {
+	// Map old IDs to new IDs
+	idMap := make(map[int]int)
+	grpMap := make(map[int]int)
+
+	// 1. Remap and Add Groups
+	for _, grp := range source.Groups {
+		target.NextGroupID++
+		newID := target.NextGroupID
+		grpMap[grp.ID] = newID
+
+		newGrp := *grp // Copy
+		newGrp.ID = newID
+		// Offset slightly to indicate newness? Or just keep relative position?
+		// Let's keep position.
+		target.Groups = append(target.Groups, &newGrp)
+	}
+
+	// 2. Remap and Add Nodes
+	for _, n := range source.Nodes {
+		target.NextNodeID++
+		newID := target.NextNodeID
+		idMap[n.ID] = newID
+
+		n.ID = newID
+		n.Graph = target
+		target.Nodes = append(target.Nodes, n)
+	}
+
+	// 3. Remap and Add Wires
+	for _, w := range source.Wires {
+		// Only add wire if both ends exist (which they should if from valid source)
+		// But in merge, we remapped them.
+		startID, ok1 := idMap[w.StartNode.ID]
+		endID, ok2 := idMap[w.EndNode.ID]
+
+		if ok1 && ok2 {
+			// Find the actual node pointers in target (which we just added)
+			// Optimization: we could have stored *Node in idMap, but int is fine.
+			startNode, _ := target.GetNode(startID)
+			endNode, _ := target.GetNode(endID)
+
+			if startNode != nil && endNode != nil {
+				newWire := &Wire{
+					StartNode: startNode,
+					StartPort: w.StartPort,
+					EndNode:   endNode,
+					EndPort:   w.EndPort,
+				}
+				target.Wires = append(target.Wires, newWire)
+			}
+		}
+	}
+}

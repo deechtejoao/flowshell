@@ -423,9 +423,6 @@ func processInput() {
 		if len(files) > 0 && IsHoveringPanel {
 			mousePos := rl.GetMousePosition()
 			// Find the top-most node under the mouse
-			// (Iterating in reverse order usually gives top-most if rendered in order,
-			// but Graph.Nodes order isn't strictly Z-order.
-			// However, picking *any* collided node is better than nothing.)
 			for i := len(currentGraph.Nodes) - 1; i >= 0; i-- {
 				n := currentGraph.Nodes[i]
 				if data, ok := clay.GetElementData(n.ClayID()); ok {
@@ -442,6 +439,20 @@ func processInput() {
 						}
 						break // Only handle for the top-most node (or first found)
 					}
+				}
+			}
+		}
+
+		if !handled && len(files) > 0 {
+			// Check for .flow file import
+			ext := strings.ToLower(filepath.Ext(files[0]))
+			if ext == ".flow" {
+				PushHistory()
+				if g, err := LoadGraph(files[0]); err == nil {
+					MergeGraph(currentGraph, g)
+					handled = true
+				} else {
+					fmt.Printf("Failed to load graph: %v\n", err)
 				}
 			}
 		}

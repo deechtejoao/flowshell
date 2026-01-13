@@ -60,7 +60,7 @@
 ## System & Core
 - [ ] Plugin System: Load dynamic libraries or external binaries as nodes.
 - [x] Settings/Configuration: Persist app preferences (theme, default shell, window state).
-- [ ] Import/Merge: Load a `.flow` file into the current workspace (merging).
+- [x] Import/Merge: Load a `.flow` file into the current workspace (merging).
 - [x] Shell Integration: "Run Process" option to execute via system shell (PowerShell/Bash) for pipes/redirects.
 - [ ] Headless Mode: Run a flow file from CLI without UI (e.g. `flowshell run mygraph.flow`).
 
