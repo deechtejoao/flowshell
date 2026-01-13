@@ -76,6 +76,7 @@ var nodeTypes = []NodeType{
 	{Name: "Regex Replace", Create: func() *Node { return NewRegexReplaceNode() }},
 	{Name: "Regex Split", Create: func() *Node { return NewRegexSplitNode() }},
 	{Name: "HTTP Request", Create: func() *Node { return NewHTTPRequestNode() }},
+	{Name: "Formula", Create: func() *Node { return NewFormulaNode() }},
 }
 
 func CreateGroup() {

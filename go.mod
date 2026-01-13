@@ -17,6 +17,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
+	github.com/expr-lang/expr v1.17.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robotn/gohook v0.42.3 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect

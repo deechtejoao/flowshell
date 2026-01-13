@@ -114,7 +114,7 @@ func (a *HTTPRequestAction) RunContext(ctx context.Context, n *Node) <-chan Node
 	// Reimplement logic with Context support
 	done := make(chan NodeActionResult, 1)
 	go func() {
-		// Get Inputs (Same as Run)
+		// Get Inputs
 		valURL, _, errURL := n.GetInputValue(0)
 		if errURL != nil {
 			done <- NodeActionResult{Err: fmt.Errorf("bad URL input: %v", errURL)}
