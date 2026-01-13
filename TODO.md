@@ -58,7 +58,7 @@
 - [x] Date/Time Parsing: Parse strings to Timestamps with format strings.
 
 ## System & Core
-- [ ] Plugin System: Load dynamic libraries or external binaries as nodes.
+- [x] Plugin System: Load dynamic libraries or external binaries as nodes.
 - [x] Settings/Configuration: Persist app preferences (theme, default shell, window state).
 - [x] Import/Merge: Load a `.flow` file into the current workspace (merging).
 - [x] Shell Integration: "Run Process" option to execute via system shell (PowerShell/Bash) for pipes/redirects.
