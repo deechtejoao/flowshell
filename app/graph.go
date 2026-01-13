@@ -35,6 +35,15 @@ func (g *Graph) AddNode(n *Node) {
 	g.Nodes = append(g.Nodes, n)
 }
 
+func (g *Graph) AddWire(start *Node, startPort int, end *Node, endPort int) {
+	g.Wires = append(g.Wires, &Wire{
+		StartNode: start,
+		StartPort: startPort,
+		EndNode:   end,
+		EndPort:   endPort,
+	})
+}
+
 func (g *Graph) DeleteNode(id int) {
 	// When deleting a node, we must invalidate any nodes that were connected to it,
 	// because their inputs/outputs have changed.

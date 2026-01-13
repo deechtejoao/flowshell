@@ -28,10 +28,6 @@ func NewPromptUserNode() *Node {
 
 var _ NodeAction = &PromptUserAction{}
 
-func (a *PromptUserAction) Tag() string {
-	return "PromptUserAction"
-}
-
 func (a *PromptUserAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }

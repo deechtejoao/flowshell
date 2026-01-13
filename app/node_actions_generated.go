@@ -9,6 +9,8 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "CaseConvertAction", Alloc: func() NodeAction { return &CaseConvertAction{} }},
 	{Tag: "ConcatTablesAction", Alloc: func() NodeAction { return &ConcatTablesAction{} }},
 	{Tag: "ConvertAction", Alloc: func() NodeAction { return &ConvertAction{} }},
+	{Tag: "CopyFileAction", Alloc: func() NodeAction { return &CopyFileAction{} }},
+	{Tag: "DeleteFileAction", Alloc: func() NodeAction { return &DeleteFileAction{} }},
 	{Tag: "ExtractColumnAction", Alloc: func() NodeAction { return &ExtractColumnAction{} }},
 	{Tag: "FilterEmptyAction", Alloc: func() NodeAction { return &FilterEmptyAction{} }},
 	{Tag: "FormatStringAction", Alloc: func() NodeAction { return &FormatStringAction{} }},
@@ -18,16 +20,20 @@ var allNodeActions = [...]NodeActionMeta{
 	{Tag: "GraphInputAction", Alloc: func() NodeAction { return &GraphInputAction{} }},
 	{Tag: "GraphOutputAction", Alloc: func() NodeAction { return &GraphOutputAction{} }},
 	{Tag: "HTTPRequestAction", Alloc: func() NodeAction { return &HTTPRequestAction{} }},
+	{Tag: "IfElseAction", Alloc: func() NodeAction { return &IfElseAction{} }},
 	{Tag: "JoinTextAction", Alloc: func() NodeAction { return &JoinTextAction{} }},
 	{Tag: "JsonQueryAction", Alloc: func() NodeAction { return &JsonQueryAction{} }},
 	{Tag: "LineChartAction", Alloc: func() NodeAction { return &LineChartAction{} }},
 	{Tag: "LinesAction", Alloc: func() NodeAction { return &LinesAction{} }},
 	{Tag: "ListFilesAction", Alloc: func() NodeAction { return &ListFilesAction{} }},
 	{Tag: "LoadFileAction", Alloc: func() NodeAction { return &LoadFileAction{} }},
+	{Tag: "MakeDirAction", Alloc: func() NodeAction { return &MakeDirAction{} }},
 	{Tag: "MapAction", Alloc: func() NodeAction { return &MapAction{} }},
 	{Tag: "MinifyHTMLAction", Alloc: func() NodeAction { return &MinifyHTMLAction{} }},
+	{Tag: "MoveFileAction", Alloc: func() NodeAction { return &MoveFileAction{} }},
 	{Tag: "ParseTimeAction", Alloc: func() NodeAction { return &ParseTimeAction{} }},
 	{Tag: "PluginAction", Alloc: func() NodeAction { return &PluginAction{} }},
+	{Tag: "PromptUserAction", Alloc: func() NodeAction { return &PromptUserAction{} }},
 	{Tag: "RegexFindAllAction", Alloc: func() NodeAction { return &RegexFindAllAction{} }},
 	{Tag: "RegexMatchAction", Alloc: func() NodeAction { return &RegexMatchAction{} }},
 	{Tag: "RegexReplaceAction", Alloc: func() NodeAction { return &RegexReplaceAction{} }},
@@ -69,6 +75,14 @@ func (a *ConvertAction) Tag() string {
 	return "ConvertAction"
 }
 
+func (a *CopyFileAction) Tag() string {
+	return "CopyFileAction"
+}
+
+func (a *DeleteFileAction) Tag() string {
+	return "DeleteFileAction"
+}
+
 func (a *ExtractColumnAction) Tag() string {
 	return "ExtractColumnAction"
 }
@@ -105,6 +119,10 @@ func (a *HTTPRequestAction) Tag() string {
 	return "HTTPRequestAction"
 }
 
+func (a *IfElseAction) Tag() string {
+	return "IfElseAction"
+}
+
 func (a *JoinTextAction) Tag() string {
 	return "JoinTextAction"
 }
@@ -129,6 +147,10 @@ func (a *LoadFileAction) Tag() string {
 	return "LoadFileAction"
 }
 
+func (a *MakeDirAction) Tag() string {
+	return "MakeDirAction"
+}
+
 func (a *MapAction) Tag() string {
 	return "MapAction"
 }
@@ -137,12 +159,20 @@ func (a *MinifyHTMLAction) Tag() string {
 	return "MinifyHTMLAction"
 }
 
+func (a *MoveFileAction) Tag() string {
+	return "MoveFileAction"
+}
+
 func (a *ParseTimeAction) Tag() string {
 	return "ParseTimeAction"
 }
 
 func (a *PluginAction) Tag() string {
 	return "PluginAction"
+}
+
+func (a *PromptUserAction) Tag() string {
+	return "PromptUserAction"
 }
 
 func (a *RegexFindAllAction) Tag() string {

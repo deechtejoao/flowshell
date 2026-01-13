@@ -55,6 +55,10 @@ type NodeType struct {
 var nodeTypes = []NodeType{
 	{Name: "Run Process", Category: "Core", Create: func() *Node { return NewRunProcessNode(util.Tern(runtime.GOOS == "Windows", "dir", "ls")) }},
 	{Name: "List Files", Category: "File System", Create: func() *Node { return NewListFilesNode(".") }},
+	{Name: "Copy File", Category: "File System", Create: func() *Node { return NewCopyFileNode() }},
+	{Name: "Move File", Category: "File System", Create: func() *Node { return NewMoveFileNode() }},
+	{Name: "Delete File", Category: "File System", Create: func() *Node { return NewDeleteFileNode() }},
+	{Name: "Make Directory", Category: "File System", Create: func() *Node { return NewMakeDirNode() }},
 	{Name: "Lines", Category: "Text", Create: func() *Node { return NewLinesNode() }},
 	{Name: "Load File", Category: "File System", Create: func() *Node { return NewLoadFileNode("") }},
 	{Name: "Save File", Category: "File System", Create: func() *Node { return NewSaveFileNode() }},

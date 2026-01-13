@@ -27,10 +27,6 @@ func NewIfElseNode() *Node {
 
 var _ NodeAction = &IfElseAction{}
 
-func (a *IfElseAction) Tag() string {
-	return "IfElseAction"
-}
-
 func (a *IfElseAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
