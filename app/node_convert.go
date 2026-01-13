@@ -164,6 +164,12 @@ func (c *ConvertAction) UI(n *Node) {
 			},
 		})
 	}
+
+	UISpacer(clay.IDI("ConvertSpacer", n.ID), GROWH)
+
+	// Render ports
+	UIInputPort(n, 0)
+	UIOutputPort(n, 0)
 }
 
 func (c *ConvertAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {

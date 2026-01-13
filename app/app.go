@@ -28,7 +28,7 @@ func Main() {
 
 	initImages()
 
-	clay.SetMaxElementCount(1 << 18)
+	clay.SetMaxElementCount(1 << 16)
 	arena := clay.CreateArenaWithCapacity(uintptr(clay.MinMemorySize()))
 	clay.Initialize(
 		arena,
@@ -53,7 +53,6 @@ func Main() {
 
 func frame() {
 	drag.Update()
-	beforeLayout()
 
 	// Handle Zoom Input
 	wheel := rl.GetMouseWheelMove()
@@ -79,12 +78,19 @@ func frame() {
 	}
 	UIInput.BeginFrame(clayPointerMouseDown)
 
-	// --- Layout 2: Overlay (Screen Space) ---
+	// --- Layout 1: Nodes (World Space -> Screen Space Mapped) ---
+	// We map the Clay layout to the screen directly, but manually position nodes
+	// using WorldToScreen. This allows us to handle infinite canvas interactions
+	// correctly (Clay ignores inputs outside its layout bounds) while keeping
+	// the UI elements at a constant pixel size (no semantic zoom distortion).
 	clay.SetPointerState(
 		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
 		clayPointerMouseDown,
 	)
-	clay.SetLayoutDimensions(clay.D{Width: windowWidth, Height: windowHeight})
+	screenWidth := float32(rl.GetScreenWidth())
+	screenHeight := float32(rl.GetScreenHeight())
+	clay.SetLayoutDimensions(clay.D{Width: screenWidth, Height: screenHeight})
+
 	scrollDelta := clay.Vector2{X: 0, Y: 0}
 	if !shouldZoom {
 		scrollDelta = clay.Vector2(rl.GetMouseWheelMoveV()).Times(4)
@@ -92,36 +98,44 @@ func frame() {
 	clay.UpdateScrollContainers(false, scrollDelta, rl.GetFrameTime())
 
 	clay.BeginLayout()
-	UIOverlay(topoErr)
-	overlayCommands := clay.EndLayout()
+	UINodes(topoErr)
+	nodesRenderCommands := clay.EndLayout()
 
-	// --- Layout 1: Nodes (World Space) ---
-	worldMouse := Camera.ScreenToWorld(rl.GetMousePosition())
+	// Update cached layout info based on the World Space layout
+	afterLayout()
+
+	// --- Layout 2: Overlay (Screen Space) ---
 	clay.SetPointerState(
-		clay.V2{X: worldMouse.X, Y: worldMouse.Y},
+		clay.V2{X: float32(rl.GetMouseX()), Y: float32(rl.GetMouseY())},
 		clayPointerMouseDown,
 	)
-	clay.SetLayoutDimensions(clay.D{
-		Width:  windowWidth / Camera.Zoom,
-		Height: windowHeight / Camera.Zoom,
-	})
+	clay.SetLayoutDimensions(clay.D{Width: screenWidth, Height: screenHeight})
+
+	// We don't update scroll containers again to avoid double application of scroll?
+	// But if overlay has scrollable areas, they need it.
+	// Assuming overlay doesn't scroll with same wheel event as nodes if they are separate.
+	// For now, we only called it once above. It updates global state.
+	// If overlay has scrollable elements, they might need a second update or just rely on the first one?
+	// Clay's UpdateScrollContainers iterates ALL scroll containers.
+	// It should be fine.
 
 	clay.BeginLayout()
-	UINodes(topoErr)
-	nodeCommands := clay.EndLayout()
+	UIOverlay(topoErr)
+	overlayRenderCommands := clay.EndLayout()
 
-	afterLayout()
+	processInput()
+
 	UIInput.EndFrame()
 
 	rl.BeginDrawing()
 	rl.ClearBackground(Night.RGBA())
 
-	rl.BeginMode2D(Camera.Camera2D)
-	renderClayCommands(nodeCommands)
+	// World Space (Mapped to Screen Space)
 	renderWorldOverlays()
-	rl.EndMode2D()
+	renderClayCommands(nodesRenderCommands)
 
-	renderClayCommands(overlayCommands)
+	// Screen Space
+	renderClayCommands(overlayRenderCommands)
 	renderScreenOverlays()
 
 	rl.EndDrawing()

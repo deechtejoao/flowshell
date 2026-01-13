@@ -191,11 +191,20 @@ func DeleteSelectedNodes() {
 var UICursor rl.MouseCursor
 var UIFocus *clay.ElementID
 
+var CurrentZIndex int16
+
+func WithZIndex(z int16, f func()) {
+	prev := CurrentZIndex
+	CurrentZIndex = z
+	defer func() { CurrentZIndex = prev }()
+	f()
+}
+
 func IsFocused(id clay.ElementID) bool {
 	return UIFocus != nil && id.ID == UIFocus.ID
 }
 
-func beforeLayout() {
+func processInput() {
 	if rl.IsMouseButtonPressed(rl.MouseRightButton) && !IsHoveringPanel && !IsHoveringUI {
 		isGroup := false
 		for _, grp := range currentGraph.Groups {
@@ -556,7 +565,6 @@ func UpdateGraph() error {
 func UINodes(topoErr error) {
 	clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 		Layout: clay.LAY{Sizing: GROWALL},
-		Clip:   clay.CLIP{Horizontal: true, Vertical: true},
 	}, func() {
 		for _, group := range currentGraph.Groups {
 			UIGroup(group)
@@ -570,180 +578,234 @@ func UINodes(topoErr error) {
 func UIOverlay(topoErr error) {
 	clay.CLAY(clay.ID("OverlayRoot"), clay.EL{
 		Layout: clay.LAY{Sizing: GROWALL},
-		Border: clay.BorderElementConfig{Width: BTW, Color: LightGray},
+		Floating: clay.FLOAT{
+			AttachTo:           clay.AttachToRoot,
+			PointerCaptureMode: clay.PointercaptureModePassthrough, // Important: let clicks pass through to nodes if not hitting UI
+		},
 	}, func() {
 		if topoErr != nil {
-			clay.CLAY(clay.ID("CycleWarning"), clay.EL{
-				Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0), Height: clay.SizingFixed(30)}, ChildAlignment: ALLCENTER},
-				BackgroundColor: Red,
-				Floating: clay.FLOAT{
-					AttachTo: clay.AttachToParent,
-					AttachPoints: clay.FloatingAttachPoints{
-						Element: clay.AttachPointCenterTop,
-						Parent:  clay.AttachPointCenterTop,
+			WithZIndex(ZTOP, func() {
+				clay.CLAY(clay.ID("CycleWarning"), clay.EL{
+					Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0), Height: clay.SizingFixed(30)}, ChildAlignment: ALLCENTER},
+					BackgroundColor: Red,
+					Floating: clay.FLOAT{
+						AttachTo: clay.AttachToParent,
+						AttachPoints: clay.FloatingAttachPoints{
+							Element: clay.AttachPointCenterTop,
+							Parent:  clay.AttachPointCenterTop,
+						},
+						ZIndex: ZTOP,
 					},
-					ZIndex: ZTOP,
-				},
-			}, func() {
-				clay.TEXT("Cycle Detected! Graph execution disabled.", clay.TextElementConfig{TextColor: White, FontID: InterBold})
+				}, func() {
+					clay.TEXT("Cycle Detected! Graph execution disabled.", clay.TextElementConfig{TextColor: White, FontID: InterBold})
+				})
 			})
 		}
 
 		if ShowLoadConfirmation {
-			clay.CLAY(clay.ID("LoadConfirmation"), clay.EL{
-				Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300)}, ChildAlignment: ALLCENTER, Padding: PA3, ChildGap: S2},
-				BackgroundColor: Charcoal,
-				Border:          clay.BorderElementConfig{Width: BA2, Color: Red},
-				CornerRadius:    RA2,
-				Floating: clay.FLOAT{
-					AttachTo: clay.AttachToParent,
-					AttachPoints: clay.FloatingAttachPoints{
-						Element: clay.AttachPointCenterCenter,
-						Parent:  clay.AttachPointCenterCenter,
+			WithZIndex(ZTOP, func() {
+				clay.CLAY(clay.ID("LoadConfirmation"), clay.EL{
+					Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300)}, ChildAlignment: ALLCENTER, Padding: PA3, ChildGap: S2},
+					BackgroundColor: Charcoal,
+					Border:          clay.BorderElementConfig{Width: BA2, Color: Red},
+					CornerRadius:    RA2,
+					Floating: clay.FLOAT{
+						AttachTo: clay.AttachToParent,
+						AttachPoints: clay.FloatingAttachPoints{
+							Element: clay.AttachPointCenterCenter,
+							Parent:  clay.AttachPointCenterCenter,
+						},
+						ZIndex:             ZTOP,
+						PointerCaptureMode: clay.PointercaptureModePassthrough,
 					},
-					ZIndex: ZTOP,
-				},
-			}, func() {
-				clay.TEXT("Discard changes and load?", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
-				clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{ChildGap: S3}}, func() {
-					UIButton(clay.ID("ConfirmLoad"), UIButtonConfig{
-						El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Red, CornerRadius: RA1},
-						OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-							ShowLoadConfirmation = false
-							_, _ = LoadGraph("saved.flow")
-						},
-					}, func() {
-						clay.TEXT("Load", clay.TextElementConfig{TextColor: White})
-					})
-					UIButton(clay.ID("CancelLoad"), UIButtonConfig{
-						El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Gray, CornerRadius: RA1},
-						OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-							ShowLoadConfirmation = false
-						},
-					}, func() {
-						clay.TEXT("Cancel", clay.TextElementConfig{TextColor: White})
+				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
+					clay.TEXT("Discard changes and load?", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
+					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{ChildGap: S3}}, func() {
+						UIButton(clay.ID("ConfirmLoad"), UIButtonConfig{
+							El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Red, CornerRadius: RA1},
+							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+								ShowLoadConfirmation = false
+								_, _ = LoadGraph("saved.flow")
+							},
+						}, func() {
+							clay.TEXT("Load", clay.TextElementConfig{TextColor: White})
+						})
+						UIButton(clay.ID("CancelLoad"), UIButtonConfig{
+							El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Gray, CornerRadius: RA1},
+							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+								ShowLoadConfirmation = false
+							},
+						}, func() {
+							clay.TEXT("Cancel", clay.TextElementConfig{TextColor: White})
+						})
 					})
 				})
 			})
 		}
 
-		clay.CLAY(clay.ID("NewNodeContainer"), clay.EL{
-			Layout: clay.LAY{
-				Sizing:  GROWH,
-				Padding: PA3,
-			},
-			Floating: clay.FLOAT{
-				AttachTo: clay.AttachToParent,
-				AttachPoints: clay.FloatingAttachPoints{
-					Element: clay.AttachPointLeftBottom,
-					Parent:  clay.AttachPointLeftBottom,
-				},
-			},
-		}, func() {
-			clay.CLAY_AUTO_ID(clay.EL{
+		// Check expansion state for New Node Menu
+		textboxID := clay.ID("NewNodeName")
+		isFocused := IsFocused(textboxID)
+
+		shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
+
+		if rl.IsKeyPressed(rl.KeyEscape) {
+			UIFocus = nil
+			isFocused = false
+		}
+
+		containerWidth := clay.SizingFit(0, 0)
+		if isFocused || shortcut {
+			containerWidth = clay.SizingFixed(300)
+		}
+
+		WithZIndex(10, func() {
+			clay.CLAY(clay.ID("NewNodeContainer"), clay.EL{
 				Layout: clay.LAY{
-					Sizing:   GROWH,
-					ChildGap: S2,
+					Sizing:  clay.Sizing{Width: containerWidth, Height: clay.SizingFit(0, 0)},
+					Padding: PA3,
+				},
+				Floating: clay.FLOAT{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Element: clay.AttachPointLeftBottom,
+						Parent:  clay.AttachPointLeftBottom,
+					},
+					ZIndex:             10,
+					PointerCaptureMode: clay.PointercaptureModePassthrough,
 				},
 			}, func() {
-				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-					IsHoveringUI = true
-				}, nil)
-
-				textboxID := clay.ID("NewNodeName")
-				shortcut := rl.IsKeyPressed(rl.KeySpace) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl))
-
-				// Before UI: defocus textbox
-				if shortcut && IsFocused(textboxID) {
-					UIFocus = nil
-				}
-
-				UIButton(clay.ID("NewNode"), UIButtonConfig{
-					El: clay.EL{
-						Layout: clay.LAY{
-							Sizing:         WH(36, 36),
-							ChildAlignment: ALLCENTER,
-						},
-						Border: clay.B{Width: BA, Color: Gray},
-					},
-					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						NewNodeName = ""
-						id := textboxID
-						UIFocus = &id
+				clay.CLAY_AUTO_ID(clay.EL{
+					Layout: clay.LAY{
+						ChildGap: S2,
+						Sizing:   clay.Sizing{Width: clay.SizingGrow(0, 300)}, // Capped grow? Or just Grow.
 					},
 				}, func() {
-					clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
-				})
-				if IsFocused(textboxID) {
-					addNodeFromMatch := func(nt NodeType) {
-						newNode := nt.Create()
-						centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
-						newNode.Pos = SnapToGrid(centerWorld)
-						currentGraph.AddNode(newNode)
-						selectedNodeID = newNode.ID
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
+
+					// textboxID already defined above
+					// shortcut already defined above
+
+					// Before UI: defocus textbox
+					if shortcut && isFocused { // Was IsFocused(textboxID)
+						UIFocus = nil
 					}
 
-					UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
-						El: clay.ElementDeclaration{
+					UIButton(clay.ID("NewNode"), UIButtonConfig{
+						El: clay.EL{
 							Layout: clay.LAY{
-								Sizing: GROWALL,
+								Sizing:         WH(36, 36),
+								ChildAlignment: ALLCENTER,
 							},
+							Border: clay.B{Width: BA, Color: Gray},
 						},
-						OnSubmit: func(val string) {
-							matches := SearchNodeTypes(val)
-							if len(matches) > 0 {
-								addNodeFromMatch(matches[0])
-							}
-							UIFocus = nil
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							NewNodeName = ""
+							id := textboxID
+							UIFocus = &id
 						},
 					}, func() {
-						clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
-							Layout: clay.LAY{
-								LayoutDirection: clay.TopToBottom,
-								Sizing:          GROWH,
-							},
-							BackgroundColor: DarkGray,
-							Border:          clay.B{Width: BA_BTW, Color: Gray},
-							Floating: clay.FLOAT{
-								AttachTo: clay.AttachToParent,
-								AttachPoints: clay.FloatingAttachPoints{
-									Parent:  clay.AttachPointLeftTop,
-									Element: clay.AttachPointLeftBottom,
+						clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
+					})
+					if IsFocused(textboxID) {
+						addNodeFromMatch := func(nt NodeType) {
+							newNode := nt.Create()
+							centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
+
+							pos := SnapToGrid(centerWorld)
+							// Simple collision avoidance: cascade
+							for i := 0; i < 50; i++ {
+								overlap := false
+								for _, n := range currentGraph.Nodes {
+									// Check if pos is exactly same as n.Pos (since both are snapped)
+									if n.Pos == pos {
+										overlap = true
+										break
+									}
+								}
+								if !overlap {
+									break
+								}
+								pos.X += GridSize
+								pos.Y += GridSize
+							}
+
+							newNode.Pos = pos
+							currentGraph.AddNode(newNode)
+							selectedNodeID = newNode.ID
+						}
+
+						UITextBox(textboxID, &NewNodeName, UITextBoxConfig{
+							El: clay.ElementDeclaration{
+								Layout: clay.LAY{
+									Sizing: GROWALL,
 								},
 							},
+							OnSubmit: func(val string) {
+								matches := SearchNodeTypes(val)
+								if len(matches) > 0 {
+									addNodeFromMatch(matches[0])
+								}
+								UIFocus = nil
+							},
 						}, func() {
-							clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-								IsHoveringUI = true
-							}, nil)
-
-							matches := SearchNodeTypes(NewNodeName)
-							for i := len(matches) - 1; i >= 0; i-- {
-								UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
-									El: clay.EL{
-										Layout: clay.LAY{
-											Padding: PVH(S1, S2),
-											Sizing:  GROWH,
+							WithZIndex(20, func() {
+								clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
+									Layout: clay.LAY{
+										LayoutDirection: clay.TopToBottom,
+										Sizing:          GROWH,
+									},
+									BackgroundColor: DarkGray,
+									Border:          clay.B{Width: BA_BTW, Color: Gray},
+									Floating: clay.FLOAT{
+										AttachTo: clay.AttachToParent,
+										AttachPoints: clay.FloatingAttachPoints{
+											Parent:  clay.AttachPointLeftTop,
+											Element: clay.AttachPointLeftBottom,
 										},
-										BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+										ZIndex:             20,
+										PointerCaptureMode: clay.PointercaptureModePassthrough,
 									},
-									OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-										addNodeFromMatch(matches[userData.(int)])
-										UIFocus = nil
-									},
-									OnClickUserData: i,
 								}, func() {
-									clay.TEXT(matches[i].Name, clay.T{TextColor: White})
-								})
-							}
-						})
-					})
-				}
+									clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+										IsHoveringUI = true
+									}, nil)
 
-				// After UI: focus textbox
-				if shortcut && !IsFocused(textboxID) {
-					UIFocus = &textboxID
-					NewNodeName = ""
-				}
+									matches := SearchNodeTypes(NewNodeName)
+									for i := len(matches) - 1; i >= 0; i-- {
+										UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
+											El: clay.EL{
+												Layout: clay.LAY{
+													Padding: PVH(S1, S2),
+													Sizing:  GROWH,
+												},
+												BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+											},
+											OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+												addNodeFromMatch(matches[userData.(int)])
+												UIFocus = nil
+											},
+											OnClickUserData: i,
+										}, func() {
+											clay.TEXT(matches[i].Name, clay.T{TextColor: White})
+										})
+									}
+								})
+							})
+						})
+					}
+
+					// After UI: focus textbox
+					if shortcut && !IsFocused(textboxID) {
+						UIFocus = &textboxID
+						NewNodeName = ""
+					}
+				})
 			})
 		})
 
@@ -830,6 +892,11 @@ func UIOverlay(topoErr error) {
 					}
 					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(overlay.BoundingBox), V2{})
 				} else {
+					if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+						clear(selectedNodes)
+						selectedNodeID = 0
+						UIFocus = nil
+					}
 					if drag.TryStartDrag(PanDragKey, rl.Rectangle(overlay.BoundingBox), V2{}) {
 						LastPanMousePosition = rl.GetMousePosition()
 					}
@@ -904,12 +971,12 @@ func renderWorldOverlays() {
 		)
 	}
 	if draggingNewWire, _, _ := drag.State(NewWireDragKey); draggingNewWire {
-		// Calculate end position in world space
-		mouseWorld := Camera.ScreenToWorld(rl.GetMousePosition())
+		// Calculate end position in screen space
+		mousePos := rl.GetMousePosition()
 
 		rl.DrawLineBezier(
 			rl.Vector2(NewWireSourceNode.OutputPortPositions[NewWireSourcePort]),
-			mouseWorld,
+			mousePos,
 			1,
 			LightGray.RGBA(),
 		)
@@ -952,12 +1019,12 @@ func UIGroup(group *Group) {
 	clay.CLAY(clay.IDI("Group", group.ID), clay.EL{
 		Floating: clay.FloatingElementConfig{
 			AttachTo: clay.AttachToParent,
-			Offset:   clay.Vector2(group.XY()),
+			Offset:   clay.Vector2(Camera.WorldToScreen(group.XY())),
 			ClipTo:   clay.ClipToAttachedParent,
 		},
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
-			Sizing:          clay.Sizing{Width: clay.SizingFixed(group.Rect.Width), Height: clay.SizingFixed(group.Rect.Height)},
+			Sizing:          clay.Sizing{Width: clay.SizingFixed(group.Rect.Width * Camera.Zoom), Height: clay.SizingFixed(group.Rect.Height * Camera.Zoom)},
 		},
 		BackgroundColor: clay.Color{R: group.Color.R, G: group.Color.G, B: group.Color.B, A: 50},
 		Border:          clay.B{Color: group.Color, Width: BA},
@@ -966,6 +1033,7 @@ func UIGroup(group *Group) {
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 			// Don't set IsHoveringPanel so we can still pan if we click the background of a group
 			// But we do want to catch clicks to select/drag
+			UIInput.RegisterPointerDown(elementID, pointerData, 0)
 		}, nil)
 
 		// Header
@@ -978,7 +1046,7 @@ func UIGroup(group *Group) {
 			BackgroundColor: clay.Color{R: group.Color.R, G: group.Color.G, B: group.Color.B, A: 200},
 		}, func() {
 			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
-				UIInput.RegisterPointerDown(elementID, pointerData)
+				UIInput.RegisterPointerDown(elementID, pointerData, 0)
 
 				if drag.TryStartDrag(GroupDrag{Group: group}, rl.Rectangle{}, V2{}) {
 					// Find nodes inside
@@ -1022,6 +1090,9 @@ func (r *Group) XY() rl.Vector2 {
 }
 
 func UINode(node *Node, disabled bool) {
+	// Node header font size
+	headerFontSize := uint16(F3)
+
 	border := clay.B{
 		Color: Gray,
 		Width: BA,
@@ -1038,113 +1109,154 @@ func UINode(node *Node, disabled bool) {
 		}
 	}
 
-	clay.CLAY(node.ClayID(), clay.EL{
-		Floating: clay.FloatingElementConfig{
-			AttachTo: clay.AttachToParent,
-			Offset:   clay.Vector2(node.Pos),
-			ClipTo:   clay.ClipToAttachedParent,
-		},
+	zIndex := int16(0)
+	if IsNodeSelected(node.ID) {
+		zIndex = 10
+	}
 
-		Layout: clay.LAY{
-			LayoutDirection: clay.TopToBottom,
-			Sizing:          clay.Sizing{Width: clay.SizingFit(NodeMinWidth, 0)},
-		},
-		BackgroundColor: DarkGray,
-		Border:          border,
-		CornerRadius:    RA2,
-	}, func() {
-		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-			IsHoveringPanel = true
-		}, nil)
-
-		clay.CLAY_AUTO_ID(clay.EL{ // Node header
-			Layout: clay.LAY{
-				Sizing:         GROWH,
-				Padding:        PD(1, 0, 0, 0, PVH(S1, S2)),
-				ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter},
+	WithZIndex(zIndex, func() {
+		clay.CLAY(node.ClayID(), clay.EL{
+			Floating: clay.FloatingElementConfig{
+				AttachTo: clay.AttachToParent,
+				Offset:   clay.Vector2(Camera.WorldToScreen(node.Pos)),
+				ClipTo:   clay.ClipToAttachedParent,
+				ZIndex:   zIndex,
 			},
-			BackgroundColor: Charcoal,
+
+			Layout: clay.LAY{
+				LayoutDirection: clay.TopToBottom,
+				Sizing:          clay.Sizing{Width: clay.SizingFit(NodeMinWidth, 0)},
+			},
+			BackgroundColor: DarkGray,
+			Border:          border,
+			CornerRadius:    RA2,
 		}, func() {
-			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
-				UIInput.RegisterPointerDown(elementID, pointerData)
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				IsHoveringPanel = true
+				UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
 				if UIInput.IsClick(elementID, pointerData) {
+					UIFocus = nil
 					multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 					SelectNode(node.ID, multi)
 				}
 			}, nil)
 
-			clay.TEXT(node.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: F3, TextColor: White})
-			UISpacer(node.DragHandleClayID(), GROWALL)
-			if node.Running {
-				clay.TEXT("Running...", clay.TextElementConfig{TextColor: White})
-			}
-
-			playButtonDisabled := !node.Valid || node.Running || disabled
-
-			UIButton(clay.AUTO_ID, // Pin button
-				UIButtonConfig{
-					El: clay.EL{Layout: clay.LAY{Padding: PA1}},
-					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						node.Pinned = !node.Pinned
-					},
+			clay.CLAY(clay.IDI("NodeHeader", node.ID), clay.EL{ // Node header
+				Layout: clay.LAY{
+					Sizing:         GROWH,
+					Padding:        PD(1, 0, 0, 0, PVH(S1, S2)),
+					ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter},
 				},
-				func() {
-					UIImage(clay.AUTO_ID, util.Tern(node.Pinned, ImgPushpin, ImgPushpinOutline), clay.EL{
-						BackgroundColor: Red,
-					})
-
-					if clay.Hovered() {
-						UITooltip("Pin command (prevent automatic re-runs)")
+				BackgroundColor: Charcoal,
+			}, func() {
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+					IsHoveringPanel = true
+					UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
+					if UIInput.IsClick(elementID, pointerData) {
+						UIFocus = nil
+						multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
+						SelectNode(node.ID, multi)
 					}
-				},
-			)
-			UIButton(clay.AUTO_ID, // Retry / play-all button
-				UIButtonConfig{
-					El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
-					Disabled: playButtonDisabled,
-					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						node.Run(context.Background(), true)
-					},
-				},
-				func() {
-					UIImage(clay.AUTO_ID, ImgRetry, clay.EL{
-						BackgroundColor: util.Tern(playButtonDisabled, LightGray, Blue),
-					})
+				}, nil)
 
-					if clay.Hovered() {
-						UITooltip("Run command and inputs")
-					}
-				},
-			)
-			UIButton(clay.AUTO_ID, // Play button
-				UIButtonConfig{
-					El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
-					Disabled: playButtonDisabled,
-					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						node.Run(context.Background(), false)
-					},
-				},
-				func() {
-					UIImage(clay.AUTO_ID, ImgPlay, clay.EL{
-						BackgroundColor: util.Tern(playButtonDisabled, LightGray, PlayButtonGreen),
-					})
+				clay.TEXT(node.Name, clay.TextElementConfig{FontID: InterSemibold, FontSize: headerFontSize, TextColor: White})
+				UISpacer(node.DragHandleClayID(), GROWALL)
+				// ... (rest of header using scaled vars if needed)
+				// For now, let's just make sure the main container and header scale.
+				// Buttons might need scaling too.
 
-					if clay.Hovered() {
-						UITooltip("Run command")
-					}
-				},
-			)
-		})
-		clay.CLAY_AUTO_ID(clay.EL{ // Node body
-			Layout: clay.LAY{Sizing: GROWH, Padding: PA2},
-		}, func() {
-			node.Action.UI(node)
+				// ...
+				if node.Running {
+					clay.TEXT("Running...", clay.TextElementConfig{TextColor: White})
+				}
+
+				playButtonDisabled := !node.Valid || node.Running || disabled
+
+				UIButton(clay.IDI("NodePin", node.ID), // Pin button
+					UIButtonConfig{
+						El: clay.EL{Layout: clay.LAY{Padding: PA1}},
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							node.Pinned = !node.Pinned
+						},
+					},
+					func() {
+						UIImage(clay.IDI("NodePinIcon", node.ID), util.Tern(node.Pinned, ImgPushpin, ImgPushpinOutline), clay.EL{
+							BackgroundColor: Red,
+						})
+
+						if clay.Hovered() {
+							UITooltip("Pin command (prevent automatic re-runs)")
+						}
+					},
+				)
+				UIButton(clay.IDI("NodeRetry", node.ID), // Retry / play-all button
+					UIButtonConfig{
+						El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
+						Disabled: playButtonDisabled,
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							node.Run(context.Background(), true)
+						},
+					},
+					func() {
+						UIImage(clay.IDI("NodeRetryIcon", node.ID), ImgRetry, clay.EL{
+							BackgroundColor: util.Tern(playButtonDisabled, LightGray, Blue),
+						})
+
+						if clay.Hovered() {
+							UITooltip("Run command and inputs")
+						}
+					},
+				)
+				UIButton(clay.IDI("NodePlay", node.ID), // Play button
+					UIButtonConfig{
+						El:       clay.EL{Layout: clay.LAY{Padding: PA1}},
+						Disabled: playButtonDisabled,
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							node.Run(context.Background(), false)
+						},
+					},
+					func() {
+						UIImage(clay.IDI("NodePlayIcon", node.ID), ImgPlay, clay.EL{
+							BackgroundColor: util.Tern(playButtonDisabled, LightGray, PlayButtonGreen),
+						})
+
+						if clay.Hovered() {
+							UITooltip("Run command")
+						}
+					},
+				)
+				UIButton(clay.IDI("NodeDelete", node.ID), // Delete button
+					UIButtonConfig{
+						El: clay.EL{Layout: clay.LAY{Padding: PA1}},
+						// Ensure delete button is always clickable above other node elements
+						ZIndex: zIndex + 100,
+						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							DeleteNode(node.ID)
+							delete(selectedNodes, node.ID)
+							if selectedNodeID == node.ID {
+								selectedNodeID = 0
+							}
+						},
+					},
+					func() {
+						clay.TEXT("X", clay.TextElementConfig{TextColor: util.Tern(clay.Hovered(), Red, LightGray), FontID: InterBold})
+						if clay.Hovered() {
+							UITooltip("Delete Node")
+						}
+					},
+				)
+			})
+			clay.CLAY(clay.IDI("NodeBody", node.ID), clay.EL{ // Node body
+				Layout: clay.LAY{Sizing: GROWH, Padding: PA2},
+			}, func() {
+				node.Action.UI(node)
+			})
 		})
 	})
 }
 
 func UIInputPort(n *Node, port int) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI(fmt.Sprintf("InputPort%d", port), n.ID), clay.EL{
 		Layout: clay.LAY{ChildAlignment: YCENTER},
 	}, func() {
 		PortAnchor(n, false, port)
@@ -1153,7 +1265,7 @@ func UIInputPort(n *Node, port int) {
 }
 
 func UIOutputPort(n *Node, port int) {
-	clay.CLAY_AUTO_ID(clay.EL{
+	clay.CLAY(clay.IDI(fmt.Sprintf("OutputPort%d", port), n.ID), clay.EL{
 		Layout: clay.LAY{ChildAlignment: YCENTER},
 	}, func() {
 		clay.TEXT(n.OutputPorts[port].Name, clay.TextElementConfig{TextColor: White})
@@ -1243,6 +1355,8 @@ type UIButtonConfig struct {
 
 	OnClick         clay.OnHoverFunc
 	OnClickUserData any
+
+	ZIndex int16
 }
 
 func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
@@ -1257,7 +1371,12 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 
 			if !config.Disabled {
 				UICursor = rl.MouseCursorPointingHand
-				UIInput.RegisterPointerDown(elementID, pointerData)
+				z := config.ZIndex
+				if CurrentZIndex > z {
+					z = CurrentZIndex
+				}
+				// Bump Z-index to ensure buttons are always above their background context (e.g. Node body)
+				UIInput.RegisterPointerDown(elementID, pointerData, z+1)
 			}
 
 			if config.OnHover != nil {
@@ -1283,6 +1402,8 @@ type UITextBoxConfig struct {
 	Disabled bool
 
 	OnSubmit func(val string)
+
+	ZIndex int16
 }
 
 func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children ...func()) {
@@ -1322,7 +1443,11 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 			IsHoveringUI = true
-			UIInput.RegisterPointerDown(elementID, pointerData)
+			z := config.ZIndex
+			if CurrentZIndex > z {
+				z = CurrentZIndex
+			}
+			UIInput.RegisterPointerDown(elementID, pointerData, z)
 
 			if UIInput.IsClick(elementID, pointerData) {
 				UIFocus = &elementID
@@ -1437,58 +1562,61 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 		})
 
 		if d.open {
-			clay.CLAY_AUTO_ID(clay.EL{
-				Layout: clay.LAY{
-					LayoutDirection: clay.TopToBottom,
-					Sizing:          GROWH,
-				},
-				Floating: clay.FLOAT{
-					AttachTo:     clay.AttachToParent,
-					AttachPoints: clay.FloatingAttachPoints{Parent: clay.AttachPointLeftBottom},
-					ZIndex:       ZTOP,
-				},
-				Border: clay.B{
-					Width: clay.BW{
-						Top:  0,
-						Left: 1, Right: 1,
-						Bottom: 1,
-
-						BetweenChildren: 1,
+			WithZIndex(ZTOP, func() {
+				clay.CLAY_AUTO_ID(clay.EL{
+					Layout: clay.LAY{
+						LayoutDirection: clay.TopToBottom,
+						Sizing:          GROWH,
 					},
-					Color: Gray,
-				},
-				BackgroundColor: DarkGray,
-			}, func() {
-				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-					IsHoveringUI = true
-				}, nil)
+					Floating: clay.FLOAT{
+						AttachTo:           clay.AttachToParent,
+						AttachPoints:       clay.FloatingAttachPoints{Parent: clay.AttachPointLeftBottom},
+						ZIndex:             ZTOP,
+						PointerCaptureMode: clay.PointercaptureModePassthrough,
+					},
+					Border: clay.B{
+						Width: clay.BW{
+							Top:  0,
+							Left: 1, Right: 1,
+							Bottom: 1,
 
-				for i, opt := range d.Options {
-					clay.CLAY_AUTO_ID_LATE(func() clay.EL {
-						return clay.EL{
-							Layout: clay.LAY{
-								Padding: PVH(S1, S2),
-								Sizing:  GROWH,
-							},
-							BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
-						}
-					}, func() {
-						clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-							IsHoveringUI = true
-							UIInput.RegisterPointerDown(elementID, pointerData)
+							BetweenChildren: 1,
+						},
+						Color: Gray,
+					},
+					BackgroundColor: DarkGray,
+				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
 
-							if UIInput.IsClick(elementID, pointerData) {
-								selectedBefore := d.Selected
-								d.Selected = userData.(int)
-								d.open = false
-								if config.OnChange != nil {
-									config.OnChange(d.GetOption(selectedBefore).Value, d.GetOption(d.Selected).Value)
-								}
+					for i, opt := range d.Options {
+						clay.CLAY_AUTO_ID_LATE(func() clay.EL {
+							return clay.EL{
+								Layout: clay.LAY{
+									Padding: PVH(S1, S2),
+									Sizing:  GROWH,
+								},
+								BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
 							}
-						}, i)
-						clay.TEXT(opt.Name, clay.T{TextColor: White})
-					})
-				}
+						}, func() {
+							clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+								IsHoveringUI = true
+								UIInput.RegisterPointerDown(elementID, pointerData, ZTOP)
+
+								if UIInput.IsClick(elementID, pointerData) {
+									selectedBefore := d.Selected
+									d.Selected = userData.(int)
+									d.open = false
+									if config.OnChange != nil {
+										config.OnChange(d.GetOption(selectedBefore).Value, d.GetOption(d.Selected).Value)
+									}
+								}
+							}, i)
+							clay.TEXT(opt.Name, clay.T{TextColor: White})
+						})
+					}
+				})
 			})
 		}
 	})
@@ -1539,7 +1667,8 @@ func PortAnchorID(node *Node, isOutput bool, port int) clay.ElementID {
 }
 
 func PortAnchor(node *Node, isOutput bool, port int) {
-	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{})
+	// Give it a small non-zero size to ensure it has a valid bounding box for layout calculations
+	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{Layout: clay.LAY{Sizing: WH(1, 1)}})
 }
 
 func FormatBytes(n int64) string {
@@ -1555,5 +1684,3 @@ func FormatBytes(n int64) string {
 		return fmt.Sprintf("%.1f TB", float32(n)/1_000_000_000_000)
 	}
 }
-
-

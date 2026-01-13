@@ -23,6 +23,7 @@ type InputManager struct {
 
 	pointerDownOwnerID  uint32
 	pointerDownOwnerSet bool
+	pointerDownMaxZ     int16
 }
 
 func (m *InputManager) BeginFrame(pointerDown bool) {
@@ -33,6 +34,7 @@ func (m *InputManager) BeginFrame(pointerDown bool) {
 	if m.pointerPressedThisFrame {
 		m.pointerDownOwnerID = 0
 		m.pointerDownOwnerSet = false
+		m.pointerDownMaxZ = -32768
 	}
 }
 
@@ -41,25 +43,20 @@ func (m *InputManager) EndFrame() {
 	m.pointerReleasedThisFrame = false
 }
 
-func (m *InputManager) RegisterPointerDown(owner clay.ElementID, pointerData clay.PointerData) {
-	if pointerData.State != clay.PointerDataPressedThisFrame {
+func (m *InputManager) RegisterPointerDown(owner clay.ElementID, pointerData clay.PointerData, zIndex int16) {
+	if !m.pointerPressedThisFrame {
 		return
 	}
-	if m.pointerDownOwnerSet {
-		return
+	if !m.pointerDownOwnerSet || zIndex >= m.pointerDownMaxZ {
+		m.pointerDownOwnerID = owner.ID
+		m.pointerDownOwnerSet = true
+		m.pointerDownMaxZ = zIndex
 	}
-	// We trust Clay's event timing even if it's lagging behind our InputManager's frame detection.
-
-	m.pointerDownOwnerID = owner.ID
-	m.pointerDownOwnerSet = true
 }
-
 func (m *InputManager) IsClick(owner clay.ElementID, pointerData clay.PointerData) bool {
-	if pointerData.State != clay.PointerDataReleasedThisFrame {
+	if !m.pointerReleasedThisFrame {
 		return false
 	}
-	// We don't check m.pointerReleasedThisFrame because Clay might be late.
-
 	if !m.pointerDownOwnerSet {
 		return false
 	}
