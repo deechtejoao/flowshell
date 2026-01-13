@@ -77,6 +77,10 @@ var nodeTypes = []NodeType{
 	{Name: "Regex Split", Create: func() *Node { return NewRegexSplitNode() }},
 	{Name: "HTTP Request", Create: func() *Node { return NewHTTPRequestNode() }},
 	{Name: "Formula", Create: func() *Node { return NewFormulaNode() }},
+	{Name: "Join Text", Create: func() *Node { return NewJoinTextNode() }},
+	{Name: "Split Text", Create: func() *Node { return NewSplitTextNode() }},
+	{Name: "Change Case", Create: func() *Node { return NewCaseConvertNode() }},
+	{Name: "Format String", Create: func() *Node { return NewFormatStringNode() }},
 }
 
 func CreateGroup() {

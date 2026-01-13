@@ -53,7 +53,7 @@
 - [x] Regex: Match, Find All, Replace, Split.
 - [x] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
 - [x] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
-- [ ] Text Operations: Split lines, Join, String formatting, Case conversion.
+- [x] Text Operations: Split lines, Join, String formatting, Case conversion.
 - [ ] JSON/XML Query: Extract data using JSONPath or XPath.
 - [ ] Date/Time Parsing: Parse strings to Timestamps with format strings.
 
