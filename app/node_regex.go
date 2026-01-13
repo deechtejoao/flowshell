@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -244,7 +246,24 @@ func (a *RegexSplitAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 }
 
-func (a *RegexSplitAction) UI(n *Node) {}
+func (a *RegexSplitAction) UI(n *Node) {
+	clay.CLAY(clay.IDI("RegexSplit", n.ID), clay.EL{
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+	}, func() {
+		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 0)
+			UISpacer(clay.AUTO_ID, GROWH)
+			UIOutputPort(n, 0)
+		})
+		clay.CLAY(clay.IDI("Row2", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: GROWH, ChildAlignment: YCENTER},
+		}, func() {
+			UIInputPort(n, 1)
+		})
+	})
+}
 
 func (a *RegexSplitAction) Run(n *Node) <-chan NodeActionResult {
 	done := make(chan NodeActionResult, 1)

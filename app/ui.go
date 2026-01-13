@@ -284,22 +284,25 @@ func processInput() {
 				if rl.CheckCollisionPointRec(rl.GetMousePosition(), rl.Rectangle(data.BoundingBox)) {
 					clickedNode = true
 
+					// Capture loop var
+					node := n
+
 					// Open Context Menu
 					items := []ContextMenuItem{
-						{Label: "Run", Action: func() { n.Run(context.Background(), false) }},
-						{Label: util.Tern(n.Pinned, "Unpin", "Pin"), Action: func() {
+						{Label: "Run", Action: func() { node.Run(context.Background(), false) }},
+						{Label: util.Tern(node.Pinned, "Unpin", "Pin"), Action: func() {
 							PushHistory()
-							n.Pinned = !n.Pinned
+							node.Pinned = !node.Pinned
 						}},
-						{Label: "Duplicate", Action: func() { DuplicateNode(n) }}, // DuplicateNode calls PushHistory
+						{Label: "Duplicate", Action: func() { DuplicateNode(node) }}, // DuplicateNode calls PushHistory
 						{Label: "Delete", Action: func() {
 							// DeleteSelectedNodes calls PushHistory, but here we might delete a single node
 							// that isn't selected? Or we should select it first?
 							// Logic below deletes node n.ID.
 							PushHistory()
-							DeleteNode(n.ID)
-							if IsNodeSelected(n.ID) {
-								delete(selectedNodes, n.ID)
+							DeleteNode(node.ID)
+							if IsNodeSelected(node.ID) {
+								delete(selectedNodes, node.ID)
 								selectedNodeID = 0
 							}
 						}},
@@ -307,7 +310,7 @@ func processInput() {
 
 					ContextMenu = &ContextMenuState{
 						Pos:    V2(rl.GetMousePosition()),
-						NodeID: n.ID,
+						NodeID: node.ID,
 						Items:  items,
 					}
 					break
@@ -1966,7 +1969,8 @@ func PortAnchorID(node *Node, isOutput bool, port int) clay.ElementID {
 
 func PortAnchor(node *Node, isOutput bool, port int) {
 	// Give it a small non-zero size to ensure it has a valid bounding box for layout calculations
-	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{Layout: clay.LAY{Sizing: WH(1, 1)}})
+	// 12x12 ensures easy clicking
+	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{Layout: clay.LAY{Sizing: WH(12, 12)}})
 }
 
 func FormatBytes(n int64) string {

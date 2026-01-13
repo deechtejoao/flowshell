@@ -11,7 +11,7 @@ const MinimapSize = 200
 const MinimapPadding = 10
 
 func UIMinimap() {
-	if len(currentGraph.Nodes) == 0 {
+	if len(currentGraph.Nodes) <= CurrentSettings.MinimapThreshold {
 		return
 	}
 

@@ -6,20 +6,22 @@ import (
 )
 
 type Settings struct {
-	WindowWidth     int    `json:"window_width"`
-	WindowHeight    int    `json:"window_height"`
-	WindowMaximized bool   `json:"window_maximized"`
-	Theme           string `json:"theme"`
+	WindowWidth      int    `json:"window_width"`
+	WindowHeight     int    `json:"window_height"`
+	WindowMaximized  bool   `json:"window_maximized"`
+	Theme            string `json:"theme"`
+	MinimapThreshold int    `json:"minimap_threshold"`
 }
 
 var CurrentSettings *Settings
 
 func DefaultSettings() *Settings {
 	return &Settings{
-		WindowWidth:     1920,
-		WindowHeight:    1080,
-		WindowMaximized: false,
-		Theme:           "Dark",
+		WindowWidth:      1920,
+		WindowHeight:     1080,
+		WindowMaximized:  false,
+		Theme:            "Dark",
+		MinimapThreshold: 10,
 	}
 }
 
