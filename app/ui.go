@@ -791,6 +791,8 @@ func UIOverlay(topoErr error) {
 			PointerCaptureMode: clay.PointercaptureModePassthrough, // Important: let clicks pass through to nodes if not hitting UI
 		},
 	}, func() {
+		UIMinimap()
+
 		if topoErr != nil {
 			WithZIndex(ZTOP, func() {
 				clay.CLAY(clay.ID("CycleWarning"), clay.EL{

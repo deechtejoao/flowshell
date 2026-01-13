@@ -43,7 +43,7 @@
 - [x] Grouping/Containers: Visual containers to organize related nodes.
 - [x] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
 - [x] Zoom: Canvas zooming support.
-- [ ] Minimap: Navigation aid for large flows.
+- [x] Minimap: Navigation aid for large flows.
 - [x] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
 - [x] Undo/Redo: Global history stack for graph mutations.
 - [x] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
