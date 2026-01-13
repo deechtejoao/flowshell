@@ -734,7 +734,7 @@ func (f FlowValueDrag) DragKey() string {
 var LastPanMousePosition V2
 
 const NewWireDragKey = "NEW_WIRE"
-const PortDragRadius = 5
+const PortDragRadius = 10
 
 var NewWireSourceNode *Node
 var NewWireSourcePort int
