@@ -391,6 +391,7 @@ func processInput() {
 							StartNode: NewWireSourceNode, EndNode: node,
 							StartPort: NewWireSourcePort, EndPort: port,
 						})
+						node.ClearResult()
 					}
 				}
 			}
@@ -825,7 +826,9 @@ func UIOverlay(topoErr error) {
 						for outputIndex, output := range result.Outputs {
 							port := selectedNode.OutputPorts[outputIndex]
 							if err := Typecheck(*output.Type, port.Type); err != nil {
-								panic(err)
+								// panic(err)
+								clay.TEXT(fmt.Sprintf("Type Error: %v", err), clay.TextElementConfig{TextColor: Red})
+								continue
 							}
 
 							outputState := selectedNode.GetOutputState(port.Name)

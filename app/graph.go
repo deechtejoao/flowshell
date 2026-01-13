@@ -31,6 +31,14 @@ func (g *Graph) AddNode(n *Node) {
 }
 
 func (g *Graph) DeleteNode(id int) {
+	// When deleting a node, we must invalidate any nodes that were connected to it,
+	// because their inputs/outputs have changed.
+	for _, wire := range g.Wires {
+		if wire.StartNode.ID == id {
+			wire.EndNode.ClearResult()
+		}
+	}
+
 	g.Nodes = slices.DeleteFunc(g.Nodes, func(node *Node) bool { return node.ID == id })
 	g.Wires = slices.DeleteFunc(g.Wires, func(wire *Wire) bool { return wire.StartNode.ID == id || wire.EndNode.ID == id })
 }
