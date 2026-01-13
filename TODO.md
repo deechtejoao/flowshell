@@ -68,6 +68,6 @@
 - [x] Unit Tests: specifically for `drag.go` state machine and `serialize.go` edge cases.
 - [x] Refactor Globals: Move `nodes`, `wires`, and `nodeID` into a `Graph` struct.
 - [x] Action Tests: Add unit tests for `NodeAction.Run` logic independent of the UI/Raylib.
-- [ ] Linter: Add `golangci-lint` configuration.
+- [x] Linter: Add `golangci-lint` configuration.
 - [x] Clay Optimization: Search `clay/clay.h` for performance optimizations (SIMD/Culling confirmed active).
 
