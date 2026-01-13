@@ -238,6 +238,11 @@ func processInput() {
 		}
 	}
 
+	// Double check to clear focus if clicking background
+	if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && !IsHoveringPanel && !IsHoveringUI {
+		UIFocus = nil
+	}
+
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
 		_ = SaveGraph("saved.flow", currentGraph)
 	}
@@ -420,14 +425,22 @@ func processInput() {
 					}
 
 					if rl.CheckCollisionPointRec(rl.GetMousePosition(), portRect) && node != NewWireSourceNode {
-						// Delete existing wires into that port
-						currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
-							return wire.EndNode == node && wire.EndPort == port
-						})
-						currentGraph.Wires = append(currentGraph.Wires, &Wire{
-							StartNode: NewWireSourceNode, EndNode: node,
-							StartPort: NewWireSourcePort, EndPort: port,
-						})
+						// Check types
+						sourceType := NewWireSourceNode.OutputPorts[NewWireSourcePort].Type
+						targetType := node.InputPorts[port].Type
+						if err := Typecheck(sourceType, targetType); err != nil {
+							fmt.Printf("Cannot connect: %v\n", err)
+							// TODO: Show visual feedback?
+						} else {
+							// Delete existing wires into that port
+							currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
+								return wire.EndNode == node && wire.EndPort == port
+							})
+							currentGraph.Wires = append(currentGraph.Wires, &Wire{
+								StartNode: NewWireSourceNode, EndNode: node,
+								StartPort: NewWireSourcePort, EndPort: port,
+							})
+						}
 						node.ClearResult()
 					}
 				}
@@ -754,11 +767,18 @@ func UIOverlay(topoErr error) {
 								if i == 0 {
 									centerWorld := Camera.ScreenToWorld(rl.Vector2{X: float32(rl.GetScreenWidth()) / 2, Y: float32(rl.GetScreenHeight()) / 2})
 									pos = SnapToGrid(centerWorld)
-									// Simple collision avoidance: cascade
+									// Collision avoidance with bounding box check
+									testRect := rl.Rectangle{X: pos.X, Y: pos.Y, Width: NodeMinWidth, Height: 150} // 150 is estimated height
 									for j := 0; j < 50; j++ {
 										overlap := false
 										for _, n := range currentGraph.Nodes {
-											if n.Pos == pos {
+											// Use the actual drag rect if available (it might be 0 if not rendered yet, but we have n.Pos)
+											// Or fallback to a default size check
+											otherRect := n.DragRect
+											if otherRect.Width == 0 {
+												otherRect = rl.Rectangle{X: n.Pos.X, Y: n.Pos.Y, Width: NodeMinWidth, Height: 150}
+											}
+											if rl.CheckCollisionRecs(testRect, otherRect) {
 												overlap = true
 												break
 											}
@@ -768,6 +788,8 @@ func UIOverlay(topoErr error) {
 										}
 										pos.X += GridSize
 										pos.Y += GridSize
+										testRect.X = pos.X
+										testRect.Y = pos.Y
 									}
 								} else {
 									// Place next to previous
