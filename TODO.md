@@ -66,7 +66,7 @@
 - [x] Interactive Input: "Prompt User" node to ask for text/confirmation during execution.
 - [x] Undo/Redo Properties: Extend Undo/Redo to cover node property changes (currently handles graph topology).
 - [x] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).
-- [ ] Conditional Branching: `If/Else` node to verify conditions and branch flow.
+- [x] Conditional Branching: `If/Else` node to verify conditions and branch flow.
 - [ ] File System Operations: `Copy File`, `Move File`, `Delete File`, `Make Directory` for filesystem automation.
 
 # move to addons
