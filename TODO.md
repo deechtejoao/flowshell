@@ -51,7 +51,7 @@
 
 ## New Native Nodes
 - [x] Regex: Match, Find All, Replace, Split.
-- [ ] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
+- [x] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
 - [ ] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
 - [ ] Text Operations: Split lines, Join, String formatting, Case conversion.
 - [ ] JSON/XML Query: Extract data using JSONPath or XPath.
