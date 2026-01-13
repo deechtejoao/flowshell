@@ -68,7 +68,9 @@
 - [x] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).
 - [x] Conditional Branching: `If/Else` node to verify conditions and branch flow.
 - [x] File System Operations: `Copy File`, `Move File`, `Delete File`, `Make Directory` for filesystem automation.
+- [ ] Control Flow Extras: `Merge` (rejoin branches) and `Gate` (conditional filter).
 
 # move to addons
 - [ ] Database Integration: `SQL Query` node to connect to SQLite/Postgres and map results to Tables.
 - [ ] Deduplication: `Unique` node to remove duplicate items from lists/tables.
+
