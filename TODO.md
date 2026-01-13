@@ -46,7 +46,7 @@
 - [ ] Minimap: Navigation aid for large flows.
 - [x] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
 - [x] Undo/Redo: Global history stack for graph mutations.
-- [ ] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
+- [x] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
 - [ ] Rendering: Custom rendering implementation. `app/render.go:86`
 
 ## New Native Nodes

@@ -70,6 +70,7 @@ var nodeTypes = []NodeType{
 	{Name: "Convert Type", Create: func() *Node { return NewConvertNode() }},
 	{Name: "Transpose", Create: func() *Node { return NewTransposeNode() }},
 	{Name: "Minify HTML", Create: func() *Node { return NewMinifyHTMLNode() }},
+	{Name: "Wait For Click", Create: func() *Node { return NewWaitForClickNode() }},
 }
 
 func CreateGroup() {
@@ -513,21 +514,7 @@ func processInput() {
 						node.Pos = SnapToGrid(node.Pos)
 					}
 				}
-			}
 
-			if done {
-				if canceled {
-					// Revert all
-					// This is tricky because we don't store start pos for all.
-					// But `drag` only stores start pos for `n`.
-					// We might need to store start pos for all selected nodes when drag starts.
-					// For now, let's just revert `n` (which is what original code did)
-					// and maybe accept that others stay?
-					// Or better: Revert is rare (ESC).
-					// If we want to support revert, we need to capture state.
-					n.Pos = drag.ObjStart // This only reverts n.
-				}
-			}
 		}
 
 		// Selected node keyboard shortcuts
