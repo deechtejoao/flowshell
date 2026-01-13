@@ -882,6 +882,60 @@ func UIOverlay(topoErr error) {
 			})
 		}
 
+		// Prompt Modal
+		if CurrentPrompt != nil {
+			WithZIndex(ZTOP, func() {
+				// Blocking overlay background
+				clay.CLAY(clay.ID("PromptOverlayBlocker"), clay.EL{
+					Layout:          clay.LAY{Sizing: GROWALL, LayoutDirection: clay.TopToBottom, ChildAlignment: ALLCENTER},
+					BackgroundColor: clay.Color{R: 0, G: 0, B: 0, A: 100}, // Semi-transparent dim
+					Floating: clay.FLOAT{
+						AttachTo:           clay.AttachToRoot,
+						ZIndex:             ZTOP,
+						PointerCaptureMode: clay.PointercaptureModeCapture, // Block clicks
+					},
+				}, func() {
+					clay.CLAY(clay.ID("PromptModal"), clay.EL{
+						Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildAlignment: ALLCENTER, Padding: PA3, ChildGap: S3},
+						BackgroundColor: Charcoal,
+						Border:          clay.BorderElementConfig{Width: BA2, Color: Blue},
+						CornerRadius:    RA2,
+					}, func() {
+						clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							IsHoveringUI = true
+						}, nil)
+
+						clay.TEXT(CurrentPrompt.Title, clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
+						clay.TEXT(CurrentPrompt.Message, clay.TextElementConfig{TextColor: LightGray})
+
+						UITextBox(clay.ID("PromptInput"), &CurrentPrompt.DefaultValue, UITextBoxConfig{
+							El:       clay.EL{Layout: clay.LAY{Sizing: GROWH, Padding: PA2}, BackgroundColor: DarkGray, CornerRadius: RA1},
+							OnSubmit: func(val string) { RespondToPrompt(val) },
+						})
+
+						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{ChildGap: S3, LayoutDirection: clay.LeftToRight}}, func() {
+							UIButton(clay.ID("PromptOK"), UIButtonConfig{
+								El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Blue, CornerRadius: RA1},
+								OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+									RespondToPrompt(CurrentPrompt.DefaultValue)
+								},
+							}, func() {
+								clay.TEXT("OK", clay.TextElementConfig{TextColor: White})
+							})
+							UIButton(clay.ID("PromptCancel"), UIButtonConfig{
+								El: clay.EL{Layout: clay.LAY{Padding: PA2}, BackgroundColor: Gray, CornerRadius: RA1},
+								OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+									CancelPrompt()
+								},
+							}, func() {
+								clay.TEXT("Cancel", clay.TextElementConfig{TextColor: White})
+							})
+						})
+					})
+				})
+			})
+		}
+
 		if ShowVariables {
 			WithZIndex(ZTOP, func() {
 				clay.CLAY(clay.ID("VariablesPanel"), clay.EL{
