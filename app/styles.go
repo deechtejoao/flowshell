@@ -12,12 +12,35 @@ var DarkGray = clay.Color{R: 33, G: 36, B: 40, A: 255}
 var Gray = clay.Color{R: 67, G: 71, B: 79, A: 255}
 var LightGray = clay.Color{R: 157, G: 161, B: 170, A: 255}
 var White = clay.Color{R: 250, G: 250, B: 252, A: 255}
+
+// Accents
 var Red = clay.Color{R: 214, G: 25, B: 50, A: 255}
 var Blue = clay.Color{R: 11, G: 88, B: 183, A: 255}
 var Yellow = clay.Color{R: 242, G: 199, B: 68, A: 255}
 
 var PlayButtonGreen = clay.Color{R: 61, G: 159, B: 72, A: 255}
 var HoverWhite = clay.Color{R: 255, G: 255, B: 255, A: 20}
+
+func ApplyTheme(name string) {
+	if name == "Light" {
+		Night = clay.Color{R: 250, G: 250, B: 252, A: 255}     // White
+		Charcoal = clay.Color{R: 235, G: 235, B: 240, A: 255}  // Light Gray
+		DarkGray = clay.Color{R: 220, G: 220, B: 225, A: 255}  // Gray
+		Gray = clay.Color{R: 180, G: 180, B: 185, A: 255}      // Darker Gray
+		LightGray = clay.Color{R: 100, G: 100, B: 105, A: 255} // Dark Gray Text
+		White = clay.Color{R: 20, G: 20, B: 25, A: 255}        // Black Text
+		HoverWhite = clay.Color{R: 0, G: 0, B: 0, A: 20}       // Dark Hover
+	} else {
+		// Default Dark
+		Night = clay.Color{R: 12, G: 14, B: 17, A: 255}
+		Charcoal = clay.Color{R: 20, G: 22, B: 25, A: 255}
+		DarkGray = clay.Color{R: 33, G: 36, B: 40, A: 255}
+		Gray = clay.Color{R: 67, G: 71, B: 79, A: 255}
+		LightGray = clay.Color{R: 157, G: 161, B: 170, A: 255}
+		White = clay.Color{R: 250, G: 250, B: 252, A: 255}
+		HoverWhite = clay.Color{R: 255, G: 255, B: 255, A: 20}
+	}
+}
 
 const S1 = 4
 const S2 = 8

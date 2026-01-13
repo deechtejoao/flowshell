@@ -15,16 +15,39 @@ const windowHeight = 1080
 // const windowHeight = 720
 
 func Main() {
-	// rl.SetConfigFlags(rl.FlagWindowResizable)
+	CurrentSettings = LoadSettings()
+	ApplyTheme(CurrentSettings.Theme)
 
-	rl.InitWindow(windowWidth, windowHeight, "Flowshell")
+	rl.SetConfigFlags(rl.FlagWindowResizable)
+	// rl.InitWindow(windowWidth, windowHeight, "Flowshell")
+	rl.InitWindow(int32(CurrentSettings.WindowWidth), int32(CurrentSettings.WindowHeight), "Flowshell")
 	defer rl.CloseWindow()
+
+	if CurrentSettings.WindowMaximized {
+		rl.MaximizeWindow()
+	}
 
 	monitorWidth := float32(rl.GetMonitorWidth(rl.GetCurrentMonitor()))
 	monitorHeight := float32(rl.GetMonitorHeight(rl.GetCurrentMonitor()))
-	// rl.SetWindowSize(windowWidth, windowHeight)
-	rl.SetWindowPosition(int(monitorWidth/2-windowWidth/2), int(monitorHeight/2-windowHeight/2))
+
+	// Center if not maximized and looks like default or sane
+	// Actually InitWindow usually centers or puts it somewhere.
+	// If we want to restore position we need to save it too.
+	// User only asked for window state (implied size/maximized).
+	// Let's just center if it's the first run (default size).
+	if CurrentSettings.WindowWidth == 1920 && CurrentSettings.WindowHeight == 1080 {
+		rl.SetWindowPosition(int(monitorWidth/2-float32(CurrentSettings.WindowWidth)/2), int(monitorHeight/2-float32(CurrentSettings.WindowHeight)/2))
+	}
+
 	rl.SetTargetFPS(int32(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor())))
+
+	defer func() {
+		// Save Settings on exit
+		CurrentSettings.WindowWidth = rl.GetScreenWidth()
+		CurrentSettings.WindowHeight = rl.GetScreenHeight()
+		CurrentSettings.WindowMaximized = rl.IsWindowMaximized()
+		SaveSettings(CurrentSettings)
+	}()
 
 	initImages()
 
@@ -32,7 +55,7 @@ func Main() {
 	arena := clay.CreateArenaWithCapacity(uintptr(clay.MinMemorySize()))
 	clay.Initialize(
 		arena,
-		clay.Dimensions{Width: windowWidth, Height: windowHeight},
+		clay.Dimensions{Width: float32(CurrentSettings.WindowWidth), Height: float32(CurrentSettings.WindowHeight)}, // Initial size
 		clay.ErrorHandler{ErrorHandlerFunction: handleClayErrors},
 	)
 	clay.SetMeasureTextFunction(func(str string, config *clay.TextElementConfig, userData any) clay.Dimensions {
