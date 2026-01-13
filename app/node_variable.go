@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -94,3 +94,4 @@ func (a *GetVariableAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.VariableName)
 	return s.Ok()
 }
+

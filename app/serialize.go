@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"bytes"
@@ -327,3 +327,4 @@ type PSerializable[T any] interface {
 type PP[T any] interface {
 	**T
 }
+

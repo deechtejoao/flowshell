@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"encoding/json"
@@ -61,3 +61,4 @@ func SaveSettings(s *Settings) error {
 	}
 	return os.WriteFile(path, data, 0644)
 }
+

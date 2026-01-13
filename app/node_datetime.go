@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -103,3 +103,4 @@ func (a *ParseTimeAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.Format)
 	return s.Ok()
 }
+

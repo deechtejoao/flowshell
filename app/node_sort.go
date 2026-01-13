@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"cmp"
@@ -166,3 +166,4 @@ func (c *SortAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionR
 func (c *SortAction) Run(n *Node) <-chan NodeActionResult {
 	return c.RunContext(context.Background(), n)
 }
+

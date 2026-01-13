@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import rl "github.com/gen2brain/raylib-go/raylib"
 
@@ -42,3 +42,4 @@ func LoadFont(font Font, size int) rl.Font {
 
 	return rlfont
 }
+

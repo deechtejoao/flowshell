@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -138,3 +138,4 @@ func (n *LinesAction) Serialize(s *Serializer) bool {
 	SBool(s, &n.IncludeCarriageReturns)
 	return s.Ok()
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"embed"
@@ -42,3 +42,4 @@ func LoadAssetFont(path string, fontSize int32) rl.Font {
 	data := util.Must1(assets.ReadFile(path))
 	return rl.LoadFontFromMemory(filepath.Ext(path), data, fontSize, nil)
 }
+

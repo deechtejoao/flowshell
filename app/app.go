@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"fmt"
@@ -183,3 +183,4 @@ func frame() {
 func handleClayErrors(errorData clay.ErrorData) {
 	fmt.Printf("CLAY ERROR: %s\n", errorData.ErrorText)
 }
+

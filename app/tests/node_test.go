@@ -1,25 +1,26 @@
-package app
+package tests
 
 import (
 	"testing"
 
+	"github.com/bvisness/flowshell/app"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSerializeNodes(t *testing.T) {
 	t.Run("LoadFileAction", func(t *testing.T) {
-		before := NewLoadFileNode("foo/bar")
+		before := app.NewLoadFileNode("foo/bar")
 
-		enc := NewEncoder(1)
-		assert.True(t, SThing(enc, before))
+		enc := app.NewEncoder(1)
+		assert.True(t, app.SThing(enc, before))
 		assert.True(t, enc.Ok())
 
 		buf := enc.Bytes()
 		t.Log("encoded:", buf)
 
-		dec := NewDecoder(buf)
-		var after Node
-		assert.True(t, SThing(dec, &after))
+		dec := app.NewDecoder(buf)
+		var after app.Node
+		assert.True(t, app.SThing(dec, &after))
 
 		assert.True(t, dec.Ok())
 		assert.Equal(t, before.ID, after.ID)

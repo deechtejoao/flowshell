@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -243,3 +243,4 @@ func parsePluginType(t string) FlowType {
 		return FlowType{Kind: FSKindAny}
 	}
 }
+

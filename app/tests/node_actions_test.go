@@ -1,25 +1,27 @@
-package app
+package tests
 
 import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/bvisness/flowshell/app"
 )
 
-func runAction(t *testing.T, node *Node) NodeActionResult {
+func runAction(t *testing.T, node *app.Node) app.NodeActionResult {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	if actionCtx, ok := node.Action.(NodeActionWithContext); ok {
+	if actionCtx, ok := node.Action.(app.NodeActionWithContext); ok {
 		done := actionCtx.RunContext(ctx, node)
 		select {
 		case res := <-done:
 			return res
 		case <-ctx.Done():
 			t.Fatal("Node execution timed out")
-			return NodeActionResult{}
+			return app.NodeActionResult{}
 		}
 	} else {
 		done := node.Action.Run(node)
@@ -28,7 +30,7 @@ func runAction(t *testing.T, node *Node) NodeActionResult {
 			return res
 		case <-ctx.Done():
 			t.Fatal("Node execution timed out")
-			return NodeActionResult{}
+			return app.NodeActionResult{}
 		}
 	}
 }
@@ -62,41 +64,28 @@ func TestSortAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := NewSortNode()
-			action := node.Action.(*SortAction)
+			node := app.NewSortNode()
+			action := node.Action.(*app.SortAction)
 			action.Reverse = tt.reverse
 
 			// Prepare input
-			var inputValues []FlowValue
+			var inputValues []app.FlowValue
 			for _, s := range tt.input {
-				inputValues = append(inputValues, NewStringValue(s))
+				inputValues = append(inputValues, app.NewStringValue(s))
 			}
-			inputList := NewListValue(FlowType{Kind: FSKindBytes}, inputValues)
+			inputList := app.NewListValue(app.FlowType{Kind: app.FSKindBytes}, inputValues)
 
-			// Mock input port
-			// Since we can't easily wire nodes in unit tests without a full graph,
-			// we might need to mock GetInputValue.
-			// However, GetInputValue relies on n.InputPorts and Wires.
-			// Or we can manually set the input value if the node supports it.
-			// But Node struct doesn't store input values directly, it looks them up via wires.
-			//
-			// HACK: We can create a ValueNode and wire it up, OR we can modify the node to pre-set input.
-			// OR we can rely on the fact that GetInputValue checks for wires.
-			//
-			// Let's use the HACK of setting up global Wires temporarily.
-			// This is ugly but effectively tests the Action logic which calls GetInputValue.
-
-			valueNode := NewValueNode(inputList)
+			valueNode := app.NewValueNode(inputList)
 
 			// Setup graph
-			g := NewGraph()
+			g := app.NewGraph()
 			g.AddNode(valueNode)
 			g.AddNode(node)
-			g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+			g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 			// Pre-calculate input node result
-			valueNode.SetResult(NodeActionResult{
-				Outputs: []FlowValue{inputList},
+			valueNode.SetResult(app.NodeActionResult{
+				Outputs: []app.FlowValue{inputList},
 			})
 
 			// Run
@@ -112,7 +101,7 @@ func TestSortAction(t *testing.T) {
 			}
 
 			outVal := res.Outputs[0]
-			if outVal.Type.Kind != FSKindList {
+			if outVal.Type.Kind != app.FSKindList {
 				t.Fatalf("Expected List output, got %v", outVal.Type.Kind)
 			}
 
@@ -132,22 +121,22 @@ func TestSortAction(t *testing.T) {
 
 func TestConvertAction_Scalar(t *testing.T) {
 	// Test Int -> String
-	node := NewConvertNode()
-	action := node.Action.(*ConvertAction)
-	action.TargetKind = FSKindBytes
+	node := app.NewConvertNode()
+	action := node.Action.(*app.ConvertAction)
+	action.TargetKind = app.FSKindBytes
 
-	val := NewInt64Value(123, 0)
-	valueNode := NewValueNode(val)
+	val := app.NewInt64Value(123, 0)
+	valueNode := app.NewValueNode(val)
 
 	// Setup graph
-	g := NewGraph()
+	g := app.NewGraph()
 	g.AddNode(valueNode)
 	g.AddNode(node)
-	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.SetResult(NodeActionResult{
-		Outputs: []FlowValue{val},
+	valueNode.SetResult(app.NodeActionResult{
+		Outputs: []app.FlowValue{val},
 	})
 
 	// Run
@@ -163,7 +152,7 @@ func TestConvertAction_Scalar(t *testing.T) {
 	}
 
 	outVal := res.Outputs[0]
-	if outVal.Type.Kind != FSKindBytes {
+	if outVal.Type.Kind != app.FSKindBytes {
 		t.Errorf("Expected output kind Bytes, got %v", outVal.Type.Kind)
 	}
 	if string(outVal.BytesValue) != "123" {
@@ -173,24 +162,24 @@ func TestConvertAction_Scalar(t *testing.T) {
 
 func TestConvertAction_IgnoreErrors(t *testing.T) {
 	// Test String (Invalid) -> Int64 with IgnoreErrors
-	node := NewConvertNode()
-	action := node.Action.(*ConvertAction)
-	action.TargetKind = FSKindInt64
-	action.targetDropdown.SelectByValue(FSKindInt64)
+	node := app.NewConvertNode()
+	action := node.Action.(*app.ConvertAction)
+	action.TargetKind = app.FSKindInt64
+	action.TargetDropdown.SelectByValue(app.FSKindInt64)
 	action.IgnoreErrors = true
 
-	val := NewStringValue("invalid")
-	valueNode := NewValueNode(val)
+	val := app.NewStringValue("invalid")
+	valueNode := app.NewValueNode(val)
 
 	// Setup graph
-	g := NewGraph()
+	g := app.NewGraph()
 	g.AddNode(valueNode)
 	g.AddNode(node)
-	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.SetResult(NodeActionResult{
-		Outputs: []FlowValue{val},
+	valueNode.SetResult(app.NodeActionResult{
+		Outputs: []app.FlowValue{val},
 	})
 
 	// Run
@@ -206,7 +195,7 @@ func TestConvertAction_IgnoreErrors(t *testing.T) {
 	}
 
 	outVal := res.Outputs[0]
-	if outVal.Type.Kind != FSKindInt64 {
+	if outVal.Type.Kind != app.FSKindInt64 {
 		t.Errorf("Expected output kind Int64, got %v", outVal.Type.Kind)
 	}
 	if outVal.Int64Value != 0 {
@@ -215,45 +204,45 @@ func TestConvertAction_IgnoreErrors(t *testing.T) {
 }
 
 func TestExtractColumnAction(t *testing.T) {
-	node := NewExtractColumnNode()
-	action := node.Action.(*ExtractColumnAction)
+	node := app.NewExtractColumnNode()
+	action := node.Action.(*app.ExtractColumnAction)
 	action.Column = "col1"
 
 	// Create table input
-	row1 := []FlowValueField{
-		{Name: "col1", Value: NewStringValue("a")},
-		{Name: "col2", Value: NewInt64Value(1, 0)},
+	row1 := []app.FlowValueField{
+		{Name: "col1", Value: app.NewStringValue("a")},
+		{Name: "col2", Value: app.NewInt64Value(1, 0)},
 	}
-	row2 := []FlowValueField{
-		{Name: "col1", Value: NewStringValue("b")},
-		{Name: "col2", Value: NewInt64Value(2, 0)},
+	row2 := []app.FlowValueField{
+		{Name: "col1", Value: app.NewStringValue("b")},
+		{Name: "col2", Value: app.NewInt64Value(2, 0)},
 	}
-	tableType := FlowType{
-		Kind: FSKindTable,
-		ContainedType: &FlowType{
-			Kind: FSKindRecord,
-			Fields: []FlowField{
-				{Name: "col1", Type: &FlowType{Kind: FSKindBytes}},
-				{Name: "col2", Type: &FlowType{Kind: FSKindInt64}},
+	tableType := app.FlowType{
+		Kind: app.FSKindTable,
+		ContainedType: &app.FlowType{
+			Kind: app.FSKindRecord,
+			Fields: []app.FlowField{
+				{Name: "col1", Type: &app.FlowType{Kind: app.FSKindBytes}},
+				{Name: "col2", Type: &app.FlowType{Kind: app.FSKindInt64}},
 			},
 		},
 	}
-	val := FlowValue{
+	val := app.FlowValue{
 		Type:       &tableType,
-		TableValue: [][]FlowValueField{row1, row2},
+		TableValue: [][]app.FlowValueField{row1, row2},
 	}
 
-	valueNode := NewValueNode(val)
+	valueNode := app.NewValueNode(val)
 
 	// Setup graph
-	g := NewGraph()
+	g := app.NewGraph()
 	g.AddNode(valueNode)
 	g.AddNode(node)
-	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.SetResult(NodeActionResult{
-		Outputs: []FlowValue{val},
+	valueNode.SetResult(app.NodeActionResult{
+		Outputs: []app.FlowValue{val},
 	})
 
 	// Run
@@ -269,7 +258,7 @@ func TestExtractColumnAction(t *testing.T) {
 	}
 
 	outVal := res.Outputs[0]
-	if outVal.Type.Kind != FSKindList {
+	if outVal.Type.Kind != app.FSKindList {
 		t.Errorf("Expected output kind List, got %v", outVal.Type.Kind)
 	}
 
@@ -286,45 +275,45 @@ func TestExtractColumnAction(t *testing.T) {
 }
 
 func TestSelectColumnsAction(t *testing.T) {
-	node := NewSelectColumnsNode()
-	action := node.Action.(*SelectColumnsAction)
+	node := app.NewSelectColumnsNode()
+	action := node.Action.(*app.SelectColumnsAction)
 	action.SelectedColumns = []string{"col1"}
 
 	// Create table input
-	row1 := []FlowValueField{
-		{Name: "col1", Value: NewStringValue("a")},
-		{Name: "col2", Value: NewInt64Value(1, 0)},
+	row1 := []app.FlowValueField{
+		{Name: "col1", Value: app.NewStringValue("a")},
+		{Name: "col2", Value: app.NewInt64Value(1, 0)},
 	}
-	row2 := []FlowValueField{
-		{Name: "col1", Value: NewStringValue("b")},
-		{Name: "col2", Value: NewInt64Value(2, 0)},
+	row2 := []app.FlowValueField{
+		{Name: "col1", Value: app.NewStringValue("b")},
+		{Name: "col2", Value: app.NewInt64Value(2, 0)},
 	}
-	tableType := FlowType{
-		Kind: FSKindTable,
-		ContainedType: &FlowType{
-			Kind: FSKindRecord,
-			Fields: []FlowField{
-				{Name: "col1", Type: &FlowType{Kind: FSKindBytes}},
-				{Name: "col2", Type: &FlowType{Kind: FSKindInt64}},
+	tableType := app.FlowType{
+		Kind: app.FSKindTable,
+		ContainedType: &app.FlowType{
+			Kind: app.FSKindRecord,
+			Fields: []app.FlowField{
+				{Name: "col1", Type: &app.FlowType{Kind: app.FSKindBytes}},
+				{Name: "col2", Type: &app.FlowType{Kind: app.FSKindInt64}},
 			},
 		},
 	}
-	val := FlowValue{
+	val := app.FlowValue{
 		Type:       &tableType,
-		TableValue: [][]FlowValueField{row1, row2},
+		TableValue: [][]app.FlowValueField{row1, row2},
 	}
 
-	valueNode := NewValueNode(val)
+	valueNode := app.NewValueNode(val)
 
 	// Setup graph
-	g := NewGraph()
+	g := app.NewGraph()
 	g.AddNode(valueNode)
 	g.AddNode(node)
-	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.SetResult(NodeActionResult{
-		Outputs: []FlowValue{val},
+	valueNode.SetResult(app.NodeActionResult{
+		Outputs: []app.FlowValue{val},
 	})
 
 	// Run
@@ -340,7 +329,7 @@ func TestSelectColumnsAction(t *testing.T) {
 	}
 
 	outVal := res.Outputs[0]
-	if outVal.Type.Kind != FSKindTable {
+	if outVal.Type.Kind != app.FSKindTable {
 		t.Errorf("Expected output kind Table, got %v", outVal.Type.Kind)
 	}
 
@@ -366,31 +355,31 @@ func TestSelectColumnsAction(t *testing.T) {
 }
 
 func TestSelectColumnsAction_NilContainedType(t *testing.T) {
-	node := NewSelectColumnsNode()
-	action := node.Action.(*SelectColumnsAction)
+	node := app.NewSelectColumnsNode()
+	action := node.Action.(*app.SelectColumnsAction)
 	action.SelectedColumns = []string{"col1"}
 
 	// Table with no ContainedType (e.g. dynamic or empty)
-	tableType := FlowType{
-		Kind:          FSKindTable,
+	tableType := app.FlowType{
+		Kind:          app.FSKindTable,
 		ContainedType: nil,
 	}
-	val := FlowValue{
+	val := app.FlowValue{
 		Type:       &tableType,
-		TableValue: [][]FlowValueField{},
+		TableValue: [][]app.FlowValueField{},
 	}
 
-	valueNode := NewValueNode(val)
+	valueNode := app.NewValueNode(val)
 
 	// Setup graph
-	g := NewGraph()
+	g := app.NewGraph()
 	g.AddNode(valueNode)
 	g.AddNode(node)
-	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
+	g.Wires = []*app.Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.SetResult(NodeActionResult{
-		Outputs: []FlowValue{val},
+	valueNode.SetResult(app.NodeActionResult{
+		Outputs: []app.FlowValue{val},
 	})
 
 	// Run

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -205,3 +205,4 @@ func (a *XmlQueryAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.XPath)
 	return s.Ok()
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"fmt"
@@ -445,3 +445,4 @@ func RenderChart(bbox clay.BoundingBox, data *ChartRenderData) {
 	rl.DrawText(fmt.Sprintf("%.2f", data.MaxY), int32(bbox.X)+5, int32(bbox.Y)+5, 10, rl.Gray)
 	rl.DrawText(fmt.Sprintf("%.2f", data.MinY), int32(bbox.X)+5, int32(bbox.Y+height)-15, 10, rl.Gray)
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -525,3 +525,4 @@ func Toposort(nodes []*Node, wires []*Wire) ([]*Node, error) {
 
 	return result, nil
 }
+

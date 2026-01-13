@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -152,3 +152,4 @@ func (a *WaitForClickAction) RunContext(ctx context.Context, n *Node) <-chan Nod
 func (a *WaitForClickAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

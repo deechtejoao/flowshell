@@ -1,21 +1,22 @@
-package app
+package tests
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/bvisness/flowshell/app"
 	"github.com/stretchr/testify/assert"
 )
 
-func createTestInputNode(val FlowValue) *Node {
-	n := &Node{ID: 1, OutputPorts: []NodePort{{Type: FlowType{Kind: FSKindAny}}}}
-	n.SetResult(NodeActionResult{Outputs: []FlowValue{val}})
+func createTestInputNode(val app.FlowValue) *app.Node {
+	n := &app.Node{ID: 1, OutputPorts: []app.NodePort{{Type: app.FlowType{Kind: app.FSKindAny}}}}
+	n.SetResult(app.NodeActionResult{Outputs: []app.FlowValue{val}})
 	return n
 }
 
-func setupTestGraph(testNode *Node, inputs ...FlowValue) *Graph {
-	g := NewGraph()
+func setupTestGraph(testNode *app.Node, inputs ...app.FlowValue) *app.Graph {
+	g := app.NewGraph()
 	g.AddNode(testNode)
 
 	for i, val := range inputs {
@@ -28,13 +29,13 @@ func setupTestGraph(testNode *Node, inputs ...FlowValue) *Graph {
 }
 
 func TestGateNode(t *testing.T) {
-	val := NewStringValue("data")
+	val := app.NewStringValue("data")
 
 	t.Run("Condition True", func(t *testing.T) {
-		node := NewGateNode()
-		action := node.Action.(*GateAction)
+		node := app.NewGateNode()
+		action := node.Action.(*app.GateAction)
 
-		cond := NewInt64Value(1, 0) // Truthy
+		cond := app.NewInt64Value(1, 0) // Truthy
 		setupTestGraph(node, val, cond)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -50,10 +51,10 @@ func TestGateNode(t *testing.T) {
 	})
 
 	t.Run("Condition False", func(t *testing.T) {
-		node := NewGateNode()
-		action := node.Action.(*GateAction)
+		node := app.NewGateNode()
+		action := node.Action.(*app.GateAction)
 
-		cond := NewInt64Value(0, 0) // Falsy
+		cond := app.NewInt64Value(0, 0) // Falsy
 		setupTestGraph(node, val, cond)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -69,13 +70,13 @@ func TestGateNode(t *testing.T) {
 }
 
 func TestMergeNode(t *testing.T) {
-	valA := NewStringValue("A")
-	valB := NewStringValue("B")
-	valSkipped := FlowValue{Type: &FlowType{Kind: FSKindAny}, Skipped: true}
+	valA := app.NewStringValue("A")
+	valB := app.NewStringValue("B")
+	valSkipped := app.FlowValue{Type: &app.FlowType{Kind: app.FSKindAny}, Skipped: true}
 
 	t.Run("A Valid, B Skipped", func(t *testing.T) {
-		node := NewMergeNode()
-		action := node.Action.(*MergeAction)
+		node := app.NewMergeNode()
+		action := node.Action.(*app.MergeAction)
 
 		setupTestGraph(node, valA, valSkipped)
 
@@ -92,8 +93,8 @@ func TestMergeNode(t *testing.T) {
 	})
 
 	t.Run("A Skipped, B Valid", func(t *testing.T) {
-		node := NewMergeNode()
-		action := node.Action.(*MergeAction)
+		node := app.NewMergeNode()
+		action := node.Action.(*app.MergeAction)
 
 		setupTestGraph(node, valSkipped, valB)
 
@@ -110,8 +111,8 @@ func TestMergeNode(t *testing.T) {
 	})
 
 	t.Run("Both Skipped", func(t *testing.T) {
-		node := NewMergeNode()
-		action := node.Action.(*MergeAction)
+		node := app.NewMergeNode()
+		action := node.Action.(*app.MergeAction)
 
 		setupTestGraph(node, valSkipped, valSkipped)
 
@@ -127,8 +128,8 @@ func TestMergeNode(t *testing.T) {
 	})
 
 	t.Run("Both Valid (Priority A)", func(t *testing.T) {
-		node := NewMergeNode()
-		action := node.Action.(*MergeAction)
+		node := app.NewMergeNode()
+		action := node.Action.(*app.MergeAction)
 
 		setupTestGraph(node, valA, valB)
 

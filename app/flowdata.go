@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"fmt"
@@ -452,3 +452,4 @@ func FlowValueToNative(v FlowValue) interface{} {
 	}
 	return nil
 }
+

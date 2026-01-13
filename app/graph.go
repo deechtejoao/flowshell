@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"slices"
@@ -107,3 +107,4 @@ func (g *Graph) GetGroup(id int) (*Group, bool) {
 	}
 	return nil, false
 }
+

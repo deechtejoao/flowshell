@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"bytes"
@@ -130,3 +130,4 @@ func (l *TrimSpacesAction) Run(n *Node) <-chan NodeActionResult {
 func (n *TrimSpacesAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

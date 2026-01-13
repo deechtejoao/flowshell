@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -203,3 +203,4 @@ func (c *AddColumnAction) Serialize(s *Serializer) bool {
 	SStr(s, &c.NewColumnName)
 	return s.Ok()
 }
+

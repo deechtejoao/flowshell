@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -81,3 +81,4 @@ func (c *ValueAction) RunContext(ctx context.Context, n *Node) <-chan NodeAction
 func (c *ValueAction) Run(n *Node) <-chan NodeActionResult {
 	return c.RunContext(context.Background(), n)
 }
+

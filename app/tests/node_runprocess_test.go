@@ -1,4 +1,4 @@
-package app
+package tests
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bvisness/flowshell/app"
 )
 
 // TestRunProcess_ExitCode verifies that the RunProcess node correctly outputs the exit code.
@@ -23,8 +25,8 @@ func TestRunProcess_ExitCode(t *testing.T) {
 
 	// 1. Test successful exit (0)
 	t.Run("Exit Code 0", func(t *testing.T) {
-		node := NewRunProcessNode(cmdExit0)
-		action := node.Action.(*RunProcessAction)
+		node := app.NewRunProcessNode(cmdExit0)
+		action := node.Action.(*app.RunProcessAction)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -39,7 +41,7 @@ func TestRunProcess_ExitCode(t *testing.T) {
 				t.Fatalf("Expected 4 outputs, got %d", len(res.Outputs))
 			}
 			exitCodeVal := res.Outputs[3]
-			if exitCodeVal.Type.Kind != FSKindInt64 {
+			if exitCodeVal.Type.Kind != app.FSKindInt64 {
 				t.Errorf("Expected Exit Code type Int64, got %v", exitCodeVal.Type.Kind)
 			}
 			if exitCodeVal.Int64Value != 0 {
@@ -52,8 +54,8 @@ func TestRunProcess_ExitCode(t *testing.T) {
 
 	// 2. Test failure exit (1)
 	t.Run("Exit Code 1", func(t *testing.T) {
-		node := NewRunProcessNode(cmdExit1)
-		action := node.Action.(*RunProcessAction)
+		node := app.NewRunProcessNode(cmdExit1)
+		action := node.Action.(*app.RunProcessAction)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -90,8 +92,8 @@ func TestRunProcess_UseShell(t *testing.T) {
 	}
 
 	t.Run("Shell Pipe", func(t *testing.T) {
-		node := NewRunProcessNode(cmdPipe)
-		action := node.Action.(*RunProcessAction)
+		node := app.NewRunProcessNode(cmdPipe)
+		action := node.Action.(*app.RunProcessAction)
 		action.UseShell = true
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

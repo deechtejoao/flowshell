@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -145,3 +145,4 @@ func (a *MapAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.SubflowPath)
 	return s.Ok()
 }
+

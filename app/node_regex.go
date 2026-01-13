@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -351,3 +351,4 @@ func (a *RegexSplitAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 func (a *RegexSplitAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

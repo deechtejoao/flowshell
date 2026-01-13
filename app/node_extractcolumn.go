@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -203,3 +203,4 @@ func (c *ExtractColumnAction) Serialize(s *Serializer) bool {
 	SStr(s, &c.Column)
 	return s.Ok()
 }
+

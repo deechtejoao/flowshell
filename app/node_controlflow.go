@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -190,3 +190,4 @@ func (a *MergeAction) RunContext(ctx context.Context, n *Node) <-chan NodeAction
 func (a *MergeAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

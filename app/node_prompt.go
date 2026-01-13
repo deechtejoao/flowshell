@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -86,3 +86,4 @@ func (a *PromptUserAction) Serialize(s *Serializer) bool {
 	SStr(s, &a.DefaultValue)
 	return s.Ok()
 }
+

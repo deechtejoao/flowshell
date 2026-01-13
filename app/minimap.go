@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"math"
@@ -11,7 +11,7 @@ const MinimapSize = 200
 const MinimapPadding = 10
 
 func UIMinimap() {
-	if len(currentGraph.Nodes) <= CurrentSettings.MinimapThreshold {
+	if len(CurrentGraph.Nodes) <= CurrentSettings.MinimapThreshold {
 		return
 	}
 
@@ -19,7 +19,7 @@ func UIMinimap() {
 	minX, minY := float32(math.Inf(1)), float32(math.Inf(1))
 	maxX, maxY := float32(math.Inf(-1)), float32(math.Inf(-1))
 
-	for _, n := range currentGraph.Nodes {
+	for _, n := range CurrentGraph.Nodes {
 		minX = min(minX, n.Pos.X)
 		minY = min(minY, n.Pos.Y)
 		// Use estimated node size if not rendered yet, or actual size
@@ -105,10 +105,10 @@ func UIMinimap() {
 			Layout: clay.LAY{Sizing: GROWALL},
 			Custom: clay.CustomElementConfig{
 				CustomData: &MinimapRenderData{
-					Nodes: currentGraph.Nodes,
+					Nodes: CurrentGraph.Nodes,
 					MinX:  minX, MinY: minY,
 					Scale:  scale,
-					Graph:  currentGraph,
+					Graph:  CurrentGraph,
 					ViewTL: viewTL, ViewBR: viewBR,
 				},
 			},
@@ -214,3 +214,4 @@ func RenderMinimap(bbox clay.BoundingBox, data *MinimapRenderData) {
 
 	rl.DrawRectangleLinesEx(rl.Rectangle{X: vx, Y: vy, Width: vw, Height: vh}, 1, rl.White)
 }
+

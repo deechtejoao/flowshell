@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"fmt"
@@ -158,3 +158,4 @@ func GetDragKey(key any) string {
 type DragKeyer interface {
 	DragKey() string
 }
+

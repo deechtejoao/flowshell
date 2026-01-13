@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -67,3 +67,4 @@ func HeadlessRun(path string) {
 	time.Sleep(100 * time.Millisecond)
 	fmt.Println("Shutdown complete.")
 }
+

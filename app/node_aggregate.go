@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -272,3 +272,4 @@ func AggOpMean(vals []FlowValue, t FlowType) (FlowValue, error) {
 		return FlowValue{}, fmt.Errorf("cannot average values of type %s", t)
 	}
 }
+

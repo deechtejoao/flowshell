@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -100,3 +100,4 @@ func (a *MinifyHTMLAction) RunContext(ctx context.Context, n *Node) <-chan NodeA
 func (a *MinifyHTMLAction) Run(n *Node) <-chan NodeActionResult {
 	return a.RunContext(context.Background(), n)
 }
+

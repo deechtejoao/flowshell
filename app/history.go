@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"bytes"
@@ -98,3 +98,4 @@ func (hm *HistoryManager) CanUndo() bool {
 func (hm *HistoryManager) CanRedo() bool {
 	return hm.pointer < len(hm.snapshots)-1
 }
+

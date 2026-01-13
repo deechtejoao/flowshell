@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -230,3 +230,4 @@ func (c *SelectColumnsAction) Serialize(s *Serializer) bool {
 	}
 	return s.Ok()
 }
+

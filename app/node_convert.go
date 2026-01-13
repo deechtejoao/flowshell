@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 // GEN:NodeAction
 type ConvertAction struct {
 	TargetKind     FlowTypeKind
-	targetDropdown UIDropdown
+	TargetDropdown UIDropdown
 
 	Column      string
-	colDropdown UIDropdown
+	ColDropdown UIDropdown
 
 	IgnoreErrors bool
 }
@@ -30,14 +30,14 @@ var convertOptions = []UIDropdownOption{
 func NewConvertNode() *Node {
 	action := ConvertAction{
 		TargetKind: FSKindBytes, // Default
-		targetDropdown: UIDropdown{
+		TargetDropdown: UIDropdown{
 			Options: convertOptions,
 		},
-		colDropdown: UIDropdown{
+		ColDropdown: UIDropdown{
 			Options: []UIDropdownOption{},
 		},
 	}
-	action.targetDropdown.SelectByValue(FSKindBytes)
+	action.TargetDropdown.SelectByValue(FSKindBytes)
 
 	return &Node{
 		Name: "Convert Type",
@@ -68,10 +68,10 @@ func (c *ConvertAction) UpdateAndValidate(n *Node) {
 	n.Valid = true
 
 	// Ensure target dropdown matches state
-	if c.targetDropdown.Selected == -1 {
-		c.targetDropdown.SelectByValue(c.TargetKind)
+	if c.TargetDropdown.Selected == -1 {
+		c.TargetDropdown.SelectByValue(c.TargetKind)
 	} else {
-		c.TargetKind = c.targetDropdown.GetSelectedOption().Value.(FlowTypeKind)
+		c.TargetKind = c.TargetDropdown.GetSelectedOption().Value.(FlowTypeKind)
 	}
 
 	// Update input/output types and column dropdown
@@ -83,20 +83,20 @@ func (c *ConvertAction) UpdateAndValidate(n *Node) {
 			for _, field := range inputType.ContainedType.Fields {
 				options = append(options, UIDropdownOption{Name: field.Name, Value: field.Name})
 			}
-			c.colDropdown.Options = options
+			c.ColDropdown.Options = options
 
 			if c.Column == "" && len(options) > 0 {
 				c.Column = options[0].Value.(string)
 			}
-			if !c.colDropdown.SelectByValue(c.Column) {
+			if !c.ColDropdown.SelectByValue(c.Column) {
 				if len(options) > 0 {
 					c.Column = options[0].Value.(string)
-					c.colDropdown.Selected = 0
+					c.ColDropdown.Selected = 0
 				} else {
 					c.Column = ""
 				}
 			} else {
-				c.Column = c.colDropdown.GetSelectedOption().Value.(string)
+				c.Column = c.ColDropdown.GetSelectedOption().Value.(string)
 			}
 
 			// Update output type to be Table with modified column
@@ -126,7 +126,7 @@ func (c *ConvertAction) UpdateAndValidate(n *Node) {
 }
 
 func (c *ConvertAction) UI(n *Node) {
-	c.targetDropdown.Do(clay.IDI("ConvertTargetKind", n.ID), UIDropdownConfig{
+	c.TargetDropdown.Do(clay.IDI("ConvertTargetKind", n.ID), UIDropdownConfig{
 		El: clay.EL{
 			Layout: clay.LAY{Sizing: GROWH},
 		},
@@ -155,7 +155,7 @@ func (c *ConvertAction) UI(n *Node) {
 		}, func() {
 			clay.TEXT("Column:", clay.TextElementConfig{TextColor: White})
 		})
-		c.colDropdown.Do(clay.IDI("ConvertColumn", n.ID), UIDropdownConfig{
+		c.ColDropdown.Do(clay.IDI("ConvertColumn", n.ID), UIDropdownConfig{
 			El: clay.EL{
 				Layout: clay.LAY{Sizing: GROWH},
 			},
@@ -412,3 +412,4 @@ func ConvertValue(v FlowValue, target FlowTypeKind) (FlowValue, error) {
 
 	return FlowValue{}, fmt.Errorf("unsupported conversion target: %v", target)
 }
+

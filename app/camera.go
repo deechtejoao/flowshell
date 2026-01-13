@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -57,3 +57,4 @@ func (c *CameraState) ZoomAt(screenPos rl.Vector2, factor float32) {
 	term := rl.Vector2Scale(rl.Vector2Subtract(screenPos, c.Offset), 1.0/c.Zoom)
 	c.Target = rl.Vector2Subtract(worldPos, term)
 }
+

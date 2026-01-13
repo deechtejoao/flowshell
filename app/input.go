@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"github.com/bvisness/flowshell/clay"
@@ -72,3 +72,4 @@ func (m *InputManager) IsPressed(owner clay.ElementID) bool {
 	}
 	return m.pointerDownOwnerID == owner.ID
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"math"
@@ -134,3 +134,4 @@ var YCENTER = clay.ChildAlignment{Y: clay.AlignYCenter}
 var ALLCENTER = clay.ChildAlignment{X: clay.AlignXCenter, Y: clay.AlignYCenter}
 
 const ZTOP = math.MaxInt16
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -595,3 +595,4 @@ func (c *LoadFileAction) Serialize(s *Serializer) bool {
 
 	return s.Ok()
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -392,3 +392,4 @@ func parseCommand(cmd string) []string {
 	}
 	return args
 }
+

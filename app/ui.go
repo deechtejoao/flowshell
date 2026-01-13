@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -30,18 +30,18 @@ func SnapToGrid(v V2) V2 {
 
 const NodeMinWidth = 360
 
-var currentGraph = NewGraph()
+var CurrentGraph = NewGraph()
 var History *HistoryManager
 
 func InitHistory() {
-	History = NewHistoryManager(currentGraph)
+	History = NewHistoryManager(CurrentGraph)
 }
 
 func PushHistory() {
 	if History == nil {
 		InitHistory()
 	}
-	History.Push(currentGraph)
+	History.Push(CurrentGraph)
 }
 
 type NodeType struct {
@@ -114,15 +114,15 @@ func init() {
 func CreateGroup() {
 	PushHistory()
 	// Calculate bounding box of selected nodes
-	if len(selectedNodes) == 0 {
+	if len(SelectedNodes) == 0 {
 		return
 	}
 
 	minX, minY := float32(1e9), float32(1e9)
 	maxX, maxY := float32(-1e9), float32(-1e9)
 
-	for id := range selectedNodes {
-		if n, ok := currentGraph.GetNode(id); ok {
+	for id := range SelectedNodes {
+		if n, ok := CurrentGraph.GetNode(id); ok {
 			minX = min(minX, n.Pos.X)
 			minY = min(minY, n.Pos.Y)
 			maxX = max(maxX, n.Pos.X+NodeMinWidth) // Approx width
@@ -146,7 +146,7 @@ func CreateGroup() {
 		Height: (maxY - minY) + pad*2 + 40,
 	}
 
-	currentGraph.AddGroup(&Group{
+	CurrentGraph.AddGroup(&Group{
 		Title: "New Group",
 		Rect:  rect,
 		Color: clay.Color{R: 100, G: 100, B: 100, A: 255}, // Default gray
@@ -193,55 +193,55 @@ nextrank:
 }
 
 var selectedNodeID = 0
-var selectedNodes = make(map[int]struct{})
+var SelectedNodes = make(map[int]struct{})
 
 func IsNodeSelected(id int) bool {
-	_, ok := selectedNodes[id]
+	_, ok := SelectedNodes[id]
 	return ok
 }
 
 func SelectNode(id int, multi bool) {
 	if !multi {
-		for k := range selectedNodes {
-			delete(selectedNodes, k)
+		for k := range SelectedNodes {
+			delete(SelectedNodes, k)
 		}
 	}
-	selectedNodes[id] = struct{}{}
+	SelectedNodes[id] = struct{}{}
 	selectedNodeID = id
 }
 
 func ToggleSelectNode(id int) {
-	if _, ok := selectedNodes[id]; ok {
-		delete(selectedNodes, id)
+	if _, ok := SelectedNodes[id]; ok {
+		delete(SelectedNodes, id)
 		if selectedNodeID == id {
 			selectedNodeID = 0
 			// Pick another one?
-			for k := range selectedNodes {
+			for k := range SelectedNodes {
 				selectedNodeID = k
 				break
 			}
 		}
 	} else {
-		selectedNodes[id] = struct{}{}
+		SelectedNodes[id] = struct{}{}
 		selectedNodeID = id
 	}
 }
 
 func GetSelectedNode() (*Node, bool) {
-	return currentGraph.GetNode(selectedNodeID)
+	return CurrentGraph.GetNode(selectedNodeID)
 }
 
 func DeleteNode(id int) {
-	currentGraph.DeleteNode(id)
+	CurrentGraph.DeleteNode(id)
 }
 
 func DeleteSelectedNodes() {
 	PushHistory()
-	for id := range selectedNodes {
+	for id := range SelectedNodes {
 		DeleteNode(id)
 	}
-	for k := range selectedNodes {
-		delete(selectedNodes, k)
+	for k := range SelectedNodes {
+		delete(SelectedNodes, k)
 	}
 	selectedNodeID = 0
 }
@@ -273,7 +273,7 @@ func DuplicateNode(original *Node) {
 		clone.Running = false
 		clone.Valid = false
 
-		currentGraph.AddNode(clone)
+		CurrentGraph.AddNode(clone)
 		SelectNode(clone.ID, false)
 	} else {
 		fmt.Println("Failed to duplicate node: serialization error")
@@ -305,7 +305,7 @@ func processInput() {
 	if rl.IsMouseButtonPressed(rl.MouseRightButton) && !IsHoveringPanel && !IsHoveringUI {
 		// Check if we clicked on a node for Context Menu
 		clickedNode := false
-		for _, n := range currentGraph.Nodes {
+		for _, n := range CurrentGraph.Nodes {
 			// Hit test using DragRect (header) or full body if we can guess it?
 			// DragRect is safest for "Select/Interact".
 			// But user might right click the body.
@@ -332,7 +332,7 @@ func processInput() {
 							PushHistory()
 							DeleteNode(node.ID)
 							if IsNodeSelected(node.ID) {
-								delete(selectedNodes, node.ID)
+								delete(SelectedNodes, node.ID)
 								selectedNodeID = 0
 							}
 						}},
@@ -358,7 +358,7 @@ func processInput() {
 					}},
 					{Label: "Auto Layout", Action: func() {
 						PushHistory()
-						LayoutGraph(currentGraph)
+						LayoutGraph(CurrentGraph)
 					}},
 				}
 
@@ -371,7 +371,7 @@ func processInput() {
 				ContextMenu = nil
 
 				isGroup := false
-				for _, grp := range currentGraph.Groups {
+				for _, grp := range CurrentGraph.Groups {
 					if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
 						isGroup = true
 						break
@@ -400,34 +400,34 @@ func processInput() {
 	if actions && rl.IsKeyPressed(rl.KeyZ) {
 		if rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) {
 			if g := History.Redo(); g != nil {
-				currentGraph = g
+				CurrentGraph = g
 				// Clear selection on undo/redo to avoid ghost selections
 				// Or try to restore? Restoring is hard.
-				clear(selectedNodes)
+				clear(SelectedNodes)
 				selectedNodeID = 0
 			}
 		} else {
 			if g := History.Undo(); g != nil {
-				currentGraph = g
-				clear(selectedNodes)
+				CurrentGraph = g
+				clear(SelectedNodes)
 				selectedNodeID = 0
 			}
 		}
 	}
 	if actions && rl.IsKeyPressed(rl.KeyY) {
 		if g := History.Redo(); g != nil {
-			currentGraph = g
-			clear(selectedNodes)
+			CurrentGraph = g
+			clear(SelectedNodes)
 			selectedNodeID = 0
 		}
 	}
 
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
-		_ = SaveGraph("saved.flow", currentGraph)
+		_ = SaveGraph("saved.flow", CurrentGraph)
 	}
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
 		if g, err := LoadGraph("saved.flow"); err == nil {
-			currentGraph = g
+			CurrentGraph = g
 		}
 	}
 
@@ -459,14 +459,14 @@ func processInput() {
 					newNode := nt.Create()
 					// Create at mouse position
 					newNode.Pos = SnapToGrid(V2(rl.GetMousePosition()))
-					currentGraph.AddNode(newNode)
+					CurrentGraph.AddNode(newNode)
 					selectedNodeID = newNode.ID
 				}
 			}
 		}
 	}
 
-	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && len(selectedNodes) > 0 {
+	if rl.IsKeyPressed(rl.KeyDelete) && UIFocus == nil && len(SelectedNodes) > 0 {
 		DeleteSelectedNodes()
 	}
 
@@ -478,8 +478,8 @@ func processInput() {
 		if len(files) > 0 && IsHoveringPanel {
 			mousePos := rl.GetMousePosition()
 			// Find the top-most node under the mouse
-			for i := len(currentGraph.Nodes) - 1; i >= 0; i-- {
-				n := currentGraph.Nodes[i]
+			for i := len(CurrentGraph.Nodes) - 1; i >= 0; i-- {
+				n := CurrentGraph.Nodes[i]
 				if data, ok := clay.GetElementData(n.ClayID()); ok {
 					if rl.CheckCollisionPointRec(mousePos, rl.Rectangle(data.BoundingBox)) {
 						if loadAction, ok := n.Action.(*LoadFileAction); ok {
@@ -504,7 +504,7 @@ func processInput() {
 			if ext == ".flow" {
 				PushHistory()
 				if g, err := LoadGraph(files[0]); err == nil {
-					MergeGraph(currentGraph, g)
+					MergeGraph(CurrentGraph, g)
 					handled = true
 				} else {
 					fmt.Printf("Failed to load graph: %v\n", err)
@@ -520,14 +520,14 @@ func processInput() {
 				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 					n.Pos = SnapToGrid(n.Pos)
 				}
-				currentGraph.AddNode(n)
+				CurrentGraph.AddNode(n)
 				SelectNode(n.ID, i > 0)
 			}
 		}
 	}
 
 	// Selection on Mouse Down (Immediate feedback)
-	for _, n := range currentGraph.Nodes {
+	for _, n := range CurrentGraph.Nodes {
 		if UIInput.IsPressed(n.ClayID()) {
 			multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 			if !IsNodeSelected(n.ID) {
@@ -536,7 +536,7 @@ func processInput() {
 		}
 	}
 
-	for _, n := range currentGraph.Nodes {
+	for _, n := range CurrentGraph.Nodes {
 		// Starting new wires (Prioritize over node drag)
 		for i, portPos := range n.OutputPortPositions {
 			portRect := rl.Rectangle{
@@ -559,7 +559,7 @@ func processInput() {
 			}
 			if wire, hasWire := n.GetInputWire(i); hasWire {
 				if !IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
-					currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(w *Wire) bool { return w == wire })
+					CurrentGraph.Wires = slices.DeleteFunc(CurrentGraph.Wires, func(w *Wire) bool { return w == wire })
 					NewWireSourceNode = wire.StartNode
 					NewWireSourcePort = wire.StartPort
 				}
@@ -583,8 +583,8 @@ func processInput() {
 			delta := rl.Vector2Subtract(drag.NewObjPosition(), n.Pos)
 
 			// Apply delta to all selected nodes
-			for id := range selectedNodes {
-				if node, ok := currentGraph.GetNode(id); ok {
+			for id := range SelectedNodes {
+				if node, ok := CurrentGraph.GetNode(id); ok {
 					node.Pos = rl.Vector2Add(node.Pos, delta)
 					// Snap to grid (hold Shift to disable)
 					if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
@@ -613,7 +613,7 @@ func processInput() {
 	if draggingNewWire, done, canceled := drag.State(NewWireDragKey); draggingNewWire {
 		if done && !canceled {
 			// Loop over nodes to find any you may have dropped on
-			for _, node := range currentGraph.Nodes {
+			for _, node := range CurrentGraph.Nodes {
 				for port, portPos := range node.InputPortPositions {
 					portRect := rl.Rectangle{
 						X:      portPos.X - PortDragRadius,
@@ -632,14 +632,14 @@ func processInput() {
 							ConnectionErrorTime = time.Now()
 						} else {
 							// Delete existing wires into that port
-							if len(currentGraph.Wires) > 0 { // Optimization or check required?
+							if len(CurrentGraph.Wires) > 0 { // Optimization or check required?
 								// Just push history on wire modify
 								PushHistory()
 							}
-							currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
+							CurrentGraph.Wires = slices.DeleteFunc(CurrentGraph.Wires, func(wire *Wire) bool {
 								return wire.EndNode == node && wire.EndPort == port
 							})
-							currentGraph.Wires = append(currentGraph.Wires, &Wire{
+							CurrentGraph.Wires = append(CurrentGraph.Wires, &Wire{
 								StartNode: NewWireSourceNode, EndNode: node,
 								StartPort: NewWireSourcePort, EndPort: port,
 							})
@@ -661,7 +661,7 @@ func processInput() {
 					n.Pos = SnapToGrid(n.Pos)
 				}
 				PushHistory()
-				currentGraph.AddNode(n)
+				CurrentGraph.AddNode(n)
 				selectedNodeID = n.ID
 			}
 		}
@@ -702,7 +702,7 @@ func processInput() {
 				if isShift {
 					// Snapshot selection
 					initial := make(map[int]struct{})
-					for k, v := range selectedNodes {
+					for k, v := range SelectedNodes {
 						initial[k] = v
 					}
 					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(background.BoundingBox), V2{})
@@ -717,9 +717,9 @@ func processInput() {
 				if bs, ok := drag.Thing.(BoxSelectDrag); ok {
 					if canceled {
 						// Restore
-						clear(selectedNodes)
+						clear(SelectedNodes)
 						for k, v := range bs.InitialSelection {
-							selectedNodes[k] = v
+							SelectedNodes[k] = v
 						}
 					} else {
 						// Update selection
@@ -732,14 +732,14 @@ func processInput() {
 						h := max(start.Y, end.Y) - y
 						box := rl.Rectangle{X: x, Y: y, Width: w, Height: h}
 
-						clear(selectedNodes)
+						clear(SelectedNodes)
 						for k, v := range bs.InitialSelection {
-							selectedNodes[k] = v
+							SelectedNodes[k] = v
 						}
 
-						for _, n := range currentGraph.Nodes {
+						for _, n := range CurrentGraph.Nodes {
 							if rl.CheckCollisionRecs(box, n.DragRect) {
-								selectedNodes[n.ID] = struct{}{}
+								SelectedNodes[n.ID] = struct{}{}
 								selectedNodeID = n.ID
 							}
 						}
@@ -750,7 +750,7 @@ func processInput() {
 			if panning, _, _ := drag.State(PanDragKey); panning {
 				mousePos := rl.GetMousePosition()
 				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
-				for _, n := range currentGraph.Nodes {
+				for _, n := range CurrentGraph.Nodes {
 					n.Pos = rl.Vector2Add(n.Pos, delta)
 				}
 				LastPanMousePosition = mousePos
@@ -817,10 +817,10 @@ var OutputWindowWidth float32 = windowWidth * 0.30
 
 func UpdateGraph() error {
 	// Sweep the graph, validating all nodes
-	sortedNodes, topoErr := Toposort(currentGraph.Nodes, currentGraph.Wires)
+	sortedNodes, topoErr := Toposort(CurrentGraph.Nodes, CurrentGraph.Wires)
 	if topoErr != nil {
 		// If there is a cycle, we can't toposort. Just use the default order.
-		sortedNodes = currentGraph.Nodes
+		sortedNodes = CurrentGraph.Nodes
 	}
 	for _, node := range sortedNodes {
 		node.Action.UpdateAndValidate(node)
@@ -832,10 +832,10 @@ func UINodes(topoErr error) {
 	clay.CLAY(clay.ID("NodeCanvas"), clay.EL{
 		Layout: clay.LAY{Sizing: GROWALL},
 	}, func() {
-		for _, group := range currentGraph.Groups {
+		for _, group := range CurrentGraph.Groups {
 			UIGroup(group)
 		}
-		for _, node := range currentGraph.Nodes {
+		for _, node := range CurrentGraph.Nodes {
 			UINode(node, topoErr != nil)
 		}
 	})
@@ -1004,9 +1004,9 @@ func UIOverlay(topoErr error) {
 					})
 
 					// List
-					currentGraph.VarMutex.RLock()
-					keys := make([]string, 0, len(currentGraph.Variables))
-					for k := range currentGraph.Variables {
+					CurrentGraph.VarMutex.RLock()
+					keys := make([]string, 0, len(CurrentGraph.Variables))
+					for k := range CurrentGraph.Variables {
 						keys = append(keys, k)
 					}
 					slices.Sort(keys)
@@ -1016,7 +1016,7 @@ func UIOverlay(topoErr error) {
 						Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1},
 					}, func() {
 						for _, k := range keys {
-							v := currentGraph.Variables[k]
+							v := CurrentGraph.Variables[k]
 							key := k
 							clay.CLAY(clay.ID("VarRow"+key), clay.EL{
 								Layout:          clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2, Padding: PA1},
@@ -1031,9 +1031,9 @@ func UIOverlay(topoErr error) {
 									El: clay.EL{Layout: clay.LAY{Padding: PA1}, BackgroundColor: Red, CornerRadius: RA1},
 									OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 										PushHistory()
-										currentGraph.VarMutex.Lock()
-										delete(currentGraph.Variables, key)
-										currentGraph.VarMutex.Unlock()
+										CurrentGraph.VarMutex.Lock()
+										delete(CurrentGraph.Variables, key)
+										CurrentGraph.VarMutex.Unlock()
 									},
 								}, func() {
 									clay.TEXT("Del", clay.TextElementConfig{TextColor: White, FontSize: 12})
@@ -1041,7 +1041,7 @@ func UIOverlay(topoErr error) {
 							})
 						}
 					})
-					currentGraph.VarMutex.RUnlock()
+					CurrentGraph.VarMutex.RUnlock()
 
 					// Add New
 					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: S1, Padding: PA1}, Border: clay.BorderElementConfig{Width: BA, Color: Gray}, CornerRadius: RA1}, func() {
@@ -1069,9 +1069,9 @@ func UIOverlay(topoErr error) {
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 								if NewVarKey != "" {
 									PushHistory()
-									currentGraph.VarMutex.Lock()
-									currentGraph.Variables[NewVarKey] = NewVarValue
-									currentGraph.VarMutex.Unlock()
+									CurrentGraph.VarMutex.Lock()
+									CurrentGraph.Variables[NewVarKey] = NewVarValue
+									CurrentGraph.VarMutex.Unlock()
 									NewVarKey = ""
 									NewVarValue = ""
 								}
@@ -1168,7 +1168,7 @@ func UIOverlay(topoErr error) {
 									testRect := rl.Rectangle{X: pos.X, Y: pos.Y, Width: NodeMinWidth, Height: 150} // 150 is estimated height
 									for j := 0; j < 50; j++ {
 										overlap := false
-										for _, n := range currentGraph.Nodes {
+										for _, n := range CurrentGraph.Nodes {
 											// Use the actual drag rect if available (it might be 0 if not rendered yet, but we have n.Pos)
 											// Or fallback to a default size check
 											otherRect := n.DragRect
@@ -1209,7 +1209,7 @@ func UIOverlay(topoErr error) {
 									}
 								}
 
-								currentGraph.AddNode(newNode)
+								CurrentGraph.AddNode(newNode)
 								selectedNodeID = newNode.ID
 							}
 						}
@@ -1526,13 +1526,13 @@ func UIOverlay(topoErr error) {
 				if isShift {
 					// Snapshot selection
 					initial := make(map[int]struct{})
-					for k, v := range selectedNodes {
+					for k, v := range SelectedNodes {
 						initial[k] = v
 					}
 					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(overlay.BoundingBox), V2{})
 				} else {
 					if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
-						clear(selectedNodes)
+						clear(SelectedNodes)
 						selectedNodeID = 0
 						UIFocus = nil
 					}
@@ -1546,9 +1546,9 @@ func UIOverlay(topoErr error) {
 				if bs, ok := drag.Thing.(BoxSelectDrag); ok {
 					if canceled {
 						// Restore
-						clear(selectedNodes)
+						clear(SelectedNodes)
 						for k, v := range bs.InitialSelection {
-							selectedNodes[k] = v
+							SelectedNodes[k] = v
 						}
 					} else {
 						// Update selection
@@ -1564,14 +1564,14 @@ func UIOverlay(topoErr error) {
 						h := max(startWorld.Y, endWorld.Y) - y
 						box := rl.Rectangle{X: x, Y: y, Width: w, Height: h}
 
-						clear(selectedNodes)
+						clear(SelectedNodes)
 						for k, v := range bs.InitialSelection {
-							selectedNodes[k] = v
+							SelectedNodes[k] = v
 						}
 
-						for _, n := range currentGraph.Nodes {
+						for _, n := range CurrentGraph.Nodes {
 							if rl.CheckCollisionRecs(box, n.DragRect) {
-								selectedNodes[n.ID] = struct{}{}
+								SelectedNodes[n.ID] = struct{}{}
 								selectedNodeID = n.ID
 							}
 						}
@@ -1618,14 +1618,14 @@ func UIOverlay(topoErr error) {
 }
 
 func afterLayout() {
-	for _, node := range currentGraph.Nodes {
+	for _, node := range CurrentGraph.Nodes {
 		node.UpdateLayoutInfo()
 	}
 }
 
 func renderWorldOverlays() {
 	// Render wires
-	for _, wire := range currentGraph.Wires {
+	for _, wire := range CurrentGraph.Wires {
 		res, ok := wire.StartNode.GetResult()
 		isErr := ok && res.Err != nil
 		color := util.Tern(isErr, Red, LightGray)
@@ -1648,7 +1648,7 @@ func renderWorldOverlays() {
 		)
 	}
 
-	for _, node := range currentGraph.Nodes {
+	for _, node := range CurrentGraph.Nodes {
 		for _, portPos := range append(node.InputPortPositions, node.OutputPortPositions...) {
 			rl.DrawCircle(int32(portPos.X), int32(portPos.Y), 4, White.RGBA())
 		}
@@ -1717,7 +1717,7 @@ func UIGroup(group *Group) {
 				if drag.TryStartDrag(GroupDrag{Group: group}, rl.Rectangle{}, V2{}) {
 					// Find nodes inside
 					var nodes []*Node
-					for _, n := range currentGraph.Nodes {
+					for _, n := range CurrentGraph.Nodes {
 						// Simple center point check
 						center := rl.Vector2Add(n.Pos, rl.Vector2{X: NodeMinWidth / 2, Y: 50}) // Approx center
 						if rl.CheckCollisionPointRec(center, group.Rect) {
@@ -1899,7 +1899,7 @@ func UINode(node *Node, disabled bool) {
 						ZIndex: zIndex + 100,
 						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							DeleteNode(node.ID)
-							delete(selectedNodes, node.ID)
+							delete(SelectedNodes, node.ID)
 							if selectedNodeID == node.ID {
 								selectedNodeID = 0
 							}
@@ -2407,3 +2407,4 @@ func UIContextMenu() {
 		})
 	})
 }
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -124,3 +124,4 @@ func IsTruthy(v FlowValue) bool {
 	}
 	return true // Default true for other types?
 }
+

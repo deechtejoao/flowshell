@@ -1,4 +1,4 @@
-package app
+package tests
 
 import (
 	"context"
@@ -6,16 +6,18 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/bvisness/flowshell/app"
 )
 
-func createInputNode(val FlowValue) *Node {
-	n := &Node{ID: 1, OutputPorts: []NodePort{{Type: FlowType{Kind: FSKindAny}}}}
-	n.SetResult(NodeActionResult{Outputs: []FlowValue{val}})
+func createInputNode(val app.FlowValue) *app.Node {
+	n := &app.Node{ID: 1, OutputPorts: []app.NodePort{{Type: app.FlowType{Kind: app.FSKindAny}}}}
+	n.SetResult(app.NodeActionResult{Outputs: []app.FlowValue{val}})
 	return n
 }
 
-func setupGraph(testNode *Node, inputs ...FlowValue) *Graph {
-	g := NewGraph()
+func setupGraph(testNode *app.Node, inputs ...app.FlowValue) *app.Graph {
+	g := app.NewGraph()
 	g.AddNode(testNode)
 
 	for i, val := range inputs {
@@ -32,10 +34,10 @@ func TestFilesystemNodes(t *testing.T) {
 
 	t.Run("Make Directory", func(t *testing.T) {
 		dirPath := filepath.Join(tmpDir, "new_dir")
-		node := NewMakeDirNode()
-		action := node.Action.(*MakeDirAction)
+		node := app.NewMakeDirNode()
+		action := node.Action.(*app.MakeDirAction)
 
-		setupGraph(node, FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(dirPath)})
+		setupGraph(node, app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(dirPath)})
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
@@ -59,12 +61,12 @@ func TestFilesystemNodes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		node := NewCopyFileNode()
-		action := node.Action.(*CopyFileAction)
+		node := app.NewCopyFileNode()
+		action := node.Action.(*app.CopyFileAction)
 
 		setupGraph(node,
-			FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(srcPath)},
-			FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(dstPath)},
+			app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(srcPath)},
+			app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(dstPath)},
 		)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -93,12 +95,12 @@ func TestFilesystemNodes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		node := NewMoveFileNode()
-		action := node.Action.(*MoveFileAction)
+		node := app.NewMoveFileNode()
+		action := node.Action.(*app.MoveFileAction)
 
 		setupGraph(node,
-			FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(srcPath)},
-			FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(dstPath)},
+			app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(srcPath)},
+			app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(dstPath)},
 		)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -129,10 +131,10 @@ func TestFilesystemNodes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		node := NewDeleteFileNode()
-		action := node.Action.(*DeleteFileAction)
+		node := app.NewDeleteFileNode()
+		action := node.Action.(*app.DeleteFileAction)
 
-		setupGraph(node, FlowValue{Type: &FlowType{Kind: FSKindBytes}, BytesValue: []byte(delPath)})
+		setupGraph(node, app.FlowValue{Type: &app.FlowType{Kind: app.FSKindBytes}, BytesValue: []byte(delPath)})
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()

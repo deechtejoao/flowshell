@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"github.com/bvisness/flowshell/clay"
@@ -98,3 +98,4 @@ func renderClayCommands(commands []clay.RenderCommand) {
 		}
 	}
 }
+

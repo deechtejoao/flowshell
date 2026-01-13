@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -189,3 +189,4 @@ func (a *FormulaAction) Serialize(s *Serializer) bool {
 }
 
 // FlowValueToNative moved to flowdata.go
+

@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -102,3 +102,4 @@ func (a *GraphOutputAction) RunContext(ctx context.Context, n *Node) <-chan Node
 func (a *GraphOutputAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

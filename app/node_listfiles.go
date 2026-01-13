@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -130,3 +130,4 @@ func (n *ListFilesAction) Serialize(s *Serializer) bool {
 	SStr(s, &n.Dir)
 	return s.Ok()
 }
+

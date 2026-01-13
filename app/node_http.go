@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"bytes"
@@ -206,3 +206,4 @@ func (a *HTTPRequestAction) RunContext(ctx context.Context, n *Node) <-chan Node
 func (a *HTTPRequestAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

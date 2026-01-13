@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"context"
@@ -183,3 +183,4 @@ func (a *ConcatTablesAction) Run(n *Node) <-chan NodeActionResult {
 func (n *ConcatTablesAction) Serialize(s *Serializer) bool {
 	return s.Ok()
 }
+

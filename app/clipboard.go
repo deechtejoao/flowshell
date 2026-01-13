@@ -1,4 +1,4 @@
-package app
+﻿package app
 
 import (
 	"encoding/base64"
@@ -62,7 +62,7 @@ func (c *ClipboardData) Serialize(s *Serializer) bool {
 }
 
 func Copy() {
-	if len(selectedNodes) == 0 {
+	if len(SelectedNodes) == 0 {
 		return
 	}
 
@@ -83,16 +83,16 @@ func CopyToData() *ClipboardData {
 	}
 
 	// 1. Collect selected nodes
-	for id := range selectedNodes {
-		if n, ok := currentGraph.GetNode(id); ok {
+	for id := range SelectedNodes {
+		if n, ok := CurrentGraph.GetNode(id); ok {
 			data.Nodes = append(data.Nodes, n)
 		}
 	}
 
 	// 2. Collect wires between selected nodes
-	for _, wire := range currentGraph.Wires {
-		_, startSelected := selectedNodes[wire.StartNode.ID]
-		_, endSelected := selectedNodes[wire.EndNode.ID]
+	for _, wire := range CurrentGraph.Wires {
+		_, startSelected := SelectedNodes[wire.StartNode.ID]
+		_, endSelected := SelectedNodes[wire.EndNode.ID]
 		if startSelected && endSelected {
 			data.Wires = append(data.Wires, &ClipboardWire{
 				StartNodeID: wire.StartNode.ID,
@@ -138,15 +138,15 @@ func PasteFromData(data *ClipboardData) {
 	offset := V2{X: 20, Y: 20}
 
 	// Clear selection so we can select pasted nodes
-	for k := range selectedNodes {
-		delete(selectedNodes, k)
+	for k := range SelectedNodes {
+		delete(SelectedNodes, k)
 	}
 	selectedNodeID = 0
 
 	// 2. Add nodes
 	for _, n := range data.Nodes {
 		oldID := n.ID
-		currentGraph.AddNode(n) // Assigns new ID
+		CurrentGraph.AddNode(n) // Assigns new ID
 		idMap[oldID] = n.ID
 
 		n.Pos = rl.Vector2Add(n.Pos, offset)
@@ -161,10 +161,10 @@ func PasteFromData(data *ClipboardData) {
 		endID, okEnd := idMap[w.EndNodeID]
 
 		if okStart && okEnd {
-			startNode, ok1 := currentGraph.GetNode(startID)
-			endNode, ok2 := currentGraph.GetNode(endID)
+			startNode, ok1 := CurrentGraph.GetNode(startID)
+			endNode, ok2 := CurrentGraph.GetNode(endID)
 			if ok1 && ok2 {
-				currentGraph.Wires = append(currentGraph.Wires, &Wire{
+				CurrentGraph.Wires = append(CurrentGraph.Wires, &Wire{
 					StartNode: startNode,
 					StartPort: w.StartPort,
 					EndNode:   endNode,
@@ -174,3 +174,4 @@ func PasteFromData(data *ClipboardData) {
 		}
 	}
 }
+
