@@ -73,6 +73,7 @@ var nodeTypes = []NodeType{
 }
 
 func CreateGroup() {
+	PushHistory()
 	// Calculate bounding box of selected nodes
 	if len(selectedNodes) == 0 {
 		return
@@ -196,6 +197,7 @@ func DeleteNode(id int) {
 }
 
 func DeleteSelectedNodes() {
+	PushHistory()
 	for id := range selectedNodes {
 		DeleteNode(id)
 	}
@@ -206,6 +208,7 @@ func DeleteSelectedNodes() {
 }
 
 func DuplicateNode(original *Node) {
+	PushHistory()
 	// Clone via Serialization
 	s := NewEncoder(1) // version 1
 	original.Serialize(s)
@@ -270,9 +273,16 @@ func processInput() {
 					// Open Context Menu
 					items := []ContextMenuItem{
 						{Label: "Run", Action: func() { n.Run(context.Background(), false) }},
-						{Label: util.Tern(n.Pinned, "Unpin", "Pin"), Action: func() { n.Pinned = !n.Pinned }},
-						{Label: "Duplicate", Action: func() { DuplicateNode(n) }},
+						{Label: util.Tern(n.Pinned, "Unpin", "Pin"), Action: func() {
+							PushHistory()
+							n.Pinned = !n.Pinned
+						}},
+						{Label: "Duplicate", Action: func() { DuplicateNode(n) }}, // DuplicateNode calls PushHistory
 						{Label: "Delete", Action: func() {
+							// DeleteSelectedNodes calls PushHistory, but here we might delete a single node
+							// that isn't selected? Or we should select it first?
+							// Logic below deletes node n.ID.
+							PushHistory()
 							DeleteNode(n.ID)
 							if IsNodeSelected(n.ID) {
 								delete(selectedNodes, n.ID)
@@ -318,6 +328,33 @@ func processInput() {
 		UIFocus = nil
 	}
 
+	// Undo/Redo
+	actions := rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
+	if actions && rl.IsKeyPressed(rl.KeyZ) {
+		if rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) {
+			if g := History.Redo(); g != nil {
+				currentGraph = g
+				// Clear selection on undo/redo to avoid ghost selections
+				// Or try to restore? Restoring is hard.
+				clear(selectedNodes)
+				selectedNodeID = 0
+			}
+		} else {
+			if g := History.Undo(); g != nil {
+				currentGraph = g
+				clear(selectedNodes)
+				selectedNodeID = 0
+			}
+		}
+	}
+	if actions && rl.IsKeyPressed(rl.KeyY) {
+		if g := History.Redo(); g != nil {
+			currentGraph = g
+			clear(selectedNodes)
+			selectedNodeID = 0
+		}
+	}
+
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
 		_ = SaveGraph("saved.flow", currentGraph)
 	}
@@ -331,6 +368,7 @@ func processInput() {
 		Copy()
 	}
 	if rl.IsKeyPressed(rl.KeyV) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)) {
+		PushHistory()
 		Paste()
 	}
 
@@ -350,6 +388,7 @@ func processInput() {
 					}
 				}
 				if modsDown && rl.IsKeyPressed(nt.ShortcutKey) {
+					PushHistory()
 					newNode := nt.Create()
 					// Create at mouse position
 					newNode.Pos = SnapToGrid(V2(rl.GetMousePosition()))
@@ -396,6 +435,7 @@ func processInput() {
 		}
 
 		if !handled && !IsHoveringUI && !IsHoveringPanel {
+			PushHistory()
 			for i, filename := range files {
 				n := NewLoadFileNode(filename)
 				n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
@@ -450,7 +490,9 @@ func processInput() {
 
 		// Node drag and drop
 		if !IsHoveringUI {
-			drag.TryStartDrag(n, n.DragRect, n.Pos)
+			if drag.TryStartDrag(n, n.DragRect, n.Pos) {
+				PushHistory()
+			}
 		}
 		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
 			// If we start dragging a node that isn't selected, select it (and deselect others)
@@ -519,6 +561,10 @@ func processInput() {
 							ConnectionErrorTime = time.Now()
 						} else {
 							// Delete existing wires into that port
+							if len(currentGraph.Wires) > 0 { // Optimization or check required?
+								// Just push history on wire modify
+								PushHistory()
+							}
 							currentGraph.Wires = slices.DeleteFunc(currentGraph.Wires, func(wire *Wire) bool {
 								return wire.EndNode == node && wire.EndPort == port
 							})
@@ -543,6 +589,7 @@ func processInput() {
 				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 					n.Pos = SnapToGrid(n.Pos)
 				}
+				PushHistory()
 				currentGraph.AddNode(n)
 				selectedNodeID = n.ID
 			}
