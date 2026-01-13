@@ -76,6 +76,7 @@ func (a *GraphOutputAction) UpdateAndValidate(n *Node) {
 func (a *GraphOutputAction) UI(n *Node) {
 	UIInputPort(n, 0)
 	clay.TEXT("Graph Output", clay.TextElementConfig{TextColor: White})
+	UIOutputPort(n, 0)
 }
 
 func (a *GraphOutputAction) Run(n *Node) <-chan NodeActionResult {

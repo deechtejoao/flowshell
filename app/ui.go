@@ -46,51 +46,61 @@ func PushHistory() {
 
 type NodeType struct {
 	Name         string
+	Category     string
 	Create       func() *Node
 	ShortcutKey  int32
 	ShortcutMods []int32
 }
 
 var nodeTypes = []NodeType{
-	{Name: "Run Process", Create: func() *Node { return NewRunProcessNode(util.Tern(runtime.GOOS == "Windows", "dir", "ls")) }},
-	{Name: "List Files", Create: func() *Node { return NewListFilesNode(".") }},
-	{Name: "Lines", Create: func() *Node { return NewLinesNode() }},
-	{Name: "Load File", Create: func() *Node { return NewLoadFileNode("") }},
-	{Name: "Save File", Create: func() *Node { return NewSaveFileNode() }},
-	{Name: "Trim Spaces", Create: func() *Node { return NewTrimSpacesNode() }},
-	{Name: "Min", Create: func() *Node { return NewAggregateNode("Min") }},
-	{Name: "Max", Create: func() *Node { return NewAggregateNode("Max") }},
-	{Name: "Mean (Average)", Create: func() *Node { return NewAggregateNode("Mean") }},
-	{Name: "Concatenate Tables (Combine Rows)", Create: func() *Node { return NewConcatTablesNode() }},
-	{Name: "Filter Empty", Create: func() *Node { return NewFilterEmptyNode() }},
-	{Name: "Sort", Create: func() *Node { return NewSortNode() }},
-	{Name: "Select Columns", Create: func() *Node { return NewSelectColumnsNode() }},
-	{Name: "Extract Column", Create: func() *Node { return NewExtractColumnNode() }},
-	{Name: "Add Column", Create: func() *Node { return NewAddColumnNode() }},
-	{Name: "Convert Type", Create: func() *Node { return NewConvertNode() }},
-	{Name: "Transpose", Create: func() *Node { return NewTransposeNode() }},
-	{Name: "Minify HTML", Create: func() *Node { return NewMinifyHTMLNode() }},
-	{Name: "Wait For Click", Create: func() *Node { return NewWaitForClickNode() }},
-	{Name: "Regex Match", Create: func() *Node { return NewRegexMatchNode() }},
-	{Name: "Regex Find All", Create: func() *Node { return NewRegexFindAllNode() }},
-	{Name: "Regex Replace", Create: func() *Node { return NewRegexReplaceNode() }},
-	{Name: "Regex Split", Create: func() *Node { return NewRegexSplitNode() }},
-	{Name: "HTTP Request", Create: func() *Node { return NewHTTPRequestNode() }},
-	{Name: "Formula", Create: func() *Node { return NewFormulaNode() }},
-	{Name: "Join Text", Create: func() *Node { return NewJoinTextNode() }},
-	{Name: "Split Text", Create: func() *Node { return NewSplitTextNode() }},
-	{Name: "Change Case", Create: func() *Node { return NewCaseConvertNode() }},
-	{Name: "Format String", Create: func() *Node { return NewFormatStringNode() }},
-	{Name: "Parse Time", Create: func() *Node { return NewParseTimeNode() }},
-	{Name: "JSON Query", Create: func() *Node { return NewJsonQueryNode() }},
-	{Name: "XML Query", Create: func() *Node { return NewXmlQueryNode() }},
-	{Name: "Get Variable", Create: func() *Node { return NewGetVariableNode() }},
-	{Name: "Map", Create: func() *Node { return NewMapNode() }},
-	{Name: "Graph Input", Create: func() *Node { return NewGraphInputNode() }},
-	{Name: "Graph Output", Create: func() *Node { return NewGraphOutputNode() }},
-	{Name: "Line Chart", Create: func() *Node { return NewLineChartNode() }},
-	{Name: "Bar Chart", Create: func() *Node { return NewBarChartNode() }},
-	{Name: "Scatter Plot", Create: func() *Node { return NewScatterPlotNode() }},
+	{Name: "Run Process", Category: "Core", Create: func() *Node { return NewRunProcessNode(util.Tern(runtime.GOOS == "Windows", "dir", "ls")) }},
+	{Name: "List Files", Category: "File System", Create: func() *Node { return NewListFilesNode(".") }},
+	{Name: "Lines", Category: "Text", Create: func() *Node { return NewLinesNode() }},
+	{Name: "Load File", Category: "File System", Create: func() *Node { return NewLoadFileNode("") }},
+	{Name: "Save File", Category: "File System", Create: func() *Node { return NewSaveFileNode() }},
+	{Name: "Trim Spaces", Category: "Text", Create: func() *Node { return NewTrimSpacesNode() }},
+	{Name: "Min", Category: "Math", Create: func() *Node { return NewAggregateNode("Min") }},
+	{Name: "Max", Category: "Math", Create: func() *Node { return NewAggregateNode("Max") }},
+	{Name: "Mean (Average)", Category: "Math", Create: func() *Node { return NewAggregateNode("Mean") }},
+	{Name: "Concatenate Tables", Category: "Table", Create: func() *Node { return NewConcatTablesNode() }},
+	{Name: "Filter Empty", Category: "Table", Create: func() *Node { return NewFilterEmptyNode() }},
+	{Name: "Sort", Category: "Table", Create: func() *Node { return NewSortNode() }},
+	{Name: "Select Columns", Category: "Table", Create: func() *Node { return NewSelectColumnsNode() }},
+	{Name: "Extract Column", Category: "Table", Create: func() *Node { return NewExtractColumnNode() }},
+	{Name: "Add Column", Category: "Table", Create: func() *Node { return NewAddColumnNode() }},
+	{Name: "Convert Type", Category: "Data", Create: func() *Node { return NewConvertNode() }},
+	{Name: "Transpose", Category: "Table", Create: func() *Node { return NewTransposeNode() }},
+	{Name: "Minify HTML", Category: "Text", Create: func() *Node { return NewMinifyHTMLNode() }},
+	{Name: "Wait For Click", Category: "Core", Create: func() *Node { return NewWaitForClickNode() }},
+	{Name: "Regex Match", Category: "Regex", Create: func() *Node { return NewRegexMatchNode() }},
+	{Name: "Regex Find All", Category: "Regex", Create: func() *Node { return NewRegexFindAllNode() }},
+	{Name: "Regex Replace", Category: "Regex", Create: func() *Node { return NewRegexReplaceNode() }},
+	{Name: "Regex Split", Category: "Regex", Create: func() *Node { return NewRegexSplitNode() }},
+	{Name: "HTTP Request", Category: "Network", Create: func() *Node { return NewHTTPRequestNode() }},
+	{Name: "Formula", Category: "Math", Create: func() *Node { return NewFormulaNode() }},
+	{Name: "Join Text", Category: "Text", Create: func() *Node { return NewJoinTextNode() }},
+	{Name: "Split Text", Category: "Text", Create: func() *Node { return NewSplitTextNode() }},
+	{Name: "Change Case", Category: "Text", Create: func() *Node { return NewCaseConvertNode() }},
+	{Name: "Format String", Category: "Text", Create: func() *Node { return NewFormatStringNode() }},
+	{Name: "Parse Time", Category: "Data", Create: func() *Node { return NewParseTimeNode() }},
+	{Name: "JSON Query", Category: "Data", Create: func() *Node { return NewJsonQueryNode() }},
+	{Name: "XML Query", Category: "Data", Create: func() *Node { return NewXmlQueryNode() }},
+	{Name: "Get Variable", Category: "Core", Create: func() *Node { return NewGetVariableNode() }},
+	{Name: "Map", Category: "Table", Create: func() *Node { return NewMapNode() }},
+	{Name: "Graph Input", Category: "Graph", Create: func() *Node { return NewGraphInputNode() }},
+	{Name: "Graph Output", Category: "Graph", Create: func() *Node { return NewGraphOutputNode() }},
+	{Name: "Line Chart", Category: "Visualization", Create: func() *Node { return NewLineChartNode() }},
+	{Name: "Bar Chart", Category: "Visualization", Create: func() *Node { return NewBarChartNode() }},
+	{Name: "Scatter Plot", Category: "Visualization", Create: func() *Node { return NewScatterPlotNode() }},
+}
+
+func init() {
+	slices.SortFunc(nodeTypes, func(a, b NodeType) int {
+		if c := strings.Compare(a.Category, b.Category); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Name, b.Name)
+	})
 }
 
 func CreateGroup() {
@@ -747,6 +757,7 @@ var NewWireSourceNode *Node
 var NewWireSourcePort int
 
 var NewNodeName string
+var SelectedNodeCategory string
 
 var ShowLoadConfirmation bool
 var ShowVariables bool
@@ -893,8 +904,8 @@ func UIOverlay(topoErr error) {
 
 					// Header
 					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2}}, func() {
-						clay.TEXT("Variables", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
-						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}, nil) // Spacer
+						clay.TEXT("Settings", clay.TextElementConfig{TextColor: White, FontID: InterBold, FontSize: F2})
+						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}) // Spacer
 						UIButton(clay.ID("CloseVariables"), UIButtonConfig{
 							El: clay.EL{Layout: clay.LAY{Padding: PA1}, BackgroundColor: Red, CornerRadius: RA1},
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
@@ -919,7 +930,7 @@ func UIOverlay(topoErr error) {
 					}, func() {
 						for _, k := range keys {
 							v := currentGraph.Variables[k]
-							key := k // Capture for closure
+							key := k
 							clay.CLAY(clay.ID("VarRow"+key), clay.EL{
 								Layout:          clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: YCENTER, ChildGap: S2, Padding: PA1},
 								BackgroundColor: clay.Color{R: 60, G: 60, B: 60, A: 255},
@@ -928,7 +939,7 @@ func UIOverlay(topoErr error) {
 								clay.TEXT(key, clay.TextElementConfig{TextColor: Yellow, FontID: InterBold})
 								clay.TEXT("=", clay.TextElementConfig{TextColor: Gray})
 								clay.TEXT(v, clay.TextElementConfig{TextColor: White})
-								clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}, nil) // Spacer
+								clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}) // Spacer
 								UIButton(clay.ID("DeleteVar"+key), UIButtonConfig{
 									El: clay.EL{Layout: clay.LAY{Padding: PA1}, BackgroundColor: Red, CornerRadius: RA1},
 									OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
@@ -1021,7 +1032,7 @@ func UIOverlay(topoErr error) {
 				clay.CLAY_AUTO_ID(clay.EL{
 					Layout: clay.LAY{
 						ChildGap: S2,
-						Sizing:   clay.Sizing{Width: clay.SizingGrow(0, 300)}, // Capped grow? Or just Grow.
+						Sizing:   clay.Sizing{Width: clay.SizingFixed(600)},
 					},
 				}, func() {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
@@ -1053,20 +1064,6 @@ func UIOverlay(topoErr error) {
 						clay.TEXT("+", clay.T{FontID: InterBold, FontSize: 36, TextColor: White})
 					})
 
-					UIButton(clay.ID("OpenVariables"), UIButtonConfig{
-						El: clay.EL{
-							Layout: clay.LAY{
-								Sizing:         WH(36, 36),
-								ChildAlignment: ALLCENTER,
-							},
-							Border: clay.B{Width: BA, Color: Gray},
-						},
-						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-							ShowVariables = !ShowVariables
-						},
-					}, func() {
-						clay.TEXT("V", clay.T{FontID: InterBold, FontSize: 24, TextColor: White})
-					})
 					if IsFocused(textboxID) {
 						addNodeFromMatch := func(nt NodeType) {
 							_, count := parseNodeSearch(NewNodeName)
@@ -1148,12 +1145,16 @@ func UIOverlay(topoErr error) {
 								clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
 									Layout: clay.LAY{
 										LayoutDirection: clay.TopToBottom,
-										Sizing:          GROWH,
+										Sizing:          clay.Sizing{Width: clay.SizingPercent(1.0), Height: clay.SizingAxis{Type: clay.SizingTypeFit, MinMax: clay.SizingMinMax{Min: 400, Max: float32(rl.GetScreenHeight()) * 0.5}}},
+										Padding:         PA2,
+										ChildGap:        S2,
 									},
-									BackgroundColor: DarkGray,
-									Border:          clay.B{Width: BA_BTW, Color: Gray},
+									BackgroundColor: Night,
+									Border:          clay.B{Width: BA, Color: Gray},
+									CornerRadius:    RA(4),
 									Floating: clay.FLOAT{
-										AttachTo: clay.AttachToParent,
+										AttachTo: clay.AttachToElementWithID,
+										ParentID: textboxID.ID,
 										AttachPoints: clay.FloatingAttachPoints{
 											Parent:  clay.AttachPointLeftTop,
 											Element: clay.AttachPointLeftBottom,
@@ -1166,51 +1167,185 @@ func UIOverlay(topoErr error) {
 										IsHoveringUI = true
 									}, nil)
 
-									matches := SearchNodeTypes(NewNodeName)
-									for i := len(matches) - 1; i >= 0; i-- {
-										UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
-											El: clay.EL{
+									// Scrollable Content Area
+									clay.CLAY(clay.ID("NewNodeMatchesContent"), clay.EL{
+										Layout: clay.LAY{
+											LayoutDirection: clay.TopToBottom,
+											Sizing:          clay.Sizing{Width: GROWALL.Width, Height: clay.SizingAxis{Type: clay.SizingTypeFit}},
+										},
+										Clip: clay.ClipElementConfig{
+											Vertical:    true,
+											Horizontal:  false,
+											ChildOffset: clay.GetScrollOffset(),
+										},
+									}, func() {
+										matches := SearchNodeTypes(NewNodeName)
+										showCategories := NewNodeName == "" || NewNodeName == "?" || NewNodeName == "*"
+
+										if showCategories {
+											if SelectedNodeCategory == "" && len(nodeTypes) > 0 {
+												SelectedNodeCategory = nodeTypes[0].Category
+											}
+
+											clay.CLAY(clay.AUTO_ID, clay.EL{
 												Layout: clay.LAY{
-													Padding: PVH(S1, S2),
-													Sizing:  GROWH,
+													LayoutDirection: clay.LeftToRight,
+													Sizing:          GROWH,
 												},
-												BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+											}, func() {
+												// Left Column: Categories
+												clay.CLAY(clay.ID("CategoryList"), clay.EL{
+													Layout: clay.LAY{
+														LayoutDirection: clay.TopToBottom,
+														Sizing:          clay.Sizing{Width: clay.SizingFixed(140)},
+														ChildGap:        S1,
+														Padding:         PA1,
+													},
+													BackgroundColor: Charcoal,
+													CornerRadius:    RA(4),
+													// Border:          clay.B{Width: clay.BW{Right: 1}, Color: Gray},
+												}, func() {
+													currentCat := ""
+													for _, nt := range nodeTypes {
+														if nt.Category != currentCat {
+															cat := nt.Category
+															currentCat = cat
+															thisCat := cat
+
+															UIButton(clay.ID("CatBtn"+thisCat), UIButtonConfig{
+																El: clay.EL{
+																	Layout:          clay.LAY{Padding: PVH(S1, S2), Sizing: GROWH},
+																	BackgroundColor: util.Tern(thisCat == SelectedNodeCategory, Blue, util.Tern(clay.Hovered(), HoverWhite, clay.Color{})),
+																	CornerRadius:    RA(4),
+																},
+																OnHover: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+																	SelectedNodeCategory = thisCat
+																},
+																OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+																	SelectedNodeCategory = thisCat
+																},
+															}, func() {
+																clay.TEXT(thisCat, clay.T{TextColor: White, FontID: InterBold, FontSize: 14})
+															})
+														}
+
+													}
+												})
+
+												// Right Column: Nodes
+												clay.CLAY(clay.ID("CategoryNodes"), clay.EL{
+													Layout: clay.LAY{
+														LayoutDirection: clay.TopToBottom,
+														Sizing:          GROWH,
+														ChildGap:        S1,
+														Padding:         PA1,
+													},
+												}, func() {
+													for i, nt := range matches {
+														if nt.Category == SelectedNodeCategory {
+															UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
+																El: clay.EL{
+																	Layout:          clay.LAY{Padding: PVH(S2, S3), Sizing: GROWH, ChildGap: S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
+																	BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+																	CornerRadius:    RA(4),
+																},
+																OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
+																	addNodeFromMatch(matches[userData.(int)])
+																	UIFocus = nil
+																},
+																OnClickUserData: i,
+															}, func() {
+																clay.TEXT(nt.Name, clay.T{TextColor: White, FontSize: 14})
+																clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}) // Spacer to push shortcut right
+																if nt.ShortcutKey != 0 {
+																	keyName := ""
+																	if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
+																		keyName = string(rune(nt.ShortcutKey))
+																	} else {
+																		keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
+																	}
+																	modStr := ""
+																	for _, mod := range nt.ShortcutMods {
+																		switch mod {
+																		case rl.KeyLeftControl, rl.KeyRightControl:
+																			modStr += "Ctrl+"
+																		case rl.KeyLeftAlt, rl.KeyRightAlt:
+																			modStr += "Alt+"
+																		case rl.KeyLeftShift, rl.KeyRightShift:
+																			modStr += "Shift+"
+																		}
+																	}
+																	clay.TEXT(modStr+keyName, clay.T{TextColor: LightGray, FontSize: 10})
+																}
+															})
+														}
+													}
+												})
+											})
+										} else {
+											// Original Flat List (Search Results)
+											for i := 0; i < len(matches); i++ {
+												nt := matches[i]
+												UIButton(clay.IDI("MatchButton", i), UIButtonConfig{
+													El: clay.EL{
+														Layout:          clay.LAY{Padding: PVH(S2, S3), Sizing: GROWH, ChildGap: S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
+														BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+														CornerRadius:    RA(6),
+													},
+													OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
+														addNodeFromMatch(matches[userData.(int)])
+														UIFocus = nil
+													},
+													OnClickUserData: i,
+												}, func() {
+													clay.TEXT(nt.Name, clay.T{TextColor: White, FontSize: 14})
+													clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}) // Spacer
+													_, count := parseNodeSearch(NewNodeName)
+													if count > 1 {
+														clay.TEXT(fmt.Sprintf(" (x%d)", count), clay.T{TextColor: Yellow, FontSize: 14})
+													}
+													if nt.ShortcutKey != 0 {
+														keyName := ""
+														if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
+															keyName = string(rune(nt.ShortcutKey))
+														} else {
+															keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
+														}
+														modStr := ""
+														for _, mod := range nt.ShortcutMods {
+															switch mod {
+															case rl.KeyLeftControl, rl.KeyRightControl:
+																modStr += "Ctrl+"
+															case rl.KeyLeftAlt, rl.KeyRightAlt:
+																modStr += "Alt+"
+															case rl.KeyLeftShift, rl.KeyRightShift:
+																modStr += "Shift+"
+															}
+														}
+														clay.TEXT("  "+modStr+keyName, clay.T{TextColor: Gray, FontSize: 10})
+													}
+												})
+											}
+										}
+									})
+
+									// Footer with Settings
+									clay.CLAY(clay.ID("NewNodeMatchesFooter"), clay.EL{
+										Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: GROWALL.Width, Height: clay.SizingFixed(32)}, ChildAlignment: YCENTER, Padding: PVH(0, S2), ChildGap: S2},
+									}, func() {
+										clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: GROWH}}) // Spacer
+										UIButton(clay.ID("OpenSettings"), UIButtonConfig{
+											El: clay.EL{
+												Layout: clay.LAY{Padding: PVH(S1, S2)},
 											},
 											OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-												addNodeFromMatch(matches[userData.(int)])
-												UIFocus = nil
+												ShowVariables = !ShowVariables
+												UIFocus = nil // Close menu
 											},
-											OnClickUserData: i,
 										}, func() {
-											clay.TEXT(matches[i].Name, clay.T{TextColor: White})
-											_, count := parseNodeSearch(NewNodeName)
-											if count > 1 {
-												clay.TEXT(fmt.Sprintf(" (x%d)", count), clay.T{TextColor: Yellow, FontSize: 14})
-											}
-											if matches[i].ShortcutKey != 0 {
-												// Just render the text, no spacer for now to debug
-												keyName := ""
-												if matches[i].ShortcutKey >= 32 && matches[i].ShortcutKey <= 126 {
-													keyName = string(rune(matches[i].ShortcutKey))
-												} else {
-													keyName = fmt.Sprintf("K%d", matches[i].ShortcutKey)
-												}
-
-												modStr := ""
-												for _, mod := range matches[i].ShortcutMods {
-													switch mod {
-													case rl.KeyLeftControl, rl.KeyRightControl:
-														modStr += "Ctrl+"
-													case rl.KeyLeftAlt, rl.KeyRightAlt:
-														modStr += "Alt+"
-													case rl.KeyLeftShift, rl.KeyRightShift:
-														modStr += "Shift+"
-													}
-												}
-												clay.TEXT("  "+modStr+keyName, clay.T{TextColor: Gray, FontSize: 10})
-											}
+											clay.TEXT("Settings", clay.T{TextColor: LightGray, FontSize: 12})
 										})
-									}
+									})
 								})
 							})
 						})

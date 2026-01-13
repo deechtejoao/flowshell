@@ -14,6 +14,7 @@ func Main() {
 	CurrentSettings = LoadSettings()
 	ApplyTheme(CurrentSettings.Theme)
 
+	rl.SetTraceLogLevel(rl.LogError)
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	// rl.InitWindow(windowWidth, windowHeight, "Flowshell")
 	rl.InitWindow(int32(CurrentSettings.WindowWidth), int32(CurrentSettings.WindowHeight), "Flowshell")
