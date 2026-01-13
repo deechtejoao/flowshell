@@ -51,8 +51,8 @@ func HeadlessRun(path string) {
 				// We call n.Run which internally handles context and calls Run/RunContext
 				done := node.Run(ctx, false)
 				<-done
-				if node.Result.Err != nil {
-					fmt.Fprintf(os.Stderr, "[Node %d %s] Error: %v\n", node.ID, node.Name, node.Result.Err)
+				if res, ok := node.GetResult(); ok && res.Err != nil {
+					fmt.Fprintf(os.Stderr, "[Node %d %s] Error: %v\n", node.ID, node.Name, res.Err)
 				}
 			}(n)
 		}

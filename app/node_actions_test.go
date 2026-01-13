@@ -95,10 +95,9 @@ func TestSortAction(t *testing.T) {
 			g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 			// Pre-calculate input node result
-			valueNode.ResultAvailable = true
-			valueNode.Result = NodeActionResult{
+			valueNode.SetResult(NodeActionResult{
 				Outputs: []FlowValue{inputList},
-			}
+			})
 
 			// Run
 			action.UpdateAndValidate(node)
@@ -147,10 +146,9 @@ func TestConvertAction_Scalar(t *testing.T) {
 	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.ResultAvailable = true
-	valueNode.Result = NodeActionResult{
+	valueNode.SetResult(NodeActionResult{
 		Outputs: []FlowValue{val},
-	}
+	})
 
 	// Run
 	action.UpdateAndValidate(node) // Important for Convert node to set output type
@@ -191,10 +189,9 @@ func TestConvertAction_IgnoreErrors(t *testing.T) {
 	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.ResultAvailable = true
-	valueNode.Result = NodeActionResult{
+	valueNode.SetResult(NodeActionResult{
 		Outputs: []FlowValue{val},
-	}
+	})
 
 	// Run
 	action.UpdateAndValidate(node)
@@ -255,10 +252,9 @@ func TestExtractColumnAction(t *testing.T) {
 	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.ResultAvailable = true
-	valueNode.Result = NodeActionResult{
+	valueNode.SetResult(NodeActionResult{
 		Outputs: []FlowValue{val},
-	}
+	})
 
 	// Run
 	action.UpdateAndValidate(node)
@@ -327,10 +323,9 @@ func TestSelectColumnsAction(t *testing.T) {
 	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.ResultAvailable = true
-	valueNode.Result = NodeActionResult{
+	valueNode.SetResult(NodeActionResult{
 		Outputs: []FlowValue{val},
-	}
+	})
 
 	// Run
 	action.UpdateAndValidate(node)
@@ -394,10 +389,9 @@ func TestSelectColumnsAction_NilContainedType(t *testing.T) {
 	g.Wires = []*Wire{{StartNode: valueNode, EndNode: node, StartPort: 0, EndPort: 0}}
 
 	// Pre-calculate input node result
-	valueNode.ResultAvailable = true
-	valueNode.Result = NodeActionResult{
+	valueNode.SetResult(NodeActionResult{
 		Outputs: []FlowValue{val},
-	}
+	})
 
 	// Run
 	// Should not panic

@@ -21,24 +21,16 @@
   - [x] Extract Column (Table -> List)
   - [x] Add Column (Math?)
 - [x] "Minify" HTML
-
-## Critical Issues
 - [x] Error Handling Scopes: The `Run` method uses `panic` inside goroutines for logical errors. Use `recover()` or propagate errors. `app/node.go`
 - [x] Memory Usage / Large File Handling: `os.ReadFile` and `csv.ReadAll` load entire files into RAM. Implement streaming/chunking. `app/node_loadfile.go`
-
-## Architecture Improvements
 - [x] Execution Order (Toposort): Implement topological sort to validate/execute upstream nodes first. `app/ui.go:324`
 - [x] Global UI State / Event Handling: Implement centralized `InputManager` or `EventBus` to prevent click-through conflicts. `app/ui.go`
 - [x] Type System & Polymorphism: Implement robust Type Inference, `ConvertType` node, and mixed type support. `app/node_loadfile.go`
-
-## App Logic Gaps
 - [x] Subprocesses: Extract exit codes from external processes. `app/node_runprocess.go:130`
 - [x] CSV Loading: Get dynamic path from input port, handle variable fields, support string lists. `app/node_loadfile.go`
 - [x] Filtering: Preserve column selection when data changes. `app/node_filterempty.go:82`
 - [x] Cancellation: Implement task cancellation with `context.Context`. `app/node.go:283`
 - [x] Persistence: Confirm before clearing graph. `app/persistence.go:44`
-
-## UI/UX Enhancements
 - [x] Box Selection: Drag on canvas to select multiple nodes.
 - [x] Grouping/Containers: Visual containers to organize related nodes.
 - [x] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
@@ -48,26 +40,30 @@
 - [x] Undo/Redo: Global history stack for graph mutations.
 - [x] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
 - [x] Rendering: Custom rendering implementation. `app/render.go:86`
-
-## New Native Nodes
 - [x] Regex: Match, Find All, Replace, Split.
 - [x] HTTP Request: Basic GET/POST capabilities to fetch data from APIs.
 - [x] Formula/Expression: Evaluate math/logic expressions (e.g. `col("A") + 10`).
 - [x] Text Operations: Split lines, Join, String formatting, Case conversion.
 - [x] JSON/XML Query: Extract data using JSONPath or XPath.
 - [x] Date/Time Parsing: Parse strings to Timestamps with format strings.
-
-## System & Core
 - [x] Plugin System: Load dynamic libraries or external binaries as nodes.
 - [x] Settings/Configuration: Persist app preferences (theme, default shell, window state).
 - [x] Import/Merge: Load a `.flow` file into the current workspace (merging).
 - [x] Shell Integration: "Run Process" option to execute via system shell (PowerShell/Bash) for pipes/redirects.
 - [x] Headless Mode: Run a flow file from CLI without UI (e.g. `flowshell run mygraph.flow`).
-
-## Engineering & Infra
 - [x] Unit Tests: specifically for `drag.go` state machine and `serialize.go` edge cases.
 - [x] Refactor Globals: Move `nodes`, `wires`, and `nodeID` into a `Graph` struct.
 - [x] Action Tests: Add unit tests for `NodeAction.Run` logic independent of the UI/Raylib.
 - [x] Linter: Add `golangci-lint` configuration.
 - [x] Clay Optimization: Search `clay/clay.h` for performance optimizations (SIMD/Culling confirmed active).
 
+- [x] Race Condition Safety: `Node` struct fields (especially `Running` and `Result`) are accessed by multiple goroutines without protection. Use `sync.Mutex` or `atomic` values. `app/node.go`
+- [ ] Panic Stack Traces: `Run` method's `recover()` block swallows stack traces. Use `debug.Stack()` for better debugging. `app/node.go`
+- [ ] True Streaming Support: Current "Large File Handling" loads files into RAM (or caps them). Implement `io.Reader` based data passing between nodes for true large file support. `app/node_loadfile.go`, `app/node_runprocess.go`
+- [ ] Input Validation: `GetInputValue` panics on invalid port access. Return error instead. `app/node.go`
+- [ ] Variables / Secrets: Global key-value store for API keys, environment variables, and constants.
+- [ ] Control Flow (Loop / Map): Iterate over lists and execute sub-graphs for each item.
+- [ ] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.
+- [ ] Interactive Input: "Prompt User" node to ask for text/confirmation during execution.
+- [ ] Undo/Redo Properties: Extend Undo/Redo to cover node property changes (currently handles graph topology).
+- [ ] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).

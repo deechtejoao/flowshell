@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
@@ -29,11 +30,12 @@ type Node struct {
 	Action NodeAction
 	Valid  bool
 
+	mu      sync.Mutex
 	Running bool
 	done    chan struct{}
 
-	ResultAvailable bool
-	Result          NodeActionResult
+	resultAvailable bool
+	result          NodeActionResult
 
 	InputPortPositions  []V2
 	OutputPortPositions []V2
@@ -133,25 +135,36 @@ func (w *Wire) Type() FlowType {
 }
 
 func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
+	n.mu.Lock()
 	if n.Running {
 		fmt.Printf("Node %s is already running; joining existing run\n", n)
 		if n.done == nil {
 			// This should theoretically not happen if n.Running is true,
 			// but if it does, return a closed channel.
+			n.mu.Unlock()
 			c := make(chan struct{})
 			close(c)
 			return c
 		}
-		return n.done
+		done := n.done
+		n.mu.Unlock()
+		return done
 	}
 
 	fmt.Printf("Running node %s\n", n)
 	n.Running = true
-	n.ResultAvailable = false
+	n.resultAvailable = false
 	n.done = make(chan struct{})
+	// We need to keep n.done in a local variable to return it,
+	// because we unlock before returning.
+	doneCh := n.done
+	n.mu.Unlock()
 
 	go func() {
 		defer func() {
+			n.mu.Lock()
+			defer n.mu.Unlock()
+
 			if r := recover(); r != nil {
 				var err error
 				if e, ok := r.(error); ok {
@@ -159,8 +172,8 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 				} else {
 					err = fmt.Errorf("panic: %v", r)
 				}
-				n.Result = NodeActionResult{Err: err}
-				n.ResultAvailable = true
+				n.result = NodeActionResult{Err: err}
+				n.resultAvailable = true
 			}
 			n.Running = false
 			if n.done != nil {
@@ -170,8 +183,10 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 
 		// Check context before starting
 		if ctx.Err() != nil {
-			n.Result = NodeActionResult{Err: ctx.Err()}
-			n.ResultAvailable = true
+			n.mu.Lock()
+			n.result = NodeActionResult{Err: ctx.Err()}
+			n.resultAvailable = true
+			n.mu.Unlock()
 			return
 		}
 
@@ -179,7 +194,8 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 		var inputRuns []<-chan struct{}
 		for _, inputNode := range n.Inputs() {
 			rerunThisNode := rerunInputs && !inputNode.Pinned
-			if rerunThisNode || !inputNode.ResultAvailable {
+			// Use thread-safe check
+			if rerunThisNode || !inputNode.IsResultAvailable() {
 				fmt.Printf("Node %s wants node %s to run\n", n, inputNode)
 				inputRuns = append(inputRuns, inputNode.Run(ctx, rerunInputs))
 			}
@@ -188,22 +204,29 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 			select {
 			case <-inputRun:
 			case <-ctx.Done():
-				n.Result = NodeActionResult{Err: ctx.Err()}
-				n.ResultAvailable = true
+				n.mu.Lock()
+				n.result = NodeActionResult{Err: ctx.Err()}
+				n.resultAvailable = true
+				n.mu.Unlock()
 				return
 			}
 		}
 
 		// If any inputs have errors, stop.
 		for _, inputNode := range n.Inputs() {
-			if !inputNode.ResultAvailable {
-				n.Result = NodeActionResult{Err: fmt.Errorf("input node %s produced no result", inputNode)}
-				n.ResultAvailable = true
+			res, ok := inputNode.GetResult()
+			if !ok {
+				n.mu.Lock()
+				n.result = NodeActionResult{Err: fmt.Errorf("input node %s produced no result", inputNode)}
+				n.resultAvailable = true
+				n.mu.Unlock()
 				return
 			}
-			if inputNode.Result.Err != nil {
-				n.Result = NodeActionResult{Err: fmt.Errorf("input node %s failed: %w", inputNode, inputNode.Result.Err)}
-				n.ResultAvailable = true
+			if res.Err != nil {
+				n.mu.Lock()
+				n.result = NodeActionResult{Err: fmt.Errorf("input node %s failed: %w", inputNode, res.Err)}
+				n.resultAvailable = true
+				n.mu.Unlock()
 				return
 			}
 		}
@@ -221,31 +244,60 @@ func (n *Node) Run(ctx context.Context, rerunInputs bool) <-chan struct{} {
 		select {
 		case res := <-resCh:
 			if res.Err == nil && len(res.Outputs) != len(n.OutputPorts) {
-				n.Result = NodeActionResult{Err: fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs))}
-				n.ResultAvailable = true
+				n.mu.Lock()
+				n.result = NodeActionResult{Err: fmt.Errorf("bad num outputs for %s: got %d, expected %d", n, len(n.OutputPorts), len(res.Outputs))}
+				n.resultAvailable = true
+				n.mu.Unlock()
 				return
 			}
 			for i, output := range res.Outputs {
 				if err := Typecheck(*output.Type, n.OutputPorts[i].Type); err != nil {
-					n.Result = NodeActionResult{Err: fmt.Errorf("bad value type for %s output port %d: %v", n, i, err)}
-					n.ResultAvailable = true
+					n.mu.Lock()
+					n.result = NodeActionResult{Err: fmt.Errorf("bad value type for %s output port %d: %v", n, i, err)}
+					n.resultAvailable = true
+					n.mu.Unlock()
 					return
 				}
 			}
-			n.Result = res
-			n.ResultAvailable = true
+			n.mu.Lock()
+			n.result = res
+			n.resultAvailable = true
+			n.mu.Unlock()
 		case <-ctx.Done():
-			n.Result = NodeActionResult{Err: ctx.Err()}
-			n.ResultAvailable = true
+			n.mu.Lock()
+			n.result = NodeActionResult{Err: ctx.Err()}
+			n.resultAvailable = true
+			n.mu.Unlock()
 		}
 	}()
 
-	return n.done
+	return doneCh
+}
+
+func (n *Node) IsResultAvailable() bool {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.resultAvailable
+}
+
+func (n *Node) GetResult() (NodeActionResult, bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.result, n.resultAvailable
+}
+
+func (n *Node) SetResult(res NodeActionResult) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.result = res
+	n.resultAvailable = true
 }
 
 func (n *Node) ClearResult() {
-	n.ResultAvailable = false
-	n.Result = NodeActionResult{}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.resultAvailable = false
+	n.result = NodeActionResult{}
 }
 
 func (n *Node) Inputs() []*Node {
@@ -307,13 +359,16 @@ func (n *Node) GetOutputValue(port int) (FlowValue, bool) {
 		panic(fmt.Errorf("node %s has no port %d", n, port))
 	}
 
-	if !n.ResultAvailable {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if !n.resultAvailable {
 		return FlowValue{}, false
 	}
-	if len(n.OutputPorts) != len(n.Result.Outputs) {
-		panic(fmt.Errorf("incorrect number of output values for %s: got %d, expected %d", n, len(n.Result.Outputs), len(n.OutputPorts)))
+	if len(n.OutputPorts) != len(n.result.Outputs) {
+		panic(fmt.Errorf("incorrect number of output values for %s: got %d, expected %d", n, len(n.result.Outputs), len(n.OutputPorts)))
 	}
-	return n.Result.Outputs[port], true
+	return n.result.Outputs[port], true
 }
 
 // Update cached positions and rectangles and so on based on layout

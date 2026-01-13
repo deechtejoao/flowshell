@@ -1102,8 +1102,7 @@ func UIOverlay(topoErr error) {
 			}, nil)
 
 			if selectedNode, ok := GetSelectedNode(); ok {
-				if selectedNode.ResultAvailable {
-					result := selectedNode.Result
+				if result, ok := selectedNode.GetResult(); ok {
 					if result.Err == nil {
 						for outputIndex, output := range result.Outputs {
 							port := selectedNode.OutputPorts[outputIndex]
@@ -1263,7 +1262,9 @@ func afterLayout() {
 func renderWorldOverlays() {
 	// Render wires
 	for _, wire := range currentGraph.Wires {
-		color := util.Tern(wire.StartNode.ResultAvailable && wire.StartNode.Result.Err != nil, Red, LightGray)
+		res, ok := wire.StartNode.GetResult()
+		isErr := ok && res.Err != nil
+		color := util.Tern(isErr, Red, LightGray)
 		rl.DrawLineBezier(
 			rl.Vector2(wire.StartNode.OutputPortPositions[wire.StartPort]),
 			rl.Vector2(wire.EndNode.InputPortPositions[wire.EndPort]),
@@ -1398,7 +1399,8 @@ func UINode(node *Node, disabled bool) {
 		Color: Gray,
 		Width: BA,
 	}
-	if node.Result.Err != nil {
+	res, _ := node.GetResult()
+	if res.Err != nil {
 		border = clay.B{
 			Color: Red,
 			Width: BA2,
