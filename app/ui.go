@@ -342,20 +342,40 @@ func processInput() {
 		}
 
 		if !clickedNode {
-			ContextMenu = nil // Close if clicking background
-
-			isGroup := false
-			for _, grp := range currentGraph.Groups {
-				if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
-					isGroup = true
-					break
+			// If not clicking a node, check if we right-clicked the background to open global context menu
+			if rl.IsMouseButtonPressed(rl.MouseButtonRight) && !IsHoveringUI {
+				items := []ContextMenuItem{
+					{Label: "Paste", Action: func() {
+						PushHistory()
+						Paste()
+					}},
+					{Label: "Auto Layout", Action: func() {
+						PushHistory()
+						LayoutGraph(currentGraph)
+					}},
 				}
-			}
 
-			if !isGroup {
-				NewNodeName = ""
-				id := clay.ID("NewNodeName")
-				UIFocus = &id
+				ContextMenu = &ContextMenuState{
+					Pos:   V2(rl.GetMousePosition()),
+					Items: items,
+				}
+			} else if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+				// Only clear context menu / focus on Left Click
+				ContextMenu = nil
+
+				isGroup := false
+				for _, grp := range currentGraph.Groups {
+					if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
+						isGroup = true
+						break
+					}
+				}
+
+				if !isGroup {
+					NewNodeName = ""
+					id := clay.ID("NewNodeName")
+					UIFocus = &id
+				}
 			}
 		}
 	} else if rl.IsMouseButtonPressed(rl.MouseLeftButton) && !IsHoveringPanel && !IsHoveringUI {

@@ -56,7 +56,6 @@
 - [x] Action Tests: Add unit tests for `NodeAction.Run` logic independent of the UI/Raylib.
 - [x] Linter: Add `golangci-lint` configuration.
 - [x] Clay Optimization: Search `clay/clay.h` for performance optimizations (SIMD/Culling confirmed active).
-
 - [x] Race Condition Safety: `Node` struct fields (especially `Running` and `Result`) are accessed by multiple goroutines without protection. Use `sync.Mutex` or `atomic` values. `app/node.go`
 - [x] Panic Stack Traces: `Run` method's `recover()` block swallows stack traces. Use `debug.Stack()` for better debugging. `app/node.go`
 - [x] True Streaming Support: Current "Large File Handling" loads files into RAM (or caps them). Implement `io.Reader` based data passing between nodes for true large file support. `app/node_loadfile.go`, `app/node_runprocess.go`
@@ -66,4 +65,4 @@
 - [x] Data Visualization: Native nodes for Line Charts, Bar Charts, and Scatter Plots using Raylib.
 - [x] Interactive Input: "Prompt User" node to ask for text/confirmation during execution.
 - [x] Undo/Redo Properties: Extend Undo/Redo to cover node property changes (currently handles graph topology).
-- [ ] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).
+- [x] Auto-Layout: Visual graph auto-layout algorithm (Layered/Sugiyama method).
