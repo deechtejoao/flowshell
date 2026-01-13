@@ -44,7 +44,7 @@
 - [x] Copy/Paste: Clipboard support for nodes and sub-graphs (serializing to JSON/text on clipboard).
 - [x] Zoom: Canvas zooming support.
 - [ ] Minimap: Navigation aid for large flows.
-- [ ] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
+- [x] Context Menu: Right-click actions for nodes and canvas (Delete, Clone, Run, etc.).
 - [ ] Undo/Redo: Global history stack for graph mutations.
 - [ ] Mouse Events: Hook into global system for mouse events. `app/ui.go:602`
 - [ ] Rendering: Custom rendering implementation. `app/render.go:86`

@@ -205,6 +205,39 @@ func DeleteSelectedNodes() {
 	selectedNodeID = 0
 }
 
+func DuplicateNode(original *Node) {
+	// Clone via Serialization
+	s := NewEncoder(1) // version 1
+	original.Serialize(s)
+	data := s.Bytes()
+
+	sRead := NewDecoder(data)
+
+	// Create new "empty" node structure
+	clone := &Node{}
+	// We need to initialize Action via helper or manually meta-alloc?
+	// Serialize() on decode expects n.Action to be allocated?
+	// No, the default Serialize implementation allocates it:
+	// n.Action = meta.Alloc()
+	// So we just need an empty Node.
+
+	if clone.Serialize(sRead) {
+		// Post-processing
+		clone.ID = 0 // Will be assigned by AddNode
+		clone.Graph = nil
+		clone.Pos = V2(clay.V2(clone.Pos).Plus(clay.V2{X: 20, Y: 20})) // Offset
+		clone.Pos = SnapToGrid(clone.Pos)
+		clone.outputState = nil // Reset state
+		clone.Running = false
+		clone.Valid = false
+
+		currentGraph.AddNode(clone)
+		SelectNode(clone.ID, false)
+	} else {
+		fmt.Println("Failed to duplicate node: serialization error")
+	}
+}
+
 var UICursor rl.MouseCursor
 var UIFocus *clay.ElementID
 
@@ -223,19 +256,61 @@ func IsFocused(id clay.ElementID) bool {
 
 func processInput() {
 	if rl.IsMouseButtonPressed(rl.MouseRightButton) && !IsHoveringPanel && !IsHoveringUI {
-		isGroup := false
-		for _, grp := range currentGraph.Groups {
-			if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
-				isGroup = true
-				break
+		// Check if we clicked on a node for Context Menu
+		clickedNode := false
+		for _, n := range currentGraph.Nodes {
+			// Hit test using DragRect (header) or full body if we can guess it?
+			// DragRect is safest for "Select/Interact".
+			// But user might right click the body.
+			// Let's rely on clay.GetElementData for the node's main ID "Node<ID>"
+			if data, ok := clay.GetElementData(n.ClayID()); ok {
+				if rl.CheckCollisionPointRec(rl.GetMousePosition(), rl.Rectangle(data.BoundingBox)) {
+					clickedNode = true
+
+					// Open Context Menu
+					items := []ContextMenuItem{
+						{Label: "Run", Action: func() { n.Run(context.Background(), false) }},
+						{Label: util.Tern(n.Pinned, "Unpin", "Pin"), Action: func() { n.Pinned = !n.Pinned }},
+						{Label: "Duplicate", Action: func() { DuplicateNode(n) }},
+						{Label: "Delete", Action: func() {
+							DeleteNode(n.ID)
+							if IsNodeSelected(n.ID) {
+								delete(selectedNodes, n.ID)
+								selectedNodeID = 0
+							}
+						}},
+					}
+
+					ContextMenu = &ContextMenuState{
+						Pos:    V2(rl.GetMousePosition()),
+						NodeID: n.ID,
+						Items:  items,
+					}
+					break
+				}
 			}
 		}
 
-		if !isGroup {
-			NewNodeName = ""
-			id := clay.ID("NewNodeName")
-			UIFocus = &id
+		if !clickedNode {
+			ContextMenu = nil // Close if clicking background
+
+			isGroup := false
+			for _, grp := range currentGraph.Groups {
+				if rl.CheckCollisionPointRec(rl.GetMousePosition(), grp.Rect) {
+					isGroup = true
+					break
+				}
+			}
+
+			if !isGroup {
+				NewNodeName = ""
+				id := clay.ID("NewNodeName")
+				UIFocus = &id
+			}
 		}
+	} else if rl.IsMouseButtonPressed(rl.MouseLeftButton) && !IsHoveringPanel && !IsHoveringUI {
+		// Close context menu on left click outside
+		ContextMenu = nil
 	}
 
 	// Double check to clear focus if clicking background
@@ -601,6 +676,19 @@ var NewNodeName string
 var ShowLoadConfirmation bool
 var ConnectionError string
 var ConnectionErrorTime time.Time
+
+var ContextMenu *ContextMenuState
+
+type ContextMenuItem struct {
+	Label  string
+	Action func()
+}
+
+type ContextMenuState struct {
+	Pos    V2
+	NodeID int
+	Items  []ContextMenuItem
+}
 
 var OutputWindowWidth float32 = windowWidth * 0.30
 
@@ -1080,6 +1168,14 @@ func UIOverlay(topoErr error) {
 				}, func() {
 					clay.TEXT(ConnectionError, clay.TextElementConfig{TextColor: White, FontID: InterBold})
 				})
+			}
+
+			// Render Context Menu
+			if ContextMenu != nil {
+				// Close if clicking outside (handled in processInput generally, but let's be safe?)
+				// Actually clay.OnHover only works if we cover screen?
+				// processInput handles the "click outside" via global mouse check.
+				UIContextMenu()
 			}
 		}
 	})
@@ -1818,4 +1914,45 @@ func FormatBytes(n int64) string {
 	} else {
 		return fmt.Sprintf("%.1f TB", float32(n)/1_000_000_000_000)
 	}
+}
+
+func UIContextMenu() {
+	if ContextMenu == nil {
+		return
+	}
+	// Use ZTOP for the menu. Since ZTOP is MaxInt16, we can't go higher.
+	// We rely on the fact that this is rendered late in the frame (overlay).
+	WithZIndex(ZTOP, func() {
+		clay.CLAY(clay.ID("ContextMenu"), clay.EL{
+			Floating: clay.FloatingElementConfig{
+				AttachTo: clay.AttachToRoot,
+				Offset:   clay.Vector2(ContextMenu.Pos),
+				ZIndex:   ZTOP,
+			},
+			Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Padding: PA1},
+			BackgroundColor: DarkGray,
+			Border:          clay.BorderElementConfig{Color: Gray, Width: BA},
+			CornerRadius:    RA1,
+		}, func() {
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				IsHoveringUI = true
+			}, nil)
+
+			for i, item := range ContextMenu.Items {
+				UIButton(clay.IDI("ContextItem", i), UIButtonConfig{
+					El: clay.EL{
+						Layout:          clay.LAY{Padding: PVH(S2, S3), Sizing: GROWH},
+						BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+					},
+					OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+						item.Action()
+						ContextMenu = nil
+					},
+					ZIndex: ZTOP,
+				}, func() {
+					clay.TEXT(item.Label, clay.TextElementConfig{TextColor: White})
+				})
+			}
+		})
+	})
 }
