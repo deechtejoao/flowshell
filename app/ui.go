@@ -1,4 +1,4 @@
-﻿package app
+package app
 
 import (
 	"context"
@@ -510,9 +510,22 @@ func processInput() {
 			core.PushHistory()
 			for i, filename := range files {
 				n := nodes.NewLoadFileNode(filename)
-				n.Pos = V2(clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 20, Y: 20}.Times(float32(i))))
+				// Initial position at mouse
+				pos := V2(rl.GetMousePosition())
+
+				// Apply offset: 0 for first node, then move down (y-axis) for subsequent nodes
+				// NodeMinWidth + GridSize for spacing, or just vertical spacing?
+				// User asked for "align in vertical with a little space".
+				// Let's assume a vertical stack.
+				// Height is tricky without rendering, but let's assume ~150px per node.
+				const EstimatedNodeHeight = 180
+
+				pos = V2(clay.V2(pos).Plus(clay.V2{X: 0, Y: float32(i * EstimatedNodeHeight)}))
+
 				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
-					n.Pos = SnapToGrid(n.Pos)
+					n.Pos = SnapToGrid(pos)
+				} else {
+					n.Pos = pos
 				}
 				CurrentGraph.AddNode(n)
 				SelectNode(n.ID, i > 0)
@@ -1183,11 +1196,10 @@ func UIOverlay(topoErr error) {
 										testRect.Y = pos.Y
 									}
 								} else {
-									// Place next to previous
-									// We don't know the exact width until first frame, but we can guess or use a standard width
-									// NodeMinWidth is 360.
+									// Place below previous (vertical alignment)
+									// We don't know the exact height until first frame, but we can guess or use a standard height
 									pos = prevPos
-									pos.X += NodeMinWidth + GridSize*2 // Add some padding
+									pos.Y += 110 // Vertical spacing
 								}
 
 								newNode.Pos = pos
@@ -1441,6 +1453,9 @@ func UIOverlay(topoErr error) {
 			})
 		})
 
+		// Spacer to push Output to the right
+		clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}})
+
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
 			return clay.EL{
 				Layout: clay.LAY{
@@ -1448,6 +1463,8 @@ func UIOverlay(topoErr error) {
 					Sizing:          clay.Sizing{Width: clay.SizingFixed(OutputWindowWidth), Height: clay.SizingGrow(1, 0)},
 					Padding:         core.PA2,
 				},
+				BackgroundColor: core.Charcoal,
+				Border:          clay.B{Width: clay.BW{Left: core.BA}, Color: core.Gray},
 				Clip: clay.ClipElementConfig{
 					Vertical:    true,
 					Horizontal:  true,

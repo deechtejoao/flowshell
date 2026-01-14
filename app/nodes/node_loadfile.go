@@ -1,4 +1,4 @@
-﻿package nodes
+package nodes
 
 import (
 	"context"
@@ -200,6 +200,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 		}
 
 		var paths []string
+		fmt.Printf("LoadFile: Starting execution\n")
 		wireVal, hasWire, err := n.GetInputValue(0)
 		if err != nil {
 			res.Err = err
@@ -233,6 +234,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 
 		switch format := c.Format.GetSelectedOption().Value; format {
 		case "raw":
+			fmt.Printf("LoadFile: Mode RAW\n")
 			var outputs []core.FlowValue
 			for _, path := range paths {
 				// Check context
@@ -303,6 +305,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 			}
 
 		case "csv":
+			fmt.Printf("LoadFile: Mode CSV, paths: %v\n", paths)
 			var allHeader []string
 			var allDataRows [][]string
 			var colIsInt []bool
@@ -318,9 +321,11 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 
 				f, err := os.Open(path)
 				if err != nil {
+					fmt.Printf("LoadFile: Failed to open %s: %v\n", path, err)
 					res.Err = fmt.Errorf("failed to open %s: %w", path, err)
 					return
 				}
+				fmt.Printf("LoadFile: Opened %s\n", path)
 				r := csv.NewReader(f)
 				r.FieldsPerRecord = -1
 
@@ -519,6 +524,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 					TableValue: tableRows,
 				}},
 			}
+			fmt.Printf("LoadFile: CSV done, rows: %d\n", len(tableRows))
 		case "json":
 			var outputs []core.FlowValue
 			for _, path := range paths {
