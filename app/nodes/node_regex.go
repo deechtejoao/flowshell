@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -33,7 +33,7 @@ func (a *RegexMatchAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *RegexMatchAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("RegexMatch", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
@@ -118,7 +118,7 @@ func (a *RegexFindAllAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *RegexFindAllAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("RegexFindAll", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
@@ -204,7 +204,7 @@ func (a *RegexReplaceAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *RegexReplaceAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("RegexReplace", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
@@ -292,7 +292,7 @@ func (a *RegexSplitAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *RegexSplitAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("RegexSplit", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{

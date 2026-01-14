@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
-	"github.com/bvisness/flowshell/app/core"
 )
 
 // GEN:NodeAction
@@ -36,7 +36,7 @@ var _ core.NodeAction = &SelectColumnsAction{}
 
 func (c *SelectColumnsAction) UpdateAndValidate(n *core.Node) {
 	n.Valid = true
-	
+
 	input, wired := n.GetInputWire(0)
 	if !wired {
 		n.Valid = false
@@ -58,16 +58,16 @@ func (c *SelectColumnsAction) UpdateAndValidate(n *core.Node) {
 			}
 		}
 	}
-	
+
 	// If nothing selected, maybe default to all? Or none?
-	// Let's say if list is empty, select all by default? 
+	// Let's say if list is empty, select all by default?
 	// Or maybe user explicitly wants empty table.
 	// For now, if SelectedColumns is nil/empty, we might want to initialize it with all columns if this is the first run?
 	// But UpdateAndValidate is called every frame. We shouldn't mutate state here if possible, or be careful.
 	// Actually, initializing on first connect is a nice UX.
-	
+
 	// Let's rely on UI to let user select.
-	
+
 	n.OutputPorts[0].Type = core.FlowType{
 		Kind: core.FSKindTable,
 		ContainedType: &core.FlowType{
@@ -79,8 +79,8 @@ func (c *SelectColumnsAction) UpdateAndValidate(n *core.Node) {
 
 func (c *SelectColumnsAction) UI(n *core.Node) {
 	input, wired := n.GetInputWire(0)
-	
-	clay.CLAY(clay.IDI("SelectColumnsUI", n.ID), clay.EL{
+
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          core.GROWH,
@@ -106,10 +106,10 @@ func (c *SelectColumnsAction) UI(n *core.Node) {
 				},
 			}, func() {
 				clay.TEXT("Columns:", clay.TextElementConfig{TextColor: core.LightGray, FontSize: core.F1})
-				
+
 				for i, field := range input.Type().ContainedType.Fields {
 					isSelected := slices.Contains(c.SelectedColumns, field.Name)
-					
+
 					core.UIButton(clay.IDI(fmt.Sprintf("SelectColBtn%d", i), n.ID), core.UIButtonConfig{
 						El: clay.EL{
 							Layout: clay.LAY{ChildGap: core.S2, ChildAlignment: core.YCENTER},
@@ -158,7 +158,7 @@ func (c *SelectColumnsAction) RunContext(ctx context.Context, n *core.Node) <-ch
 			return
 		default:
 		}
-		
+
 		input, ok, err := n.GetInputValue(0)
 		if !ok || err != nil {
 			done <- core.NodeActionResult{Err: err}
@@ -173,7 +173,7 @@ func (c *SelectColumnsAction) RunContext(ctx context.Context, n *core.Node) <-ch
 		// Map selected columns to indices
 		var colIndices []int
 		var newFields []core.FlowField
-		
+
 		if input.Type.ContainedType != nil {
 			for i, field := range input.Type.ContainedType.Fields {
 				if slices.Contains(c.SelectedColumns, field.Name) {

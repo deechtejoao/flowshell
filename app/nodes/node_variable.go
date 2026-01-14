@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -35,7 +35,7 @@ func (a *GetVariableAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *GetVariableAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("GetVariable", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{

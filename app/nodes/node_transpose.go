@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -63,7 +63,7 @@ func (c *TransposeAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (c *TransposeAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("TransposeUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          core.GROWH,

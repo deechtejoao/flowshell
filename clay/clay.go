@@ -27,14 +27,11 @@ import "C"
 
 import (
 	"image/color"
-	"runtime"
 	"runtime/cgo"
 	"unsafe"
 
 	"github.com/bvisness/flowshell/util"
 )
-
-var pinner runtime.Pinner
 
 // ----------------------
 // Macros

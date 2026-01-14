@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -42,7 +42,7 @@ func (c *ValueAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (c *ValueAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("ValueUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         core.GROWH,
 			ChildAlignment: core.YCENTER,

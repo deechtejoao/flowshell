@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -38,7 +38,7 @@ func (a *HTTPRequestAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *HTTPRequestAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("HTTPRequest", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{

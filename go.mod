@@ -12,6 +12,7 @@ require (
 	github.com/go-stack/stack v1.8.1
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/robotn/gohook v0.42.3
+	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
@@ -20,15 +21,22 @@ require (
 
 require (
 	github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf // indirect
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/antchfx/xpath v1.3.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dchest/jsmin v0.0.0-20220218165748-59f39799265f // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
+	github.com/gen2brain/dlgs v0.0.0-20220603100644-40c77870fa8d // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/gopherjs/gopherjs v1.17.2 // indirect
+	github.com/josephspurrier/goversioninfo v1.4.1 // indirect
+	github.com/ncruces/zenity v0.10.14 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627 // indirect
+	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/vcaesar/keycode v0.10.1 // indirect
+	golang.org/x/image v0.20.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

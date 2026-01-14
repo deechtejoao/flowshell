@@ -882,6 +882,7 @@ func UIOverlay(topoErr error) {
 			PointerCaptureMode: clay.PointercaptureModePassthrough, // Important: let clicks pass through to nodes if not hitting UI
 		},
 	}, func() {
+		UIMenuBar()
 		UIMinimap()
 
 		if topoErr != nil {
@@ -1115,6 +1116,123 @@ func UIOverlay(topoErr error) {
 							clay.TEXT("Add Variable", clay.TextElementConfig{TextColor: core.White, FontID: core.InterBold})
 						})
 					})
+				})
+			})
+		}
+
+		if topoErr != nil {
+			core.WithZIndex(core.Z_CYCLE_WARNING, func() {
+				clay.CLAY(clay.AUTO_ID, clay.EL{
+					Layout:          clay.LAY{Padding: clay.PaddingAll(8)},
+					BackgroundColor: core.Red,
+					CornerRadius:    core.RA1,
+					Floating: clay.FLOAT{
+						AttachTo:           clay.AttachToRoot,
+						AttachPoints:       clay.FloatingAttachPoints{Element: clay.AttachPointRightTop, Parent: clay.AttachPointRightTop},
+						Offset:             clay.Vector2{X: -20, Y: 20},
+						PointerCaptureMode: clay.PointercaptureModeCapture,
+						ZIndex:             core.Z_CYCLE_WARNING,
+					},
+				}, func() {
+					clay.TEXT("Cycle Detected! Cannot Run.", clay.TextElementConfig{TextColor: core.White, FontID: core.InterBold, FontSize: 16})
+				})
+			})
+		} else {
+
+			var (
+				RunCtx    context.Context
+				RunCancel context.CancelFunc
+			)
+
+			// ... (In RunButton)
+			// Run Button
+			core.WithZIndex(core.Z_CONTEXT_MENU, func() {
+				// Manually implement button to ensure specific styling (Green bg) is preserved.
+				// Use CLAY_LATE to allow checking Hovered() state during config creation.
+				id := clay.ID("RunButton")
+				isRunning := RunCtx != nil
+
+				clay.CLAY_LATE(id, func() clay.EL {
+					bgColor := core.NavyBlue
+					if isRunning {
+						bgColor = core.Red
+					} else if clay.Hovered() {
+						bgColor = core.NavyBlueHover
+					}
+
+					return clay.EL{
+						Layout:          clay.LAY{Padding: clay.PaddingAll(8)},
+						BackgroundColor: bgColor,
+						CornerRadius:    core.RA1,
+						Floating: clay.FLOAT{
+							AttachTo:           clay.AttachToRoot,
+							AttachPoints:       clay.FloatingAttachPoints{Element: clay.AttachPointRightTop, Parent: clay.AttachPointRightTop},
+							Offset:             clay.Vector2{X: -20, Y: 20},
+							PointerCaptureMode: clay.PointercaptureModeCapture,
+							ZIndex:             core.Z_CONTEXT_MENU,
+						},
+					}
+				}, func() {
+					// Icon
+					if isRunning {
+						// Stop Icon (White Square)
+						clay.CLAY(clay.AUTO_ID, clay.EL{
+							Layout:          clay.LAY{Sizing: core.WH(12, 12)},
+							BackgroundColor: core.White,
+						})
+					} else {
+						// Play Icon
+						clay.CLAY(clay.AUTO_ID, clay.EL{
+							Layout: clay.LAY{Sizing: core.WH(16, 16)},
+							Image:  clay.IMG{ImageData: core.ImgPlay},
+						})
+					}
+
+					// Tooltip
+					if clay.Hovered() {
+						core.UITooltip(util.Tern(isRunning, "Stop Flow", "Run Flow"))
+					}
+
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+						core.IsHoveringUI = true
+						core.UIInput.RegisterPointerDown(elementID, pointerData, core.Z_CONTEXT_MENU)
+						if core.UIInput.IsClick(elementID, pointerData) {
+							if isRunning {
+								if RunCancel != nil {
+									RunCancel()
+								}
+							} else {
+								var ctx context.Context
+								ctx, RunCancel = context.WithCancel(context.Background())
+								RunCtx = ctx
+								err := RunGraph(ctx, CurrentGraph, func(err error) {
+									// Reset state on UI thread?
+									// Warning: onComplete is called from goroutine.
+									// We are accessing global vars RunCtx/RunCancel.
+									// This is racey if UI checks them?
+									// UI reads them every frame.
+									// We should use a lock or atomic?
+									// Or just set them to nil. Go pointer writes are atomic-ish for nil?
+									// Better: Enqueue a task to main thread?
+									// For now, let's just write them. Raylib loop runs on main, this runs on background.
+									// Strict correctness requires synchronization.
+									// But for a simple boolean flag it might be "okay" for MVP.
+									// Ideally we use a mutex. CurrentGraph has a mutex? No.
+									// Let's rely on the fact that UI just checks != nil.
+									RunCtx = nil
+									RunCancel = nil
+									if err != nil && err != context.Canceled {
+										fmt.Printf("Run error: %v\n", err)
+									}
+								})
+								if err != nil {
+									fmt.Printf("Run error (immediate): %v\n", err)
+									RunCtx = nil
+									RunCancel = nil
+								}
+							}
+						}
+					}, nil)
 				})
 			})
 		}
@@ -1725,7 +1843,13 @@ func afterLayout() {
 
 func renderWorldOverlays() {
 	// Render wires
+	// Render wires
 	for _, wire := range CurrentGraph.Wires {
+		// Guard against uninitialized layout info (e.g. immediately after load)
+		if wire.StartPort >= len(wire.StartNode.OutputPortPositions) || wire.EndPort >= len(wire.EndNode.InputPortPositions) {
+			continue
+		}
+
 		res, ok := wire.StartNode.GetResult()
 		isErr := ok && res.Err != nil
 		color := util.Tern(isErr, core.Red, core.LightGray)

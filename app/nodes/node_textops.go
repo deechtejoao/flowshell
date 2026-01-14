@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"github.com/bvisness/flowshell/app/core"
 )
 
 // --- Join Text ---
@@ -38,7 +38,7 @@ func (a *JoinTextAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *JoinTextAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("JoinText", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
@@ -122,7 +122,7 @@ var _ core.NodeAction = &SplitTextAction{}
 
 func (a *SplitTextAction) UpdateAndValidate(n *core.Node) { n.Valid = true }
 func (a *SplitTextAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("SplitText", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Row1", n.ID), clay.EL{
@@ -206,7 +206,7 @@ var _ core.NodeAction = &CaseConvertAction{}
 func (a *CaseConvertAction) UpdateAndValidate(n *core.Node) { n.Valid = true }
 
 func (a *CaseConvertAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("CaseUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("CaseRow1", n.ID), clay.EL{
@@ -303,7 +303,7 @@ var _ core.NodeAction = &FormatStringAction{}
 func (a *FormatStringAction) UpdateAndValidate(n *core.Node) { n.Valid = true }
 
 func (a *FormatStringAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("FmtUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("FmtRow1", n.ID), clay.EL{

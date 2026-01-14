@@ -9,8 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -50,7 +50,7 @@ func (c *SaveFileAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (c *SaveFileAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("SaveFileContainer", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:          core.GROWH,
 			ChildAlignment:  core.YCENTER,

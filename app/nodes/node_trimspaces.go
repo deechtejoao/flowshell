@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
-	"github.com/bvisness/flowshell/app/core"
 )
 
 // GEN:NodeAction
@@ -63,7 +63,7 @@ func (c *TrimSpacesAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (l *TrimSpacesAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("TrimSpacesUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			Sizing:         core.GROWH,
 			ChildAlignment: core.YCENTER,

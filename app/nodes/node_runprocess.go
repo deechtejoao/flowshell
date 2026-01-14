@@ -80,7 +80,7 @@ func (c *RunProcessAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (c *RunProcessAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("RunProcessUI", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{
 			LayoutDirection: clay.TopToBottom,
 			Sizing:          core.GROWH,

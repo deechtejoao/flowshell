@@ -20,6 +20,8 @@ var Red = clay.Color{R: 214, G: 25, B: 50, A: 255}
 var Green = clay.Color{R: 61, G: 159, B: 72, A: 255}
 var Blue = clay.Color{R: 11, G: 88, B: 183, A: 255}
 var Yellow = clay.Color{R: 242, G: 199, B: 68, A: 255}
+var NavyBlue = clay.Color{R: 10, G: 40, B: 90, A: 255} // Custom Navy
+var NavyBlueHover = clay.Color{R: 30, G: 60, B: 140, A: 255}
 
 var PlayButtonGreen = clay.Color{R: 61, G: 159, B: 72, A: 255}
 var HoverWhite = clay.Color{R: 255, G: 255, B: 255, A: 20}

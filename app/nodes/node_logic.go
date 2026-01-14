@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -33,7 +33,7 @@ func (a *IfElseAction) UpdateAndValidate(n *core.Node) {
 }
 
 func (a *IfElseAction) UI(n *core.Node) {
-	clay.CLAY(clay.IDI("IfElseNode", n.ID), clay.EL{
+	clay.CLAY(clay.IDI("NodeContent", n.ID), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		clay.TEXT("Routes 'Value' based on 'Condition'", clay.TextElementConfig{TextColor: core.LightGray})

@@ -58,7 +58,6 @@ func Main() {
 	if err != nil {
 		fmt.Printf("Error loading plugins: %v\n", err)
 	} else {
-
 		nodeTypes = append(nodeTypes, pluginNodes...)
 	}
 

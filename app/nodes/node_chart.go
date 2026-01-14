@@ -5,10 +5,10 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/bvisness/flowshell/app/core"
 )
 
 type ChartType int
@@ -196,7 +196,7 @@ func (c *LineChartAction) UpdateAndValidate(n *core.Node) {
 func (c *LineChartAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeLine)
 
-	clay.CLAY(clay.IDI("LineChartNode", n.ID), clay.EL{
+	clay.CLAY(n.ClayID(), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
@@ -212,6 +212,7 @@ func (c *LineChartAction) UI(n *core.Node) {
 			Custom:          clay.CustomElementConfig{CustomData: renderData},
 		}, func() {})
 	})
+	core.UIInputPort(n, 0)
 	core.UIOutputPort(n, 0)
 }
 
@@ -266,7 +267,7 @@ func (c *BarChartAction) UpdateAndValidate(n *core.Node) {
 func (c *BarChartAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeBar)
 
-	clay.CLAY(clay.IDI("BarChartNode", n.ID), clay.EL{
+	clay.CLAY(n.ClayID(), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
@@ -282,6 +283,7 @@ func (c *BarChartAction) UI(n *core.Node) {
 			Custom:          clay.CustomElementConfig{CustomData: renderData},
 		}, func() {})
 	})
+	core.UIInputPort(n, 0)
 	core.UIOutputPort(n, 0)
 }
 
@@ -336,7 +338,7 @@ func (c *ScatterPlotAction) UpdateAndValidate(n *core.Node) {
 func (c *ScatterPlotAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeScatter)
 
-	clay.CLAY(clay.IDI("ScatterPlotNode", n.ID), clay.EL{
+	clay.CLAY(n.ClayID(), clay.EL{
 		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
@@ -352,6 +354,7 @@ func (c *ScatterPlotAction) UI(n *core.Node) {
 			Custom:          clay.CustomElementConfig{CustomData: renderData},
 		}, func() {})
 	})
+	core.UIInputPort(n, 0)
 	core.UIOutputPort(n, 0)
 }
 
