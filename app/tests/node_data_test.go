@@ -165,20 +165,20 @@ func TestTransposeNode(t *testing.T) {
 
 	assert.NoError(t, res.Err)
 	assert.Len(t, res.Outputs, 1)
-	
+
 	outTable := res.Outputs[0].TableValue
 	// Should be 3x2
 	// Row 0 Row 1
 	// a     d
 	// b     e
 	// c     f
-	
+
 	assert.Len(t, outTable, 3)
 	assert.Len(t, outTable[0], 2)
-	
+
 	assert.Equal(t, "a", string(outTable[0][0].Value.BytesValue))
 	assert.Equal(t, "d", string(outTable[0][1].Value.BytesValue))
-	
+
 	assert.Equal(t, "b", string(outTable[1][0].Value.BytesValue))
 	assert.Equal(t, "f", string(outTable[2][1].Value.BytesValue))
 }
@@ -194,7 +194,7 @@ func TestFilterEmptyNode(t *testing.T) {
 
 	row1 := []core.FlowValueField{{Name: "col1", Value: core.NewStringValue("kept")}}
 	row2 := []core.FlowValueField{{Name: "col1", Value: core.NewStringValue("")}}
-	
+
 	tableVal := core.FlowValue{Type: tableType, TableValue: [][]core.FlowValueField{row1, row2}}
 
 	setupGraph(node, tableVal)
@@ -208,4 +208,54 @@ func TestFilterEmptyNode(t *testing.T) {
 	assert.NoError(t, res.Err)
 	assert.Len(t, res.Outputs[0].TableValue, 1)
 	assert.Equal(t, "kept", string(res.Outputs[0].TableValue[0][0].Value.BytesValue))
+}
+
+func TestMapNode(t *testing.T) {
+	// 1. Create Subgraph: Input -> JoinText(" Sub") -> Output
+	subB := core.NewGraphBuilder()
+	input := subB.Add(nodes.NewGraphInputNode())
+	output := subB.Add(nodes.NewGraphOutputNode())
+
+	// We want to append " Sub" to the input string.
+	// JoinText joins a list.
+	// Or maybe just use a simpler node like CaseConvert as a proxy for "operation".
+	// Let's use CaseConvert to Upper.
+
+	convert := subB.Add(nodes.NewCaseConvertNode())
+	convert.Node.Action.(*nodes.CaseConvertAction).Mode = nodes.CaseUpper
+
+	input.To(convert).To(output)
+
+	subGraph := subB.Graph
+
+	// 2. Create Map Node
+	node := nodes.NewMapNode()
+	action := node.Action.(*nodes.MapAction)
+	action.CachedGraph = subGraph // Inject subgraph
+
+	// 3. Create Input List ["a", "b", "c"]
+	vals := []core.FlowValue{
+		core.NewStringValue("a"),
+		core.NewStringValue("b"),
+		core.NewStringValue("c"),
+	}
+	list := core.NewListValue(core.FlowType{Kind: core.FSKindBytes}, vals)
+
+	setupGraph(node, list)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	// 4. Run
+	done := action.RunContext(ctx, node)
+	res := <-done
+
+	// 5. Verify
+	assert.NoError(t, res.Err)
+	assert.Len(t, res.Outputs, 1)
+	outList := res.Outputs[0].ListValue
+	assert.Len(t, outList, 3)
+	assert.Equal(t, "A", string(outList[0].BytesValue))
+	assert.Equal(t, "B", string(outList[1].BytesValue))
+	assert.Equal(t, "C", string(outList[2].BytesValue))
 }
