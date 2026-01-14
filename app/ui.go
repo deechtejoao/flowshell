@@ -1998,14 +1998,14 @@ func UIContextMenu() {
 	if ContextMenu == nil {
 		return
 	}
-	// Use core.Z_CONTEXT_MENU for the menu.
+	// Use core.ZTOP for the menu. Since core.ZTOP is MaxInt16, we can't go higher.
 	// We rely on the fact that this is rendered late in the frame (overlay).
-	core.WithZIndex(core.Z_CONTEXT_MENU, func() {
+	core.WithZIndex(core.ZTOP, func() {
 		clay.CLAY(clay.ID("ContextMenu"), clay.EL{
 			Floating: clay.FloatingElementConfig{
 				AttachTo: clay.AttachToRoot,
 				Offset:   clay.Vector2(ContextMenu.Pos),
-				ZIndex:   core.Z_CONTEXT_MENU,
+				ZIndex:   core.ZTOP,
 			},
 			Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Padding: core.PA1},
 			BackgroundColor: core.DarkGray,
@@ -2026,7 +2026,7 @@ func UIContextMenu() {
 						item.Action()
 						ContextMenu = nil
 					},
-					ZIndex: core.Z_CONTEXT_MENU,
+					ZIndex: core.ZTOP,
 				}, func() {
 					clay.TEXT(item.Label, clay.TextElementConfig{TextColor: core.White})
 				})
