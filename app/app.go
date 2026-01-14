@@ -1,4 +1,4 @@
-﻿package app
+package app
 
 import (
 	"fmt"
@@ -12,6 +12,8 @@ import (
 )
 
 const windowWidth = 1920
+
+var ShouldQuit bool
 
 func Main() {
 	CurrentSettings = LoadSettings()
@@ -79,7 +81,7 @@ func Main() {
 	}, nil)
 
 	rl.SetExitKey(0)
-	for !rl.WindowShouldClose() {
+	for !rl.WindowShouldClose() && !ShouldQuit {
 		frame()
 	}
 }

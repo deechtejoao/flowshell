@@ -52,6 +52,7 @@ func UIMenuBar() {
 					// Confirm discard?
 					core.PushHistory()
 					CurrentGraph = core.NewGraph()
+					CurrentFilename = ""
 				})
 				UIMenuDropdownItem("Open... (Ctrl+L)", func() {
 					ActiveMenu = ""
@@ -62,10 +63,32 @@ func UIMenuBar() {
 						core.PushHistory()
 						if g, err := core.LoadGraph(filename); err == nil {
 							CurrentGraph = g
+							CurrentFilename = filename
 						}
 					}
 				})
 				UIMenuDropdownItem("Save (Ctrl+S)", func() {
+					ActiveMenu = ""
+					if CurrentFilename != "" {
+						err := core.SaveGraph(CurrentFilename, CurrentGraph)
+						if err != nil {
+							fmt.Printf("Save error: %v\n", err)
+						}
+					} else {
+						filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+						if err != nil {
+							fmt.Printf("Save error: %v\n", err)
+						} else if ok {
+							if filepath.Ext(filename) != ".flow" {
+								filename += ".flow"
+							}
+							if err := core.SaveGraph(filename, CurrentGraph); err == nil {
+								CurrentFilename = filename
+							}
+						}
+					}
+				})
+				UIMenuDropdownItem("Save As... (Ctrl+Shift+S)", func() {
 					ActiveMenu = ""
 					filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
 					if err != nil {
@@ -74,13 +97,15 @@ func UIMenuBar() {
 						if filepath.Ext(filename) != ".flow" {
 							filename += ".flow"
 						}
-						_ = core.SaveGraph(filename, CurrentGraph)
+						if err := core.SaveGraph(filename, CurrentGraph); err == nil {
+							CurrentFilename = filename
+						}
 					}
 				})
 				clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingFixed(1)}}, BackgroundColor: core.Gray}) // Separator
 				UIMenuDropdownItem("Quit", func() {
-					// TODO: Clean exit
-					// os.Exit(0) // Maybe too harsh
+					ActiveMenu = ""
+					ShouldQuit = true
 				})
 			})
 
