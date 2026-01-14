@@ -35,6 +35,7 @@ func SnapToGrid(v V2) V2 {
 const NodeMinWidth = 360
 
 var CurrentGraph = core.NewGraph()
+var CurrentFilename string
 var History *HistoryManager
 
 func InitHistory() {
@@ -435,7 +436,7 @@ func processInput() {
 
 	// Load Graph
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
-		filename, ok, err := core.OpenFileDialog("Open Flow", map[string]string{"flow": "Flow Files"})
+		filename, ok, err := core.OpenFileDialog("Open Flow", "", map[string]string{"flow": "Flow Files"})
 		if err != nil {
 			fmt.Printf("Load error: %v\n", err)
 		} else if ok {

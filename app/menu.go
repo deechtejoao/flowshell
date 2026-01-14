@@ -55,7 +55,7 @@ func UIMenuBar() {
 				})
 				UIMenuDropdownItem("Open... (Ctrl+L)", func() {
 					ActiveMenu = ""
-					filename, ok, err := core.OpenFileDialog("Open Flow", map[string]string{"flow": "Flow Files"})
+					filename, ok, err := core.OpenFileDialog("Open Flow", "", map[string]string{"flow": "Flow Files"})
 					if err != nil {
 						fmt.Printf("Load error: %v\n", err)
 					} else if ok {

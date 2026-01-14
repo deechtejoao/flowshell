@@ -21,16 +21,10 @@ type LoadFileAction struct {
 
 	Format core.UIDropdown
 
-	// TODO: In reality this should be a more complex thing. For now we will just
-	// always parse them as floats. (The "right way" to do it would be to have
-	// CSV always parse as strings, but make it clear in the UI that they are
-	// strings, and then have the user convert them to numbers. Perhaps this
-	// could be done with a "Convert to Number" node that works on single
-	// strings, lists, records, and tables. But perhaps you'd want to be able to
-	// easily apply it to specific columns of a table? Maybe implicit conversion
-	// to number would be ok within the Aggregate node and other nodes that do
-	// math? Who knows. Very large design space. For now we just demo by always
-	// parsing as float.
+	// InferTypes controls whether CSV columns are automatically converted to
+	// Int64/Float64 based on their content. If false, all columns are loaded
+	// as strings (Bytes). Users can then use the "Convert Type" node to
+	// manually convert specific columns if needed.
 	InferTypes bool
 }
 
@@ -186,7 +180,7 @@ func (c *LoadFileAction) UI(n *core.Node) {
 
 			core.UIButton(clay.IDI("LoadFileBrowse", n.ID), core.UIButtonConfig{
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-					path, ok, err := core.OpenFileDialog("Load File", nil)
+					path, ok, err := core.OpenFileDialog("Load File", "", nil)
 					if err == nil && ok {
 						c.Path = path
 					}
