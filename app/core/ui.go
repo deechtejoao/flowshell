@@ -264,7 +264,7 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 						AttachTo:           clay.AttachToParent,
 						AttachPoints:       clay.FloatingAttachPoints{Parent: clay.AttachPointLeftBottom},
 						ZIndex:             32767,
-						PointerCaptureMode: clay.PointercaptureModePassthrough,
+						PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 					Border: clay.B{
 						Width: clay.BW{

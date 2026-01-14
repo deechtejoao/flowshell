@@ -116,12 +116,18 @@ func (c *LoadFileAction) UpdateAndValidate(n *core.Node) {
 
 	switch c.Format.GetSelectedOption().Value {
 	case "raw":
+		if len(n.OutputPorts) == 0 {
+			n.OutputPorts = []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindBytes}}}
+		}
 		if isListInput {
 			n.OutputPorts[0].Type = core.NewListType(core.FlowType{Kind: core.FSKindBytes})
 		} else {
 			n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindBytes}
 		}
 	case "stream":
+		if len(n.OutputPorts) == 0 {
+			n.OutputPorts = []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindStream}}}
+		}
 		if isListInput {
 			n.OutputPorts[0].Type = core.NewListType(core.FlowType{Kind: core.FSKindStream})
 		} else {
@@ -129,11 +135,18 @@ func (c *LoadFileAction) UpdateAndValidate(n *core.Node) {
 		}
 	case "csv":
 		if res, ok := n.GetResult(); ok && len(res.Outputs) > 0 && res.Outputs[0].Type != nil && res.Outputs[0].Type.Kind == core.FSKindTable {
-			n.OutputPorts[0].Type = *res.Outputs[0].Type
+			if len(n.OutputPorts) == 0 {
+				n.OutputPorts = []core.NodePort{{Name: "Data", Type: *res.Outputs[0].Type}}
+			} else {
+				n.OutputPorts[0].Type = *res.Outputs[0].Type
+			}
 		} else {
-			n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindAny}
+			n.OutputPorts = nil
 		}
 	case "json":
+		if len(n.OutputPorts) == 0 {
+			n.OutputPorts = []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindAny}}}
+		}
 		if isListInput {
 			n.OutputPorts[0].Type = core.NewListType(core.FlowType{Kind: core.FSKindAny})
 		} else {
@@ -166,7 +179,9 @@ func (c *LoadFileAction) UI(n *core.Node) {
 				Disabled: n.InputIsWired(0),
 			})
 			core.UISpacer(clay.IDI("LoadFileSpacer", n.ID), core.W2)
-			core.UIOutputPort(n, 0)
+			if len(n.OutputPorts) > 0 {
+				core.UIOutputPort(n, 0)
+			}
 		})
 
 		c.Format.Do(clay.IDI("LoadFileFormat", n.ID), core.UIDropdownConfig{

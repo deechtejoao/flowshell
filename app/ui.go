@@ -96,8 +96,8 @@ var nodeTypes = []NodeType{
 	{Name: "XML Query", Category: "Data", Create: func() *core.Node { return nodes.NewXmlQueryNode() }},
 	{Name: "Get Variable", Category: "Core", Create: func() *core.Node { return nodes.NewGetVariableNode() }},
 	{Name: "Map", Category: "Table", Create: func() *core.Node { return nodes.NewMapNode() }},
-	{Name: "core.Graph Input", Category: "core.Graph", Create: func() *core.Node { return nodes.NewGraphInputNode() }},
-	{Name: "core.Graph Output", Category: "core.Graph", Create: func() *core.Node { return nodes.NewGraphOutputNode() }},
+	{Name: "Graph Input", Category: "Graph", Create: func() *core.Node { return nodes.NewGraphInputNode() }},
+	{Name: "Graph Output", Category: "Graph", Create: func() *core.Node { return nodes.NewGraphOutputNode() }},
 	{Name: "Line Chart", Category: "Visualization", Create: func() *core.Node { return nodes.NewLineChartNode() }},
 	{Name: "Bar Chart", Category: "Visualization", Create: func() *core.Node { return nodes.NewBarChartNode() }},
 	{Name: "Scatter Plot", Category: "Visualization", Create: func() *core.Node { return nodes.NewScatterPlotNode() }},
@@ -891,7 +891,7 @@ func UIOverlay(topoErr error) {
 							Parent:  clay.AttachPointCenterCenter,
 						},
 						ZIndex:             core.ZTOP,
-						PointerCaptureMode: clay.PointercaptureModePassthrough,
+						PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 				}, func() {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
@@ -903,7 +903,9 @@ func UIOverlay(topoErr error) {
 							El: clay.EL{Layout: clay.LAY{Padding: core.PA2}, BackgroundColor: core.Red, CornerRadius: core.RA1},
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 								ShowLoadConfirmation = false
-								_, _ = core.LoadGraph("saved.flow")
+								if g, err := core.LoadGraph("saved.flow"); err == nil {
+									CurrentGraph = g
+								}
 							},
 						}, func() {
 							clay.TEXT("Load", clay.TextElementConfig{TextColor: core.White})
@@ -989,7 +991,7 @@ func UIOverlay(topoErr error) {
 							Parent:  clay.AttachPointCenterCenter,
 						},
 						ZIndex:             core.ZTOP,
-						PointerCaptureMode: clay.PointercaptureModePassthrough,
+						PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 				}, func() {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
@@ -1104,7 +1106,7 @@ func UIOverlay(topoErr error) {
 
 		containerWidth := clay.SizingFit(0, 0)
 		if isFocused || shortcut {
-			containerWidth = clay.SizingFixed(300)
+			containerWidth = clay.SizingFixed(600)
 		}
 
 		core.WithZIndex(10, func() {
@@ -1119,14 +1121,13 @@ func UIOverlay(topoErr error) {
 						Element: clay.AttachPointLeftBottom,
 						Parent:  clay.AttachPointLeftBottom,
 					},
-					ZIndex:             10,
-					PointerCaptureMode: clay.PointercaptureModePassthrough,
+					ZIndex: 10,
 				},
 			}, func() {
 				clay.CLAY_AUTO_ID(clay.EL{
 					Layout: clay.LAY{
 						ChildGap: core.S2,
-						Sizing:   clay.Sizing{Width: clay.SizingFixed(600)},
+						Sizing:   clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingFit(0, 0)},
 					},
 				}, func() {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
@@ -1158,7 +1159,7 @@ func UIOverlay(topoErr error) {
 						clay.TEXT("+", clay.T{FontID: core.InterBold, FontSize: 36, TextColor: core.White})
 					})
 
-					if core.IsFocused(textboxID) {
+					if isFocused || shortcut {
 						addNodeFromMatch := func(nt NodeType) {
 							_, count := parseNodeSearch(NewNodeName)
 
@@ -1253,190 +1254,224 @@ func UIOverlay(topoErr error) {
 											Element: clay.AttachPointLeftBottom,
 										},
 										ZIndex:             20,
-										PointerCaptureMode: clay.PointercaptureModePassthrough,
+										PointerCaptureMode: clay.PointercaptureModeCapture,
 									},
 								}, func() {
-									clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-										core.IsHoveringUI = true
-									}, nil)
+									core.WithZIndex(20, func() {
+										clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+											core.IsHoveringUI = true
+										}, nil)
 
-									// Scrollable Content Area
-									clay.CLAY(clay.ID("NewNodeMatchesContent"), clay.EL{
-										Layout: clay.LAY{
-											LayoutDirection: clay.TopToBottom,
-											Sizing:          clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingAxis{Type: clay.SizingTypeFit}},
-										},
-										Clip: clay.ClipElementConfig{
-											Vertical:    true,
-											Horizontal:  false,
-											ChildOffset: clay.GetScrollOffset(),
-										},
-									}, func() {
-										matches := SearchNodeTypes(NewNodeName)
-										showCategories := NewNodeName == "" || NewNodeName == "?" || NewNodeName == "*"
-
-										if showCategories {
-											if SelectedNodeCategory == "" && len(nodeTypes) > 0 {
-												SelectedNodeCategory = nodeTypes[0].Category
-											}
-
-											clay.CLAY(clay.AUTO_ID, clay.EL{
-												Layout: clay.LAY{
-													LayoutDirection: clay.LeftToRight,
-													Sizing:          core.GROWH,
-												},
-											}, func() {
-												// Left Column: Categories
-												clay.CLAY(clay.ID("CategoryList"), clay.EL{
-													Layout: clay.LAY{
-														LayoutDirection: clay.TopToBottom,
-														Sizing:          clay.Sizing{Width: clay.SizingFixed(140)},
-														ChildGap:        core.S1,
-														Padding:         core.PA1,
-													},
-													BackgroundColor: core.Charcoal,
-													CornerRadius:    core.RA(4),
-													// Border:          clay.B{Width: clay.BW{Right: 1}, Color: core.Gray},
-												}, func() {
-													currentCat := ""
-													for _, nt := range nodeTypes {
-														if nt.Category != currentCat {
-															cat := nt.Category
-															currentCat = cat
-															thisCat := cat
-
-															core.UIButton(clay.ID("CatBtn"+thisCat), core.UIButtonConfig{
-																El: clay.EL{
-																	Layout:          clay.LAY{Padding: core.PVH(core.S1, core.S2), Sizing: core.GROWH},
-																	BackgroundColor: util.Tern(thisCat == SelectedNodeCategory, core.Blue, util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{})),
-																	CornerRadius:    core.RA(4),
-																},
-																OnHover: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-																	SelectedNodeCategory = thisCat
-																},
-																OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-																	SelectedNodeCategory = thisCat
-																},
-															}, func() {
-																clay.TEXT(thisCat, clay.T{TextColor: core.White, FontID: core.InterBold, FontSize: 14})
-															})
-														}
-
-													}
-												})
-
-												// Right Column: Nodes
-												clay.CLAY(clay.ID("CategoryNodes"), clay.EL{
-													Layout: clay.LAY{
-														LayoutDirection: clay.TopToBottom,
-														Sizing:          core.GROWH,
-														ChildGap:        core.S1,
-														Padding:         core.PA1,
-													},
-												}, func() {
-													for i, nt := range matches {
-														if nt.Category == SelectedNodeCategory {
-															core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
-																El: clay.EL{
-																	Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
-																	BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),
-																	CornerRadius:    core.RA(4),
-																},
-																OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
-																	addNodeFromMatch(matches[userData.(int)])
-																	core.UIFocus = nil
-																},
-																OnClickUserData: i,
-															}, func() {
-																clay.TEXT(nt.Name, clay.T{TextColor: core.White, FontSize: 14})
-																clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer to push shortcut right
-																if nt.ShortcutKey != 0 {
-																	keyName := ""
-																	if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
-																		keyName = string(rune(nt.ShortcutKey))
-																	} else {
-																		keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
-																	}
-																	modStr := ""
-																	for _, mod := range nt.ShortcutMods {
-																		switch mod {
-																		case rl.KeyLeftControl, rl.KeyRightControl:
-																			modStr += "Ctrl+"
-																		case rl.KeyLeftAlt, rl.KeyRightAlt:
-																			modStr += "Alt+"
-																		case rl.KeyLeftShift, rl.KeyRightShift:
-																			modStr += "Shift+"
-																		}
-																	}
-																	clay.TEXT(modStr+keyName, clay.T{TextColor: core.LightGray, FontSize: 10})
-																}
-															})
-														}
-													}
-												})
-											})
-										} else {
-											// Original Flat List (Search Results)
-											for i := 0; i < len(matches); i++ {
-												nt := matches[i]
-												core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
-													El: clay.EL{
-														Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
-														BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),
-														CornerRadius:    core.RA(6),
-													},
-													OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
-														addNodeFromMatch(matches[userData.(int)])
-														core.UIFocus = nil
-													},
-													OnClickUserData: i,
-												}, func() {
-													clay.TEXT(nt.Name, clay.T{TextColor: core.White, FontSize: 14})
-													clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
-													_, count := parseNodeSearch(NewNodeName)
-													if count > 1 {
-														clay.TEXT(fmt.Sprintf(" (x%d)", count), clay.T{TextColor: core.Yellow, FontSize: 14})
-													}
-													if nt.ShortcutKey != 0 {
-														keyName := ""
-														if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
-															keyName = string(rune(nt.ShortcutKey))
-														} else {
-															keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
-														}
-														modStr := ""
-														for _, mod := range nt.ShortcutMods {
-															switch mod {
-															case rl.KeyLeftControl, rl.KeyRightControl:
-																modStr += "Ctrl+"
-															case rl.KeyLeftAlt, rl.KeyRightAlt:
-																modStr += "Alt+"
-															case rl.KeyLeftShift, rl.KeyRightShift:
-																modStr += "Shift+"
-															}
-														}
-														clay.TEXT("  "+modStr+keyName, clay.T{TextColor: core.Gray, FontSize: 10})
-													}
-												})
-											}
-										}
-									})
-
-									// Footer with Settings
-									clay.CLAY(clay.ID("NewNodeMatchesFooter"), clay.EL{
-										Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingFixed(32)}, ChildAlignment: core.YCENTER, Padding: core.PVH(0, core.S2), ChildGap: core.S2},
-									}, func() {
-										clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
-										core.UIButton(clay.ID("OpenSettings"), core.UIButtonConfig{
-											El: clay.EL{
-												Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+										// Scrollable Content Area
+										clay.CLAY(clay.ID("NewNodeMatchesContent"), clay.EL{
+											Layout: clay.LAY{
+												LayoutDirection: clay.TopToBottom,
+												Sizing:          clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingAxis{Type: clay.SizingTypeFit}},
 											},
-											OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-												ShowVariables = !ShowVariables
-												core.UIFocus = nil // Close menu
+											Clip: clay.ClipElementConfig{
+												Vertical:    true,
+												Horizontal:  false,
+												ChildOffset: clay.GetScrollOffset(),
 											},
 										}, func() {
-											clay.TEXT("Settings", clay.T{TextColor: core.LightGray, FontSize: 12})
+											matches := SearchNodeTypes(NewNodeName)
+											showCategories := NewNodeName == "" || NewNodeName == "?" || NewNodeName == "*"
+
+											if showCategories {
+												if SelectedNodeCategory == "" && len(nodeTypes) > 0 {
+													SelectedNodeCategory = nodeTypes[0].Category
+												}
+
+												clay.CLAY(clay.AUTO_ID, clay.EL{
+													Layout: clay.LAY{
+														LayoutDirection: clay.LeftToRight,
+														Sizing:          core.GROWH,
+													},
+												}, func() {
+													// Left Column: Categories
+													clay.CLAY(clay.ID("CategoryList"), clay.EL{
+														Layout: clay.LAY{
+															LayoutDirection: clay.TopToBottom,
+															Sizing:          clay.Sizing{Width: clay.SizingFixed(140)},
+															ChildGap:        core.S1,
+															Padding:         core.PA1,
+														},
+														BackgroundColor: core.Charcoal,
+														CornerRadius:    core.RA(4),
+														// Border:          clay.B{Width: clay.BW{Right: 1}, Color: core.Gray},
+													}, func() {
+														currentCat := ""
+														for _, nt := range nodeTypes {
+															if nt.Category != currentCat {
+																cat := nt.Category
+																currentCat = cat
+																thisCat := cat
+
+																core.UIButton(clay.ID("CatBtn"+thisCat), core.UIButtonConfig{
+																	El: clay.EL{
+																		Layout:          clay.LAY{Padding: core.PVH(core.S1, core.S2), Sizing: core.GROWH},
+																		BackgroundColor: util.Tern(thisCat == SelectedNodeCategory, core.Blue, util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{})),
+																		CornerRadius:    core.RA(4),
+																	},
+																	OnHover: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+																		SelectedNodeCategory = thisCat
+																	},
+																	OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+																		SelectedNodeCategory = thisCat
+																	},
+																}, func() {
+																	clay.TEXT(thisCat, clay.T{TextColor: core.White, FontID: core.InterBold, FontSize: 14})
+																})
+															}
+
+														}
+													})
+
+													// Right Column: Nodes
+													clay.CLAY(clay.ID("CategoryNodes"), clay.EL{
+														Layout: clay.LAY{
+															LayoutDirection: clay.TopToBottom,
+															Sizing:          core.GROWH,
+															ChildGap:        core.S1,
+															Padding:         core.PA1,
+														},
+													}, func() {
+														for i, nt := range matches {
+															if nt.Category == SelectedNodeCategory {
+																core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
+																	El: clay.EL{
+																		Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
+																		BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),
+																		CornerRadius:    core.RA(4),
+																	},
+																	OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
+																		addNodeFromMatch(matches[userData.(int)])
+																		core.UIFocus = nil
+																	},
+																	OnClickUserData: i,
+																}, func() {
+																	clay.TEXT(nt.Name, clay.T{TextColor: core.White, FontSize: 14})
+																	clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer to push shortcut right
+																	if nt.ShortcutKey != 0 {
+																		keyName := ""
+																		if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
+																			keyName = string(rune(nt.ShortcutKey))
+																		} else {
+																			keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
+																		}
+																		modStr := ""
+																		for _, mod := range nt.ShortcutMods {
+																			switch mod {
+																			case rl.KeyLeftControl, rl.KeyRightControl:
+																				modStr += "Ctrl+"
+																			case rl.KeyLeftAlt, rl.KeyRightAlt:
+																				modStr += "Alt+"
+																			case rl.KeyLeftShift, rl.KeyRightShift:
+																				modStr += "Shift+"
+																			}
+																		}
+																		clay.TEXT(modStr+keyName, clay.T{TextColor: core.LightGray, FontSize: 10})
+																	}
+																})
+															}
+														}
+													})
+												})
+											} else {
+												// Original Flat List (Search Results)
+												for i := 0; i < len(matches); i++ {
+													nt := matches[i]
+													core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
+														El: clay.EL{
+															Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
+															BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),
+															CornerRadius:    core.RA(6),
+														},
+														OnClick: func(_ clay.ElementID, _ clay.PointerData, userData any) {
+															addNodeFromMatch(matches[userData.(int)])
+															core.UIFocus = nil
+														},
+														OnClickUserData: i,
+													}, func() {
+														clay.TEXT(nt.Name, clay.T{TextColor: core.White, FontSize: 14})
+														clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
+														_, count := parseNodeSearch(NewNodeName)
+														if count > 1 {
+															clay.TEXT(fmt.Sprintf(" (x%d)", count), clay.T{TextColor: core.Yellow, FontSize: 14})
+														}
+														if nt.ShortcutKey != 0 {
+															keyName := ""
+															if nt.ShortcutKey >= 32 && nt.ShortcutKey <= 126 {
+																keyName = string(rune(nt.ShortcutKey))
+															} else {
+																keyName = fmt.Sprintf("K%d", nt.ShortcutKey)
+															}
+															modStr := ""
+															for _, mod := range nt.ShortcutMods {
+																switch mod {
+																case rl.KeyLeftControl, rl.KeyRightControl:
+																	modStr += "Ctrl+"
+																case rl.KeyLeftAlt, rl.KeyRightAlt:
+																	modStr += "Alt+"
+																case rl.KeyLeftShift, rl.KeyRightShift:
+																	modStr += "Shift+"
+																}
+															}
+															clay.TEXT("  "+modStr+keyName, clay.T{TextColor: core.Gray, FontSize: 10})
+														}
+													})
+												}
+											}
+										})
+
+										// Footer with Settings
+										clay.CLAY(clay.ID("NewNodeMatchesFooter"), clay.EL{
+											Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingFixed(32)}, ChildAlignment: core.YCENTER, Padding: core.PVH(0, core.S2), ChildGap: core.S2},
+										}, func() {
+											clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
+											core.UIButton(clay.ID("SaveFlow"), core.UIButtonConfig{
+												El: clay.EL{
+													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+												},
+												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													core.PushHistory()
+													_ = core.SaveGraph("saved.flow", CurrentGraph)
+													core.UIFocus = nil // Close menu
+												},
+											}, func() {
+												clay.TEXT("Save Flow", clay.T{TextColor: core.LightGray, FontSize: 12})
+												if clay.Hovered() {
+													core.UITooltip("Save Flow (Ctrl+S)")
+												}
+											})
+											core.UIButton(clay.ID("LoadFlow"), core.UIButtonConfig{
+												El: clay.EL{
+													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+												},
+												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													ShowLoadConfirmation = true
+													core.UIFocus = nil // Close menu
+												},
+											}, func() {
+												clay.TEXT("Load Flow", clay.T{TextColor: core.LightGray, FontSize: 12})
+												if clay.Hovered() {
+													core.UITooltip("Load Flow (Ctrl+L)")
+												}
+											})
+											core.UIButton(clay.ID("OpenSettings"), core.UIButtonConfig{
+												El: clay.EL{
+													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+												},
+												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													ShowVariables = !ShowVariables
+													core.UIFocus = nil // Close menu
+												},
+											}, func() {
+												clay.TEXT("Settings", clay.T{TextColor: core.LightGray, FontSize: 12})
+												if clay.Hovered() {
+													core.UITooltip("Toggle Settings")
+												}
+											})
 										})
 									})
 								})
@@ -1848,7 +1883,11 @@ func UINode(node *core.Node, disabled bool) {
 
 				core.UIButton(clay.IDI("NodePin", node.ID), // Pin button
 					core.UIButtonConfig{
-						El: clay.EL{Layout: clay.LAY{Padding: core.PA1}},
+						El:     clay.EL{Layout: clay.LAY{Padding: core.PA1}},
+						ZIndex: zIndex + 100,
+						OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							core.UITooltip("Pin command (prevent automatic re-runs)")
+						},
 						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							node.Pinned = !node.Pinned
 						},
@@ -1857,16 +1896,16 @@ func UINode(node *core.Node, disabled bool) {
 						core.UIImage(clay.IDI("NodePinIcon", node.ID), util.Tern(node.Pinned, core.ImgPushpin, core.ImgPushpinOutline), clay.EL{
 							BackgroundColor: core.Red,
 						})
-
-						if clay.Hovered() {
-							core.UITooltip("Pin command (prevent automatic re-runs)")
-						}
 					},
 				)
 				core.UIButton(clay.IDI("NodeRetry", node.ID), // Retry / play-all button
 					core.UIButtonConfig{
 						El:       clay.EL{Layout: clay.LAY{Padding: core.PA1}},
 						Disabled: playButtonDisabled,
+						ZIndex:   zIndex + 100,
+						OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							core.UITooltip("Run command and inputs")
+						},
 						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							node.Run(context.Background(), true)
 						},
@@ -1875,16 +1914,16 @@ func UINode(node *core.Node, disabled bool) {
 						core.UIImage(clay.IDI("NodeRetryIcon", node.ID), core.ImgRetry, clay.EL{
 							BackgroundColor: util.Tern(playButtonDisabled, core.LightGray, core.Blue),
 						})
-
-						if clay.Hovered() {
-							core.UITooltip("Run command and inputs")
-						}
 					},
 				)
 				core.UIButton(clay.IDI("NodePlay", node.ID), // Play button
 					core.UIButtonConfig{
 						El:       clay.EL{Layout: clay.LAY{Padding: core.PA1}},
 						Disabled: playButtonDisabled,
+						ZIndex:   zIndex + 100,
+						OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							core.UITooltip("Run command")
+						},
 						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							node.Run(context.Background(), false)
 						},
@@ -1893,10 +1932,6 @@ func UINode(node *core.Node, disabled bool) {
 						core.UIImage(clay.IDI("NodePlayIcon", node.ID), core.ImgPlay, clay.EL{
 							BackgroundColor: util.Tern(playButtonDisabled, core.LightGray, core.PlayButtonGreen),
 						})
-
-						if clay.Hovered() {
-							core.UITooltip("Run command")
-						}
 					},
 				)
 				core.UIButton(clay.IDI("NodeDelete", node.ID), // Delete button
@@ -1904,6 +1939,9 @@ func UINode(node *core.Node, disabled bool) {
 						El: clay.EL{Layout: clay.LAY{Padding: core.PA1}},
 						// Ensure delete button is always clickable above other node elements
 						ZIndex: zIndex + 100,
+						OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+							core.UITooltip("Delete core.Node")
+						},
 						OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 							DeleteNode(node.ID)
 							delete(SelectedNodes, node.ID)
@@ -1914,9 +1952,6 @@ func UINode(node *core.Node, disabled bool) {
 					},
 					func() {
 						clay.TEXT("X", clay.TextElementConfig{TextColor: util.Tern(clay.Hovered(), core.Red, core.LightGray), FontID: core.InterBold})
-						if clay.Hovered() {
-							core.UITooltip("Delete core.Node")
-						}
 					},
 				)
 			})
