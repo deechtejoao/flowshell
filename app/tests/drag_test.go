@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/bvisness/flowshell/app"
+	"github.com/bvisness/flowshell/app/core"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -42,7 +42,7 @@ func NewMockInput() *MockInputProvider {
 
 func TestDragState_Lifecycle(t *testing.T) {
 	mock := NewMockInput()
-	d := app.DragState{Input: mock}
+	d := core.DragState{Input: mock}
 
 	// 1. Idle state
 	mock.ButtonsUp[rl.MouseLeftButton] = true
@@ -109,7 +109,7 @@ func TestDragState_Lifecycle(t *testing.T) {
 
 func TestDragState_Cancel(t *testing.T) {
 	mock := NewMockInput()
-	d := app.DragState{Input: mock}
+	d := core.DragState{Input: mock}
 
 	// Start dragging
 	mock.ButtonsDown[rl.MouseLeftButton] = true
@@ -136,7 +136,7 @@ func TestDragState_Cancel(t *testing.T) {
 
 func TestDragState_WasDragging(t *testing.T) {
 	mock := NewMockInput()
-	d := app.DragState{Input: mock}
+	d := core.DragState{Input: mock}
 
 	// 1. Click sequence (Down -> Up immediately)
 	mock.ButtonsDown[rl.MouseLeftButton] = true
@@ -150,8 +150,8 @@ func TestDragState_WasDragging(t *testing.T) {
 	}
 
 	// 2. Drag sequence (Down -> Move -> Release)
-	d = app.DragState{Input: mock} // Reset
-	mock = NewMockInput()      // Reset inputs
+	d = core.DragState{Input: mock} // Reset
+	mock = NewMockInput()           // Reset inputs
 	d.Input = mock
 
 	mock.ButtonsDown[rl.MouseLeftButton] = true
@@ -180,7 +180,7 @@ func TestDragState_WasDragging(t *testing.T) {
 
 func TestDragState_Concurrent(t *testing.T) {
 	mock := NewMockInput()
-	d := app.DragState{Input: mock}
+	d := core.DragState{Input: mock}
 
 	mock.ButtonsDown[rl.MouseLeftButton] = true
 	mock.MousePos = rl.Vector2{X: 100, Y: 100}
