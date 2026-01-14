@@ -128,7 +128,11 @@ func (c *LoadFileAction) UpdateAndValidate(n *core.Node) {
 			n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindStream}
 		}
 	case "csv":
-		n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindTable, ContainedType: &core.FlowType{Kind: core.FSKindAny}}
+		if res, ok := n.GetResult(); ok && len(res.Outputs) > 0 && res.Outputs[0].Type != nil && res.Outputs[0].Type.Kind == core.FSKindTable {
+			n.OutputPorts[0].Type = *res.Outputs[0].Type
+		} else {
+			n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindAny}
+		}
 	case "json":
 		if isListInput {
 			n.OutputPorts[0].Type = core.NewListType(core.FlowType{Kind: core.FSKindAny})
