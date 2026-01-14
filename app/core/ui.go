@@ -62,7 +62,11 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 					z = CurrentZIndex
 				}
 				// Bump Z-index to ensure buttons are always above their background context (e.g. Node body)
-				UIInput.RegisterPointerDown(elementID, pointerData, z+1)
+				// Cap at MaxInt16 to avoid overflow
+				if z < 32767 {
+					z++
+				}
+				UIInput.RegisterPointerDown(elementID, pointerData, z)
 			}
 
 			if config.OnHover != nil {
@@ -283,32 +287,31 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 					}, nil)
 
 					for i, opt := range d.Options {
-						clay.CLAY_AUTO_ID_LATE(func() clay.EL {
-							return clay.EL{
+						// Capture for closure
+						idx := i
+						val := opt.Value
+
+						UIButton(clay.IDI("DropdownOpt", i), UIButtonConfig{
+							El: clay.EL{
 								Layout: clay.LAY{
 									Padding: PVH(S1, S2),
 									Sizing:  GROWH,
 								},
-								BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
-							}
-						}, func() {
-							clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-								IsHoveringUI = true
-								UIInput.RegisterPointerDown(elementID, pointerData, 32767)
-
-								if UIInput.IsClick(elementID, pointerData) {
-									selectedBefore := d.Selected
-									d.Selected = userData.(int)
-									d.open = false
-									if d.Selected != selectedBefore {
-										PushHistory()
-									}
-									if config.OnChange != nil {
-										config.OnChange(d.GetOption(selectedBefore).Value, d.GetOption(d.Selected).Value)
-									}
+							},
+							ZIndex: 32767,
+							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+								selectedBefore := d.Selected
+								d.Selected = idx
+								d.open = false
+								if d.Selected != selectedBefore {
+									PushHistory()
 								}
-							}, i)
-							clay.TEXT(opt.Name, clay.T{TextColor: White})
+								if config.OnChange != nil {
+									config.OnChange(d.GetOption(selectedBefore).Value, val)
+								}
+							},
+						}, func() {
+							clay.TEXT(opt.Name, clay.TextElementConfig{TextColor: White})
 						})
 					}
 				})

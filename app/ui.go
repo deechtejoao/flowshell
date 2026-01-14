@@ -1433,6 +1433,9 @@ func UIOverlay(topoErr error) {
 												El: clay.EL{
 													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
 												},
+												OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													core.UITooltip("Save Flow (Ctrl+S)")
+												},
 												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 													core.PushHistory()
 													_ = core.SaveGraph("saved.flow", CurrentGraph)
@@ -1440,13 +1443,13 @@ func UIOverlay(topoErr error) {
 												},
 											}, func() {
 												clay.TEXT("Save Flow", clay.T{TextColor: core.LightGray, FontSize: 12})
-												if clay.Hovered() {
-													core.UITooltip("Save Flow (Ctrl+S)")
-												}
 											})
 											core.UIButton(clay.ID("LoadFlow"), core.UIButtonConfig{
 												El: clay.EL{
 													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+												},
+												OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													core.UITooltip("Load Flow (Ctrl+L)")
 												},
 												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 													ShowLoadConfirmation = true
@@ -1454,13 +1457,13 @@ func UIOverlay(topoErr error) {
 												},
 											}, func() {
 												clay.TEXT("Load Flow", clay.T{TextColor: core.LightGray, FontSize: 12})
-												if clay.Hovered() {
-													core.UITooltip("Load Flow (Ctrl+L)")
-												}
 											})
 											core.UIButton(clay.ID("OpenSettings"), core.UIButtonConfig{
 												El: clay.EL{
 													Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+												},
+												OnHover: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+													core.UITooltip("Toggle Settings")
 												},
 												OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 													ShowVariables = !ShowVariables
@@ -1468,9 +1471,6 @@ func UIOverlay(topoErr error) {
 												},
 											}, func() {
 												clay.TEXT("Settings", clay.T{TextColor: core.LightGray, FontSize: 12})
-												if clay.Hovered() {
-													core.UITooltip("Toggle Settings")
-												}
 											})
 										})
 									})

@@ -141,7 +141,11 @@ func (c *LoadFileAction) UpdateAndValidate(n *core.Node) {
 				n.OutputPorts[0].Type = *res.Outputs[0].Type
 			}
 		} else {
-			n.OutputPorts = nil
+			if len(n.OutputPorts) == 0 {
+				n.OutputPorts = []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}}
+			} else {
+				n.OutputPorts[0].Type = core.FlowType{Kind: core.FSKindTable}
+			}
 		}
 	case "json":
 		if len(n.OutputPorts) == 0 {

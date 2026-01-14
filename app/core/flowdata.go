@@ -187,10 +187,16 @@ func (t FlowType) String() string {
 	case FSKindFloat64:
 		return "Float64"
 	case FSKindList:
+		if t.ContainedType == nil {
+			return "List[?]"
+		}
 		return fmt.Sprintf("List[%s]", t.ContainedType.String())
 	case FSKindRecord:
 		return fmt.Sprintf("Record[%s]", joinFields(t.Fields))
 	case FSKindTable:
+		if t.ContainedType == nil {
+			return "Table[?]"
+		}
 		return fmt.Sprintf("Table[%s]", joinFields(t.ContainedType.Fields))
 	default:
 		return "<UNKNOWN TYPE>"

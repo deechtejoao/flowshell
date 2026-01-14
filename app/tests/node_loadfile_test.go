@@ -21,15 +21,15 @@ func TestLoadFileNode_CSVPortVisibility(t *testing.T) {
 	// Create node
 	n := nodes.NewLoadFileNode(csvPath)
 	action := n.Action.(*nodes.LoadFileAction)
-	
+
 	// Ensure format is CSV
 	action.Format.SelectByValue("csv")
 
 	// 1. Initial state (no result yet)
 	// NewLoadFileNode initializes OutputPorts with FSKindBytes, but UpdateAndValidate should clear it for CSV if no result.
 	action.UpdateAndValidate(n)
-	if n.OutputPorts != nil {
-		t.Errorf("Expected OutputPorts to be nil initially for CSV, got %v", n.OutputPorts)
+	if len(n.OutputPorts) != 1 {
+		t.Errorf("Expected 1 OutputPort initially for CSV, got %d", len(n.OutputPorts))
 	}
 
 	// 2. Run successfully
@@ -57,10 +57,12 @@ func TestLoadFileNode_CSVPortVisibility(t *testing.T) {
 	}
 	n.SetResult(res)
 
-	// 5. Verify port hidden
+	// 5. Verify port visible as generic table
 	action.UpdateAndValidate(n)
-	if n.OutputPorts != nil {
-		t.Errorf("Expected OutputPorts to be nil after error, got %v", n.OutputPorts)
+	if len(n.OutputPorts) != 1 {
+		t.Errorf("Expected 1 output port after error, got %d", len(n.OutputPorts))
+	} else if n.OutputPorts[0].Type.Kind != core.FSKindTable {
+		t.Errorf("Expected FSKindTable, got %v", n.OutputPorts[0].Type.Kind)
 	}
 
 	// 6. Switch to Raw
