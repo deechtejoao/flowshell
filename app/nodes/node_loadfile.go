@@ -31,7 +31,7 @@ type LoadFileAction struct {
 	// to number would be ok within the Aggregate node and other nodes that do
 	// math? Who knows. Very large design space. For now we just demo by always
 	// parsing as float.
-	inferTypes bool
+	InferTypes bool
 }
 
 const maxLoadFileBytes int64 = 256 << 20
@@ -91,7 +91,7 @@ func NewLoadFileNode(path string) *core.Node {
 		Action: &LoadFileAction{
 			Path:       path,
 			Format:     formatDropdown,
-			inferTypes: true,
+			InferTypes: true,
 		},
 	}
 }
@@ -198,7 +198,7 @@ func (c *LoadFileAction) UI(n *core.Node) {
 		})
 
 		if c.Format.GetSelectedOption().Value == "csv" {
-			core.UICheckbox(clay.IDI("InferTypes", n.ID), &c.inferTypes, "Infer Types")
+			core.UICheckbox(clay.IDI("InferTypes", n.ID), &c.InferTypes, "Infer Types")
 		}
 	})
 }
@@ -402,7 +402,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 					row := append([]string(nil), record...)
 					allDataRows = append(allDataRows, row)
 
-					if c.inferTypes {
+					if c.InferTypes {
 						for col := 0; col < len(allHeader); col++ {
 							if col >= len(row) {
 								continue
@@ -452,7 +452,7 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 				colTypes[i] = core.FSKindBytes
 			}
 
-			if c.inferTypes {
+			if c.InferTypes {
 				for col := 0; col < numCols; col++ {
 					if !colSeenNonEmpty[col] {
 						continue
@@ -605,7 +605,7 @@ func (c *LoadFileAction) Run(n *core.Node) <-chan core.NodeActionResult {
 
 func (c *LoadFileAction) Serialize(s *core.Serializer) bool {
 	core.SStr(s, &c.Path)
-	core.SBool(s, &c.inferTypes)
+	core.SBool(s, &c.InferTypes)
 
 	if s.Encode {
 		val := ""
