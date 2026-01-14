@@ -1,4 +1,4 @@
-﻿package nodes
+package nodes
 
 import (
 	"context"
@@ -98,7 +98,7 @@ func (c *SelectColumnsAction) UI(n *core.Node) {
 			core.UIOutputPort(n, 0)
 		})
 
-		if wired && input.Type().Kind == core.FSKindTable {
+		if wired && input.Type().Kind == core.FSKindTable && input.Type().ContainedType != nil {
 			clay.CLAY(clay.IDI("SelectColumnsList", n.ID), clay.EL{
 				Layout: clay.LAY{
 					LayoutDirection: clay.TopToBottom,

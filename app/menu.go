@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/bvisness/flowshell/app/core"
@@ -56,9 +57,11 @@ func UIMenuBar() {
 				})
 				UIMenuDropdownItem("Open... (Ctrl+L)", func() {
 					ActiveMenu = ""
-					filename, ok, err := core.OpenFileDialog("Open Flow", "", map[string]string{"flow": "Flow Files"})
+					cwd, _ := os.Getwd()
+					filename, ok, err := core.OpenFileDialog("Open Flow", cwd, map[string]string{"flow": "Flow Files"})
 					if err != nil {
 						fmt.Printf("Load error: %v\n", err)
+						core.ShowInfoDialog("Error", fmt.Sprintf("Failed to open file dialog: %v", err))
 					} else if ok {
 						core.PushHistory()
 						if g, err := core.LoadGraph(filename); err == nil {
@@ -75,7 +78,8 @@ func UIMenuBar() {
 							fmt.Printf("Save error: %v\n", err)
 						}
 					} else {
-						filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+						cwd, _ := os.Getwd()
+						filename, ok, err := core.SaveFileDialog("Save Flow", cwd, map[string]string{"flow": "Flow Files"})
 						if err != nil {
 							fmt.Printf("Save error: %v\n", err)
 						} else if ok {
@@ -90,7 +94,11 @@ func UIMenuBar() {
 				})
 				UIMenuDropdownItem("Save As... (Ctrl+Shift+S)", func() {
 					ActiveMenu = ""
-					filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+					initialDir, _ := os.Getwd()
+					if CurrentFilename != "" {
+						initialDir = filepath.Dir(CurrentFilename)
+					}
+					filename, ok, err := core.SaveFileDialog("Save Flow", initialDir, map[string]string{"flow": "Flow Files"})
 					if err != nil {
 						fmt.Printf("Save error: %v\n", err)
 					} else if ok {
@@ -102,7 +110,7 @@ func UIMenuBar() {
 						}
 					}
 				})
-				clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: core.GROWALL.Width, Height: clay.SizingFixed(1)}}, BackgroundColor: core.Gray}) // Separator
+				UIMenuSeparator()
 				UIMenuDropdownItem("Quit", func() {
 					ActiveMenu = ""
 					ShouldQuit = true
@@ -119,6 +127,14 @@ func UIMenuBar() {
 					ActiveMenu = ""
 					Camera.Zoom = 1.0
 					Camera.Target = rl.Vector2{X: 0, Y: 0}
+				})
+			})
+
+			// Help Menu
+			UIMenuItem("Help", func() {
+				UIMenuDropdownItem("About", func() {
+					ActiveMenu = ""
+					core.ShowInfoDialog("About Flowshell", "Flowshell\n\nA node-based shell automation tool.\n\nCreated by BVisness")
 				})
 			})
 		})
@@ -190,5 +206,17 @@ func UIMenuDropdownItem(label string, onClick func()) {
 		},
 	}, func() {
 		clay.TEXT(label, clay.T{TextColor: core.White, FontSize: 14})
+	})
+}
+
+func UIMenuSeparator() {
+	clay.CLAY(clay.AUTO_ID, clay.EL{
+		Layout: clay.LAY{
+			Sizing: clay.Sizing{
+				Width:  core.GROWH.Width,
+				Height: clay.SizingFixed(1),
+			},
+		},
+		BackgroundColor: core.Gray,
 	})
 }

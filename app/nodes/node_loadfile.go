@@ -180,7 +180,8 @@ func (c *LoadFileAction) UI(n *core.Node) {
 
 			core.UIButton(clay.IDI("LoadFileBrowse", n.ID), core.UIButtonConfig{
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
-					path, ok, err := core.OpenFileDialog("Load File", "", nil)
+					cwd, _ := os.Getwd()
+					path, ok, err := core.OpenFileDialog("Load File", cwd, nil)
 					if err == nil && ok {
 						c.Path = path
 					}

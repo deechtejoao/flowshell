@@ -64,15 +64,26 @@ func openFileDialogFallback(title string, initialDir string, filter string) (str
 	}
 
 	psScript := fmt.Sprintf(`
-Add-Type -AssemblyName System.Windows.Forms
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 $f = New-Object System.Windows.Forms.OpenFileDialog
 $f.Title = "%s"
-if ("%s" -ne "") { $f.InitialDirectory = "%s" }
+if ("%s" -ne "") { try { $f.InitialDirectory = "%s" } catch {} }
 $f.Filter = "%s"
-if ($f.ShowDialog() -eq "OK") { Write-Host $f.FileName }
+# IMPORTANT: ShowDialog() needs to run on a thread with STA (Single Thread Apartment) state.
+# PowerShell by default is MTA. We can force STA by starting powershell with -Sta flag,
+# but since we are running inside -Command, we rely on the parent process or use a runspace.
+# However, the simplest fix for "no dialog appearing" in many contexts is to ensure
+# the form actually gets focus and runs the message loop.
+# System.Windows.Forms.DialogResult.OK is 1.
+
+$result = $f.ShowDialog()
+if ($result -eq "OK" -or $result -eq 1) { 
+    Write-Host $f.FileName 
+}
 `, title, initialDir, initialDir, filter)
 
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", psScript)
+	// Add -Sta flag to force Single Threaded Apartment mode which is required for OLE/WinForms dialogs
+	cmd := exec.Command("powershell", "-Sta", "-NoProfile", "-NonInteractive", "-Command", psScript)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -86,9 +97,40 @@ if ($f.ShowDialog() -eq "OK") { Write-Host $f.FileName }
 	return path, true, nil
 }
 
+// ShowInfoDialog shows an information dialog with the given title and message.
+func ShowInfoDialog(title, message string) error {
+	err := zenity.Info(message, zenity.Title(title), zenity.Width(400))
+	if err != nil {
+		fmt.Printf("Zenity Info error: %v. Attempting fallback...\n", err)
+		return showInfoDialogFallback(title, message)
+	}
+	return nil
+}
+
+func showInfoDialogFallback(title, message string) error {
+	if runtime.GOOS != "windows" {
+		return fmt.Errorf("fallback only supported on Windows")
+	}
+
+	// Escape quotes in message and title for PowerShell string
+	message = strings.ReplaceAll(message, "\"", "`\"")
+	title = strings.ReplaceAll(title, "\"", "`\"")
+
+	psScript := fmt.Sprintf(`
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+[System.Windows.Forms.MessageBox]::Show("%s", "%s", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+`, message, title)
+
+	cmd := exec.Command("powershell", "-Sta", "-NoProfile", "-NonInteractive", "-Command", psScript)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("fallback failed: %w", err)
+	}
+	return nil
+}
+
 // SaveFileDialog prompts the user to select a location to save a file.
 // Returns the path and true if a path was selected, or empty string and false if cancelled.
-func SaveFileDialog(title string, filters map[string]string) (string, bool, error) {
+func SaveFileDialog(title string, initialDir string, filters map[string]string) (string, bool, error) {
 	var zenFilters []zenity.FileFilter
 	var psFilters []string
 
@@ -108,17 +150,22 @@ func SaveFileDialog(title string, filters map[string]string) (string, bool, erro
 	zenFilters = append(zenFilters, zenity.FileFilter{Name: "All Files", Patterns: []string{"*"}})
 	psFilters = append(psFilters, "All Files (*.*)|*.*")
 
-	filename, err := zenity.SelectFileSave(
+	options := []zenity.Option{
 		zenity.Title(title),
 		zenity.FileFilters(zenFilters),
 		zenity.ConfirmOverwrite(),
-	)
+	}
+	if initialDir != "" {
+		options = append(options, zenity.Filename(initialDir))
+	}
+
+	filename, err := zenity.SelectFileSave(options...)
 	if err != nil {
 		if err == zenity.ErrCanceled {
 			return "", false, nil
 		}
 		fmt.Printf("Zenity Save error: %v. Attempting fallback...\n", err)
-		return saveFileDialogFallback(title, "", strings.Join(psFilters, "|"))
+		return saveFileDialogFallback(title, initialDir, strings.Join(psFilters, "|"))
 	}
 	return filename, true, nil
 }
@@ -129,15 +176,18 @@ func saveFileDialogFallback(title string, initialDir string, filter string) (str
 	}
 
 	psScript := fmt.Sprintf(`
-Add-Type -AssemblyName System.Windows.Forms
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 $f = New-Object System.Windows.Forms.SaveFileDialog
 $f.Title = "%s"
-if ("%s" -ne "") { $f.InitialDirectory = "%s" }
+if ("%s" -ne "") { try { $f.InitialDirectory = "%s" } catch {} }
 $f.Filter = "%s"
-if ($f.ShowDialog() -eq "OK") { Write-Host $f.FileName }
+$result = $f.ShowDialog()
+if ($result -eq "OK" -or $result -eq 1) { 
+    Write-Host $f.FileName 
+}
 `, title, initialDir, initialDir, filter)
 
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", psScript)
+	cmd := exec.Command("powershell", "-Sta", "-NoProfile", "-NonInteractive", "-Command", psScript)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {

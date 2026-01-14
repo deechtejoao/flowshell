@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -419,7 +420,11 @@ func processInput() {
 
 	// Save Graph
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
-		filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+		initialDir, _ := os.Getwd()
+		if CurrentFilename != "" {
+			initialDir = filepath.Dir(CurrentFilename)
+		}
+		filename, ok, err := core.SaveFileDialog("Save Flow", initialDir, map[string]string{"flow": "Flow Files"})
 		if err != nil {
 			fmt.Printf("Save error: %v\n", err)
 		} else if ok {
@@ -436,9 +441,11 @@ func processInput() {
 
 	// Load Graph
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
-		filename, ok, err := core.OpenFileDialog("Open Flow", "", map[string]string{"flow": "Flow Files"})
+		cwd, _ := os.Getwd()
+		filename, ok, err := core.OpenFileDialog("Open Flow", cwd, map[string]string{"flow": "Flow Files"})
 		if err != nil {
 			fmt.Printf("Load error: %v\n", err)
+			core.ShowInfoDialog("Error", fmt.Sprintf("Failed to open file dialog: %v", err))
 		} else if ok {
 			core.PushHistory()
 			if g, err := core.LoadGraph(filename); err == nil {
@@ -931,8 +938,21 @@ func UIOverlay(topoErr error) {
 							El: clay.EL{Layout: clay.LAY{Padding: core.PA2}, BackgroundColor: core.Red, CornerRadius: core.RA1},
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 								ShowLoadConfirmation = false
-								if g, err := core.LoadGraph("saved.flow"); err == nil {
-									CurrentGraph = g
+								cwd, _ := os.Getwd()
+								filename, ok, err := core.OpenFileDialog("Open Flow", cwd, map[string]string{"flow": "Flow Files"})
+								if err != nil {
+									fmt.Printf("Load error: %v\n", err)
+									core.ShowInfoDialog("Error", fmt.Sprintf("Failed to open file dialog: %v", err))
+								} else if ok {
+									core.PushHistory()
+									if g, err := core.LoadGraph(filename); err == nil {
+										CurrentGraph = g
+										CurrentFilename = filename
+										clear(SelectedNodes)
+										selectedNodeID = 0
+									} else {
+										core.ShowInfoDialog("Error", fmt.Sprintf("Failed to load file: %v", err))
+									}
 								}
 							},
 						}, func() {
