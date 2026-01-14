@@ -146,14 +146,6 @@ func frame() {
 	)
 	clay.SetLayoutDimensions(clay.D{Width: screenWidth, Height: screenHeight})
 
-	// We don't update scroll containers again to avoid double application of scroll?
-	// But if overlay has scrollable areas, they need it.
-	// Assuming overlay doesn't scroll with same wheel event as nodes if they are separate.
-	// For now, we only called it once above. It updates global state.
-	// If overlay has scrollable elements, they might need a second update or just rely on the first one?
-	// Clay's UpdateScrollContainers iterates ALL scroll containers.
-	// It should be fine.
-
 	clay.BeginLayout()
 	UIOverlay(topoErr)
 	overlayRenderCommands := clay.EndLayout()
