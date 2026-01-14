@@ -1464,7 +1464,7 @@ func UIOverlay(topoErr error) {
 					Padding:         core.PA2,
 				},
 				BackgroundColor: core.Charcoal,
-				Border:          clay.B{Width: clay.BW{Left: core.BA}, Color: core.Gray},
+				Border:          clay.B{Width: core.BL, Color: core.Gray},
 				Clip: clay.ClipElementConfig{
 					Vertical:    true,
 					Horizontal:  true,
