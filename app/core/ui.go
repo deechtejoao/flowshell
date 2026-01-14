@@ -141,7 +141,7 @@ func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children 
 			if CurrentZIndex > z {
 				z = CurrentZIndex
 			}
-			UIInput.RegisterPointerDown(elementID, pointerData, z)
+			UIInput.RegisterPointerDown(elementID, pointerData, z+50)
 
 			if UIInput.IsClick(elementID, pointerData) {
 				UIFocus = &elementID
