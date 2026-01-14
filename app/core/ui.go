@@ -256,7 +256,7 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 		})
 
 		if d.open {
-			WithZIndex(32767, func() { // ZTOP
+			WithZIndex(Z_DROPDOWN_FG, func() {
 				// Transparent blocker to close dropdown when clicking outside
 				clay.CLAY(clay.ID(fmt.Sprintf("%d-blocker", id.ID)), clay.EL{
 					Layout: clay.LAY{
@@ -264,11 +264,11 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 					},
 					Floating: clay.FloatingElementConfig{
 						AttachTo: clay.AttachToRoot,
-						ZIndex:   32000,
+						ZIndex:   Z_DROPDOWN_BG,
 					},
 				}, func() {
 					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-						UIInput.RegisterPointerDown(elementID, pointerData, 32000)
+						UIInput.RegisterPointerDown(elementID, pointerData, Z_DROPDOWN_BG)
 						if UIInput.IsClick(elementID, pointerData) {
 							d.open = false
 						}
@@ -283,7 +283,7 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 					Floating: clay.FLOAT{
 						AttachTo:     clay.AttachToParent,
 						AttachPoints: clay.FloatingAttachPoints{Parent: clay.AttachPointLeftBottom},
-						ZIndex:       32767,
+						ZIndex:       Z_DROPDOWN_FG,
 						// PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 					Border: clay.B{
@@ -314,7 +314,7 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 									Sizing:  GROWH,
 								},
 							},
-							ZIndex: 32767,
+							ZIndex: Z_DROPDOWN_FG,
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 								selectedBefore := d.Selected
 								d.Selected = idx
@@ -351,7 +351,7 @@ func UITooltip(msg string) {
 		Floating: clay.FloatingElementConfig{
 			AttachTo: clay.AttachToRoot,
 			Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 0, Y: 28}),
-			ZIndex:   32767,
+			ZIndex:   Z_TOOLTIP,
 		},
 		Layout:          clay.LAY{Padding: PA1},
 		BackgroundColor: DarkGray,

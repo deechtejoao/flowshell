@@ -859,7 +859,7 @@ func UIOverlay(topoErr error) {
 		UIMinimap()
 
 		if topoErr != nil {
-			core.WithZIndex(core.ZTOP, func() {
+			core.WithZIndex(core.Z_CYCLE_WARNING, func() {
 				clay.CLAY(clay.ID("CycleWarning"), clay.EL{
 					Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(1, 0), Height: clay.SizingFixed(30)}, ChildAlignment: core.ALLCENTER},
 					BackgroundColor: core.Red,
@@ -869,7 +869,7 @@ func UIOverlay(topoErr error) {
 							Element: clay.AttachPointCenterTop,
 							Parent:  clay.AttachPointCenterTop,
 						},
-						ZIndex: core.ZTOP,
+						ZIndex: core.Z_CYCLE_WARNING,
 					},
 				}, func() {
 					clay.TEXT("Cycle Detected! core.Graph execution disabled.", clay.TextElementConfig{TextColor: core.White, FontID: core.InterBold})
@@ -878,7 +878,7 @@ func UIOverlay(topoErr error) {
 		}
 
 		if ShowLoadConfirmation {
-			core.WithZIndex(core.ZTOP, func() {
+			core.WithZIndex(core.Z_MODAL, func() {
 				clay.CLAY(clay.ID("LoadConfirmation"), clay.EL{
 					Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(300)}, ChildAlignment: core.ALLCENTER, Padding: core.PA3, ChildGap: core.S2},
 					BackgroundColor: core.Charcoal,
@@ -890,7 +890,7 @@ func UIOverlay(topoErr error) {
 							Element: clay.AttachPointCenterCenter,
 							Parent:  clay.AttachPointCenterCenter,
 						},
-						ZIndex:             core.ZTOP,
+						ZIndex:             core.Z_MODAL,
 						PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 				}, func() {
@@ -925,14 +925,14 @@ func UIOverlay(topoErr error) {
 
 		// Prompt Modal
 		if core.CurrentPrompt != nil {
-			core.WithZIndex(core.ZTOP, func() {
+			core.WithZIndex(core.Z_MODAL, func() {
 				// Blocking overlay background
 				clay.CLAY(clay.ID("PromptOverlayBlocker"), clay.EL{
 					Layout:          clay.LAY{Sizing: core.GROWALL, LayoutDirection: clay.TopToBottom, ChildAlignment: core.ALLCENTER},
 					BackgroundColor: clay.Color{R: 0, G: 0, B: 0, A: 100}, // Semi-transparent dim
 					Floating: clay.FLOAT{
 						AttachTo:           clay.AttachToRoot,
-						ZIndex:             core.ZTOP,
+						ZIndex:             core.Z_MODAL,
 						PointerCaptureMode: clay.PointercaptureModeCapture, // Block clicks
 					},
 				}, func() {
@@ -978,7 +978,7 @@ func UIOverlay(topoErr error) {
 		}
 
 		if ShowVariables {
-			core.WithZIndex(core.ZTOP, func() {
+			core.WithZIndex(core.Z_MODAL, func() {
 				clay.CLAY(clay.ID("VariablesPanel"), clay.EL{
 					Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, Padding: core.PA3, ChildGap: core.S2},
 					BackgroundColor: core.Charcoal,
@@ -990,7 +990,7 @@ func UIOverlay(topoErr error) {
 							Element: clay.AttachPointCenterCenter,
 							Parent:  clay.AttachPointCenterCenter,
 						},
-						ZIndex:             core.ZTOP,
+						ZIndex:             core.Z_MODAL,
 						PointerCaptureMode: clay.PointercaptureModeCapture,
 					},
 				}, func() {

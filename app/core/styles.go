@@ -136,6 +136,19 @@ var ALLCENTER = clay.ChildAlignment{X: clay.AlignXCenter, Y: clay.AlignYCenter}
 
 const ZTOP = math.MaxInt16
 
+const (
+	Z_NODE_BASE      = 0
+	Z_NODE_SELECTED  = 10
+	Z_NODE_BUTTON    = 100
+	Z_NEW_NODE_POPUP = 500
+	Z_CYCLE_WARNING  = 1000
+	Z_CONTEXT_MENU   = 2000
+	Z_DROPDOWN_BG    = 3000
+	Z_DROPDOWN_FG    = 3001
+	Z_MODAL          = 4000
+	Z_TOOLTIP        = 32000
+)
+
 // Shared Resources (Textures)
 // These should be initialized by the main app().
 var (
