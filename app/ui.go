@@ -1005,7 +1005,7 @@ func UIOverlay(topoErr error) {
 
 		if ShowVariables {
 			core.WithZIndex(core.Z_MODAL, func() {
-				clay.CLAY(clay.ID("VariablesPanel"), clay.EL{
+				clay.CLAY(clay.ID("OverlayVariablesPanel"), clay.EL{
 					Layout:          clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, Padding: core.PA3, ChildGap: core.S2},
 					BackgroundColor: core.Charcoal,
 					Border:          clay.BorderElementConfig{Width: core.BA2, Color: core.Gray},
@@ -1028,7 +1028,7 @@ func UIOverlay(topoErr error) {
 					clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: core.YCENTER, ChildGap: core.S2}}, func() {
 						clay.TEXT("Settings", clay.TextElementConfig{TextColor: core.White, FontID: core.InterBold, FontSize: core.F2})
 						clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
-						core.UIButton(clay.ID("CloseVariables"), core.UIButtonConfig{
+						core.UIButton(clay.ID("CloseVariables"), core.UIButtonConfig{          // This ID is inside unique container? No, ID() is global. Rename it?
 							El: clay.EL{Layout: clay.LAY{Padding: core.PA1}, BackgroundColor: core.Red, CornerRadius: core.RA1},
 							OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 								ShowVariables = false
@@ -1047,7 +1047,7 @@ func UIOverlay(topoErr error) {
 					slices.Sort(keys)
 
 					// Scrollable area? For now just list them, assuming not too many.
-					clay.CLAY(clay.ID("VariablesList"), clay.EL{
+					clay.CLAY(clay.ID("OverlayVariablesList"), clay.EL{
 						Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildGap: core.S1},
 					}, func() {
 						for _, k := range keys {
@@ -1517,7 +1517,7 @@ func UIOverlay(topoErr error) {
 		// Spacer to push Output to the right
 		clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}})
 
-		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
+		clay.CLAY_LATE(clay.ID("OverlayOutput"), func() clay.EL {
 			width := OutputWindowWidth
 			if IsOutputCollapsed {
 				width = 40

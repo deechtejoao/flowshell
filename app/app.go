@@ -1,8 +1,9 @@
 ﻿package app
 
 import (
-	"github.com/bvisness/flowshell/app/core"
 	"fmt"
+
+	"github.com/bvisness/flowshell/app/core"
 
 	_ "github.com/bvisness/flowshell/app/nodes"
 	"github.com/bvisness/flowshell/clay"
@@ -57,6 +58,7 @@ func Main() {
 	if err != nil {
 		fmt.Printf("Error loading plugins: %v\n", err)
 	} else {
+
 		nodeTypes = append(nodeTypes, pluginNodes...)
 	}
 
