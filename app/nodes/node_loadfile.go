@@ -13,6 +13,7 @@ import (
 
 	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/clay"
+	"github.com/sqweek/dialog"
 )
 
 // GEN:NodeAction
@@ -183,6 +184,20 @@ func (c *LoadFileAction) UI(n *core.Node) {
 				Disabled: n.InputIsWired(0),
 			})
 			core.UISpacer(clay.IDI("LoadFileSpacer", n.ID), core.W2)
+
+			core.UIButton(clay.IDI("LoadFileBrowse", n.ID), core.UIButtonConfig{
+				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+					path, err := dialog.File().Title("Load File").Load()
+					if err == nil && path != "" {
+						c.Path = path
+					}
+				},
+				Disabled: n.InputIsWired(0),
+			}, func() {
+				clay.TEXT("Browse...", clay.TextElementConfig{TextColor: core.White})
+			})
+
+			core.UISpacer(clay.IDI("LoadFileSpacer2", n.ID), core.W2)
 			if len(n.OutputPorts) > 0 {
 				core.UIOutputPort(n, 0)
 			}
