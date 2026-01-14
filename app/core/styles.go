@@ -149,6 +149,9 @@ const (
 	Z_DROPDOWN_FG    = 3001
 	Z_MODAL          = 4000
 	Z_TOOLTIP        = 32000
+
+	// Offset to ensure interactive inputs (textboxes) capture events over their parent containers
+	Z_OFFSET_INPUT_PRIORITY = 50
 )
 
 // Shared Resources (Textures)
