@@ -1235,7 +1235,7 @@ func UIOverlay(topoErr error) {
 								core.UIFocus = nil
 							},
 						}, func() {
-							core.WithZIndex(20, func() {
+							core.WithZIndex(core.Z_NEW_NODE_POPUP, func() {
 								clay.CLAY(clay.ID("NewNodeMatches"), clay.EL{
 									Layout: clay.LAY{
 										LayoutDirection: clay.TopToBottom,
@@ -1253,11 +1253,11 @@ func UIOverlay(topoErr error) {
 											Parent:  clay.AttachPointLeftTop,
 											Element: clay.AttachPointLeftBottom,
 										},
-										ZIndex:             20,
+										ZIndex:             core.Z_NEW_NODE_POPUP,
 										PointerCaptureMode: clay.PointercaptureModeCapture,
 									},
 								}, func() {
-									core.WithZIndex(20, func() {
+									core.WithZIndex(core.Z_NEW_NODE_POPUP, func() {
 										clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 											core.IsHoveringUI = true
 										}, nil)
