@@ -112,6 +112,10 @@ func (a *FormulaAction) Run(n *core.Node) <-chan core.NodeActionResult {
 
 		// Process
 		var result core.FlowValue
+		if valInput.Type == nil {
+			done <- core.NodeActionResult{Err: fmt.Errorf("input has no type (is the input connected?)")}
+			return
+		}
 		switch valInput.Type.Kind {
 		case core.FSKindTable:
 			// Iterate rows
