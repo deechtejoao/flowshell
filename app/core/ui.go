@@ -455,7 +455,7 @@ func UIFlowValue(v FlowValue) {
 				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
 			}, func() {
 				for i, item := range v.ListValue {
-					clay.CLAY_AUTO_ID(clay.EL{ // list item
+					clay.CLAY(clay.IDI("ListItem", i), clay.EL{ // list item
 						Layout: clay.LAY{ChildGap: S2},
 					}, func() {
 						clay.TEXT(fmt.Sprintf("%d", i), clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
@@ -468,7 +468,7 @@ func UIFlowValue(v FlowValue) {
 				Border: clay.B{Width: BA_BTW, Color: Gray},
 			}, func() {
 				for col, field := range v.Type.ContainedType.Fields {
-					clay.CLAY_AUTO_ID(clay.EL{ // Table col
+					clay.CLAY(clay.IDI("Col", col), clay.EL{ // Table col
 						Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
 						Border: clay.B{Width: BTW, Color: Gray},
 					}, func() {
@@ -478,8 +478,8 @@ func UIFlowValue(v FlowValue) {
 							clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
 						})
 
-						for _, val := range v.ColumnValues(col) {
-							clay.CLAY_AUTO_ID(clay.EL{
+						for row, val := range v.ColumnValues(col) {
+							clay.CLAY(clay.IDI("Cell", row), clay.EL{
 								Layout: clay.LAY{Padding: PVH(S2, S3)},
 							}, func() {
 								UIFlowValue(val)
