@@ -552,7 +552,7 @@ func processInput() {
 				Width:  PortDragRadius * 2,
 				Height: PortDragRadius * 2,
 			}
-			if !core.IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
+			if !core.IsHoveringUI && core.Drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
 				NewWireSourceNode = n
 				NewWireSourcePort = i
 			}
@@ -565,7 +565,7 @@ func processInput() {
 				Height: PortDragRadius * 2,
 			}
 			if wire, hasWire := n.GetInputWire(i); hasWire {
-				if !core.IsHoveringUI && drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
+				if !core.IsHoveringUI && core.Drag.TryStartDrag(NewWireDragKey, portRect, V2{}) {
 					CurrentGraph.Wires = slices.DeleteFunc(CurrentGraph.Wires, func(w *core.Wire) bool { return w == wire })
 					NewWireSourceNode = wire.StartNode
 					NewWireSourcePort = wire.StartPort
@@ -575,11 +575,11 @@ func processInput() {
 
 		// core.Node drag and drop
 		if !core.IsHoveringUI {
-			if drag.TryStartDrag(n, n.DragRect, n.Pos) {
+			if core.Drag.TryStartDrag(n, n.DragRect, n.Pos) {
 				core.PushHistory()
 			}
 		}
-		if draggingThisNode, done, canceled := drag.State(n); draggingThisNode {
+		if draggingThisNode, done, canceled := core.Drag.State(n); draggingThisNode {
 			// If we start dragging a node that isn't selected, select it (and deselect others)
 			// UNLESS we are dragging a selected node, then we move all selected nodes.
 			if !IsNodeSelected(n.ID) {
@@ -587,7 +587,7 @@ func processInput() {
 			}
 
 			// Calculate delta
-			delta := rl.Vector2Subtract(drag.NewObjPosition(), n.Pos)
+			delta := rl.Vector2Subtract(core.Drag.NewObjPosition(), n.Pos)
 
 			// Apply delta to all selected nodes
 			for id := range SelectedNodes {
@@ -603,7 +603,7 @@ func processInput() {
 
 			if done {
 				if canceled {
-					n.Pos = drag.ObjStart
+					n.Pos = core.Drag.ObjStart
 				}
 			}
 		}
@@ -617,7 +617,7 @@ func processInput() {
 	}
 
 	// Dropping new wires
-	if draggingNewWire, done, canceled := drag.State(NewWireDragKey); draggingNewWire {
+	if draggingNewWire, done, canceled := core.Drag.State(NewWireDragKey); draggingNewWire {
 		if done && !canceled {
 			// Loop over nodes to find any you may have dropped on
 			for _, node := range CurrentGraph.Nodes {
@@ -659,9 +659,9 @@ func processInput() {
 	}
 
 	// Dropping core.FlowValue
-	if draggingValue, done, canceled := drag.State("FLOW_VALUE_DRAG"); draggingValue {
+	if draggingValue, done, canceled := core.Drag.State("FLOW_VALUE_DRAG"); draggingValue {
 		if done && !canceled {
-			if dragValue, ok := drag.Thing.(FlowValueDrag); ok {
+			if dragValue, ok := core.Drag.Thing.(FlowValueDrag); ok {
 				n := nodes.NewValueNode(dragValue.Value)
 				n.Pos = V2(rl.GetMousePosition())
 				if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
@@ -682,13 +682,13 @@ func processInput() {
 			Width:  OutputWindowDragWidth,
 			Height: float32(rl.GetScreenHeight()),
 		}
-		drag.TryStartDrag(OutputWindowDragKey, outputWindowRect, V2{X: OutputWindowWidth, Y: 0})
+		core.Drag.TryStartDrag(OutputWindowDragKey, outputWindowRect, V2{X: OutputWindowWidth, Y: 0})
 
-		resizing, done, canceled := drag.State(OutputWindowDragKey)
+		resizing, done, canceled := core.Drag.State(OutputWindowDragKey)
 		if resizing {
 			if done {
 				if canceled {
-					OutputWindowWidth = drag.ObjStart.X
+					OutputWindowWidth = core.Drag.ObjStart.X
 				}
 			} else {
 				OutputWindowWidth = float32(rl.GetScreenWidth()) - float32(rl.GetMouseX())
@@ -712,16 +712,16 @@ func processInput() {
 					for k, v := range SelectedNodes {
 						initial[k] = v
 					}
-					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(background.BoundingBox), V2{})
+					core.Drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(background.BoundingBox), V2{})
 				} else {
-					if drag.TryStartDrag(PanDragKey, rl.Rectangle(background.BoundingBox), V2{}) {
+					if core.Drag.TryStartDrag(PanDragKey, rl.Rectangle(background.BoundingBox), V2{}) {
 						LastPanMousePosition = rl.GetMousePosition()
 					}
 				}
 			}
 
-			if boxSelecting, _, canceled := drag.State(BoxSelectDragKey); boxSelecting {
-				if bs, ok := drag.Thing.(BoxSelectDrag); ok {
+			if boxSelecting, _, canceled := core.Drag.State(BoxSelectDragKey); boxSelecting {
+				if bs, ok := core.Drag.Thing.(BoxSelectDrag); ok {
 					if canceled {
 						// Restore
 						clear(SelectedNodes)
@@ -730,7 +730,7 @@ func processInput() {
 						}
 					} else {
 						// Update selection
-						start := drag.MouseStart
+						start := core.Drag.MouseStart
 						end := rl.GetMousePosition()
 
 						x := min(start.X, end.X)
@@ -754,7 +754,7 @@ func processInput() {
 				}
 			}
 
-			if panning, _, _ := drag.State(PanDragKey); panning {
+			if panning, _, _ := core.Drag.State(PanDragKey); panning {
 				mousePos := rl.GetMousePosition()
 				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
 				for _, n := range CurrentGraph.Nodes {
@@ -1575,21 +1575,21 @@ func UIOverlay(topoErr error) {
 					for k, v := range SelectedNodes {
 						initial[k] = v
 					}
-					drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(overlay.BoundingBox), V2{})
+					core.Drag.TryStartDrag(BoxSelectDrag{InitialSelection: initial}, rl.Rectangle(overlay.BoundingBox), V2{})
 				} else {
 					if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
 						clear(SelectedNodes)
 						selectedNodeID = 0
 						core.UIFocus = nil
 					}
-					if drag.TryStartDrag(PanDragKey, rl.Rectangle(overlay.BoundingBox), V2{}) {
+					if core.Drag.TryStartDrag(PanDragKey, rl.Rectangle(overlay.BoundingBox), V2{}) {
 						LastPanMousePosition = rl.GetMousePosition()
 					}
 				}
 			}
 
-			if boxSelecting, _, canceled := drag.State(BoxSelectDragKey); boxSelecting {
-				if bs, ok := drag.Thing.(BoxSelectDrag); ok {
+			if boxSelecting, _, canceled := core.Drag.State(BoxSelectDragKey); boxSelecting {
+				if bs, ok := core.Drag.Thing.(BoxSelectDrag); ok {
 					if canceled {
 						// Restore
 						clear(SelectedNodes)
@@ -1598,7 +1598,7 @@ func UIOverlay(topoErr error) {
 						}
 					} else {
 						// Update selection
-						start := drag.MouseStart
+						start := core.Drag.MouseStart
 						end := rl.GetMousePosition()
 
 						startWorld := Camera.ScreenToWorld(start)
@@ -1625,7 +1625,7 @@ func UIOverlay(topoErr error) {
 				}
 			}
 
-			if panning, _, _ := drag.State(PanDragKey); panning {
+			if panning, _, _ := core.Drag.State(PanDragKey); panning {
 				mousePos := rl.GetMousePosition()
 				delta := rl.Vector2Subtract(mousePos, LastPanMousePosition)
 				Camera.Pan(delta)
@@ -1682,7 +1682,7 @@ func renderWorldOverlays() {
 			color.RGBA(),
 		)
 	}
-	if draggingNewWire, _, _ := drag.State(NewWireDragKey); draggingNewWire {
+	if draggingNewWire, _, _ := core.Drag.State(NewWireDragKey); draggingNewWire {
 		// Calculate end position in screen space
 		mousePos := rl.GetMousePosition()
 
@@ -1702,8 +1702,8 @@ func renderWorldOverlays() {
 }
 
 func renderScreenOverlays() {
-	if draggingBox, _, _ := drag.State(BoxSelectDragKey); draggingBox {
-		start := drag.MouseStart
+	if draggingBox, _, _ := core.Drag.State(BoxSelectDragKey); draggingBox {
+		start := core.Drag.MouseStart
 		end := rl.GetMousePosition()
 
 		x := min(start.X, end.X)
@@ -1760,7 +1760,7 @@ func UIGroup(group *core.Group) {
 			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
 				core.UIInput.RegisterPointerDown(elementID, pointerData, 0)
 
-				if drag.TryStartDrag(GroupDrag{Group: group}, rl.Rectangle{}, V2{}) {
+				if core.Drag.TryStartDrag(GroupDrag{Group: group}, rl.Rectangle{}, V2{}) {
 					// Find nodes inside
 					var nodes []*core.Node
 					for _, n := range CurrentGraph.Nodes {
@@ -1771,7 +1771,7 @@ func UIGroup(group *core.Group) {
 						}
 					}
 					// Update the drag thing with found nodes
-					drag.Thing = GroupDrag{Group: group, Nodes: nodes}
+					core.Drag.Thing = GroupDrag{Group: group, Nodes: nodes}
 				}
 			}, nil)
 
@@ -1779,9 +1779,9 @@ func UIGroup(group *core.Group) {
 		})
 	})
 
-	if dragging, _, _ := drag.State(GroupDragKey); dragging {
-		if gd, ok := drag.Thing.(GroupDrag); ok && gd.Group.ID == group.ID {
-			targetPos := drag.NewObjPosition()
+	if dragging, _, _ := core.Drag.State(GroupDragKey); dragging {
+		if gd, ok := core.Drag.Thing.(GroupDrag); ok && gd.Group.ID == group.ID {
+			targetPos := core.Drag.NewObjPosition()
 			if !rl.IsKeyDown(rl.KeyLeftShift) && !rl.IsKeyDown(rl.KeyRightShift) {
 				targetPos = SnapToGrid(targetPos)
 			}
@@ -1843,7 +1843,7 @@ func UINode(node *core.Node, disabled bool) {
 			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
 				core.IsHoveringPanel = true
 				core.UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
-				if core.UIInput.IsClick(elementID, pointerData) && !drag.WasDragging {
+				if core.UIInput.IsClick(elementID, pointerData) && !core.Drag.WasDragging {
 					core.UIFocus = nil
 					multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 					SelectNode(node.ID, multi)
@@ -1861,7 +1861,7 @@ func UINode(node *core.Node, disabled bool) {
 				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
 					core.IsHoveringPanel = true
 					core.UIInput.RegisterPointerDown(elementID, pointerData, zIndex)
-					if core.UIInput.IsClick(elementID, pointerData) && !drag.WasDragging {
+					if core.UIInput.IsClick(elementID, pointerData) && !core.Drag.WasDragging {
 						core.UIFocus = nil
 						multi := rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) || rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyRightControl)
 						SelectNode(node.ID, multi)

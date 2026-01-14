@@ -62,10 +62,8 @@ func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 					z = CurrentZIndex
 				}
 				// Bump Z-index to ensure buttons are always above their background context (e.g. Node body)
-				// Cap at MaxInt16 to avoid overflow
-				if z < 32767 {
-					z++
-				}
+				// Use max to ensure we don't go below context.
+				// We rely on render order (last wins) for same Z-index.
 				UIInput.RegisterPointerDown(elementID, pointerData, z)
 			}
 
@@ -259,6 +257,24 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 
 		if d.open {
 			WithZIndex(32767, func() { // ZTOP
+				// Transparent blocker to close dropdown when clicking outside
+				clay.CLAY(clay.ID(fmt.Sprintf("%d-blocker", id.ID)), clay.EL{
+					Layout: clay.LAY{
+						Sizing: WH(float32(rl.GetScreenWidth()), float32(rl.GetScreenHeight())),
+					},
+					Floating: clay.FloatingElementConfig{
+						AttachTo: clay.AttachToRoot,
+						ZIndex:   32000,
+					},
+				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						UIInput.RegisterPointerDown(elementID, pointerData, 32000)
+						if UIInput.IsClick(elementID, pointerData) {
+							d.open = false
+						}
+					}, nil)
+				})
+
 				clay.CLAY_AUTO_ID(clay.EL{
 					Layout: clay.LAY{
 						LayoutDirection: clay.TopToBottom,
@@ -407,24 +423,11 @@ func FormatBytes(n int64) string {
 
 func UIFlowValue(v FlowValue) {
 	clay.CLAY(clay.AUTO_ID, clay.EL{}, func() {
-		// Drag logic requires defining drag struct which used to be in app/ui.go.
-		// If we want to support dragging, we need access to drag package or define a Drag interface.
-		// For now, I will omit the drag interaction or assume drag is available.
-		// drag is in "github.com/bvisness/flowshell/app" which is a cycle.
-		// We shouldn't drag from 
-		// But UIFlowValue is used in nodes, and they might want to drag values.
-		// If dragging is app-specific logic, then UIFlowValue must be in app?
-		// But nodes use it.
-		// Maybe strict dragging logic stays in app, and we just render?
-
-		// For now, I'll comment out the drag handler in core moving it here.
-		/*
-			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
-				if data, ok := clay.GetElementData(elementID); ok {
-					drag.TryStartDrag(FlowValueDrag{Value: v}, rl.Rectangle(data.BoundingBox), V2{})
-				}
-			}, nil)
-		*/
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+			if data, ok := clay.GetElementData(elementID); ok {
+				Drag.TryStartDrag(FlowValueDrag{Value: v}, rl.Rectangle(data.BoundingBox), V2{})
+			}
+		}, nil)
 
 		switch v.Type.Kind {
 		case FSKindBytes:
@@ -489,4 +492,14 @@ func UIFlowValue(v FlowValue) {
 			clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
 		}
 	})
+}
+
+type FlowValueDrag struct {
+	NodeID int
+	Port   int
+	Value  FlowValue
+}
+
+func (d FlowValueDrag) DragKey() string {
+	return fmt.Sprintf("FlowValueDrag-%d-%d", d.NodeID, d.Port)
 }

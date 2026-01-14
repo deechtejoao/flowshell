@@ -84,7 +84,7 @@ func Main() {
 }
 
 func frame() {
-	drag.Update()
+	core.Drag.Update()
 
 	// Handle Zoom Input
 	wheel := rl.GetMouseWheelMove()
@@ -105,7 +105,7 @@ func frame() {
 	core.IsHoveringPanel = false
 
 	clayPointerMouseDown := rl.IsMouseButtonDown(rl.MouseButtonLeft)
-	if drag.Dragging {
+	if core.Drag.Dragging {
 		clayPointerMouseDown = false
 	}
 	core.UIInput.BeginFrame(clayPointerMouseDown)
