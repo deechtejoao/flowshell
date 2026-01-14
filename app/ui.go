@@ -675,7 +675,7 @@ func processInput() {
 	}
 
 	// Resizing output window
-	{
+	if !IsOutputCollapsed {
 		outputWindowRect := rl.Rectangle{
 			X:      float32(rl.GetScreenWidth()) - OutputWindowWidth - OutputWindowDragWidth/2,
 			Y:      0,
@@ -821,6 +821,7 @@ type ContextMenuState struct {
 }
 
 var OutputWindowWidth float32 = windowWidth * 0.30
+var IsOutputCollapsed = false
 
 func UpdateGraph() error {
 	// Sweep the graph, validating all nodes
@@ -1109,7 +1110,7 @@ func UIOverlay(topoErr error) {
 			containerWidth = clay.SizingFixed(600)
 		}
 
-		core.WithZIndex(10, func() {
+		core.WithZIndex(core.Z_NODE_SELECTED, func() {
 			clay.CLAY(clay.ID("NewNodeContainer"), clay.EL{
 				Layout: clay.LAY{
 					Sizing:  clay.Sizing{Width: containerWidth, Height: clay.SizingFit(0, 0)},
@@ -1121,7 +1122,7 @@ func UIOverlay(topoErr error) {
 						Element: clay.AttachPointLeftBottom,
 						Parent:  clay.AttachPointLeftBottom,
 					},
-					ZIndex: 10,
+					ZIndex: core.Z_NODE_SELECTED,
 				},
 			}, func() {
 				clay.CLAY_AUTO_ID(clay.EL{
@@ -1492,10 +1493,14 @@ func UIOverlay(topoErr error) {
 		clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}})
 
 		clay.CLAY_LATE(clay.ID("Output"), func() clay.EL {
+			width := OutputWindowWidth
+			if IsOutputCollapsed {
+				width = 40
+			}
 			return clay.EL{
 				Layout: clay.LAY{
 					LayoutDirection: clay.TopToBottom,
-					Sizing:          clay.Sizing{Width: clay.SizingFixed(OutputWindowWidth), Height: clay.SizingGrow(1, 0)},
+					Sizing:          clay.Sizing{Width: clay.SizingFixed(width), Height: clay.SizingGrow(1, 0)},
 					Padding:         core.PA2,
 				},
 				BackgroundColor: core.Charcoal,
@@ -1511,54 +1516,78 @@ func UIOverlay(topoErr error) {
 				core.IsHoveringUI = true
 			}, nil)
 
-			if selectedNode, ok := GetSelectedNode(); ok {
-				if result, ok := selectedNode.GetResult(); ok {
-					if result.Err == nil {
-						for outputIndex, output := range result.Outputs {
-							port := selectedNode.OutputPorts[outputIndex]
-							if err := core.Typecheck(*output.Type, port.Type); err != nil {
-								// panic(err)
-								clay.TEXT(fmt.Sprintf("Type Error: %v", err), clay.TextElementConfig{TextColor: core.Red})
-								continue
-							}
+			// Header / Toggle
+			clay.CLAY_AUTO_ID(clay.EL{
+				Layout: clay.LAY{
+					LayoutDirection: clay.LeftToRight,
+					ChildAlignment:  core.XRIGHT,
+					Sizing:          core.GROWH,
+					Padding:         clay.Padding{Bottom: core.S2},
+				},
+			}, func() {
+				core.UIButton(clay.AUTO_ID, core.UIButtonConfig{
+					OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsOutputCollapsed = !IsOutputCollapsed
+					},
+				}, func() {
+					img := core.ImgToggleDown
+					if IsOutputCollapsed {
+						img = core.ImgToggleRight
+					}
+					core.UIImage(clay.AUTO_ID, img, clay.EL{})
+				})
+			})
 
-							outputState := selectedNode.GetOutputState(port.Name)
+			if !IsOutputCollapsed {
+				if selectedNode, ok := GetSelectedNode(); ok {
+					if result, ok := selectedNode.GetResult(); ok {
+						if result.Err == nil {
+							for outputIndex, output := range result.Outputs {
+								port := selectedNode.OutputPorts[outputIndex]
+								if err := core.Typecheck(*output.Type, port.Type); err != nil {
+									// panic(err)
+									clay.TEXT(fmt.Sprintf("Type Error: %v", err), clay.TextElementConfig{TextColor: core.Red})
+									continue
+								}
 
-							clay.CLAY_AUTO_ID(clay.EL{
-								Layout: clay.LAY{ChildGap: core.S1, ChildAlignment: core.YCENTER},
-							}, func() {
-								core.UIButton(clay.AUTO_ID, core.UIButtonConfig{
-									OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
-										outputState.Collapsed = !outputState.Collapsed
-									},
-								}, func() {
-									core.UIImage(clay.AUTO_ID, util.Tern(outputState.Collapsed, core.ImgToggleRight, core.ImgToggleDown), clay.EL{})
-								})
-								clay.TEXT(port.Name, clay.TextElementConfig{FontID: core.InterSemibold, TextColor: core.White})
-							})
-							if !outputState.Collapsed {
+								outputState := selectedNode.GetOutputState(port.Name)
+
 								clay.CLAY_AUTO_ID(clay.EL{
-									Layout: clay.LAY{ChildGap: core.S1},
+									Layout: clay.LAY{ChildGap: core.S1, ChildAlignment: core.YCENTER},
 								}, func() {
-									clay.CLAY_AUTO_ID(clay.EL{
-										Layout: clay.LAY{
-											Sizing:         clay.Sizing{Width: core.PX(float32(core.ImgToggleDown.Width)), Height: core.GROWV.Height},
-											ChildAlignment: core.XCENTER,
+									core.UIButton(clay.AUTO_ID, core.UIButtonConfig{
+										OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+											outputState.Collapsed = !outputState.Collapsed
 										},
+									}, func() {
+										core.UIImage(clay.AUTO_ID, util.Tern(outputState.Collapsed, core.ImgToggleRight, core.ImgToggleDown), clay.EL{})
+									})
+									clay.TEXT(port.Name, clay.TextElementConfig{FontID: core.InterSemibold, TextColor: core.White})
+								})
+								if !outputState.Collapsed {
+									clay.CLAY_AUTO_ID(clay.EL{
+										Layout: clay.LAY{ChildGap: core.S1},
 									}, func() {
 										clay.CLAY_AUTO_ID(clay.EL{
 											Layout: clay.LAY{
-												Sizing: clay.Sizing{Width: core.PX(1), Height: core.GROWV.Height},
+												Sizing:         clay.Sizing{Width: core.PX(float32(core.ImgToggleDown.Width)), Height: core.GROWV.Height},
+												ChildAlignment: core.XCENTER,
 											},
-											Border: clay.B{Color: core.Gray, Width: core.BR},
+										}, func() {
+											clay.CLAY_AUTO_ID(clay.EL{
+												Layout: clay.LAY{
+													Sizing: clay.Sizing{Width: core.PX(1), Height: core.GROWV.Height},
+												},
+												Border: clay.B{Color: core.Gray, Width: core.BR},
+											})
 										})
+										core.UIFlowValue(output)
 									})
-									core.UIFlowValue(output)
-								})
+								}
 							}
+						} else {
+							clay.TEXT(result.Err.Error(), clay.TextElementConfig{TextColor: core.Red})
 						}
-					} else {
-						clay.TEXT(result.Err.Error(), clay.TextElementConfig{TextColor: core.Red})
 					}
 				}
 			}
