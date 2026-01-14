@@ -1,8 +1,10 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/core"
 	"fmt"
 
+	_ "github.com/bvisness/flowshell/app/nodes"
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -12,7 +14,7 @@ const windowWidth = 1920
 
 func Main() {
 	CurrentSettings = LoadSettings()
-	ApplyTheme(CurrentSettings.Theme)
+	core.ApplyTheme(CurrentSettings.Theme)
 
 	rl.SetTraceLogLevel(rl.LogError)
 	rl.SetConfigFlags(rl.FlagWindowResizable)
@@ -86,7 +88,7 @@ func frame() {
 
 	// Handle Zoom Input
 	wheel := rl.GetMouseWheelMove()
-	shouldZoom := wheel != 0 && !IsHoveringUI
+	shouldZoom := wheel != 0 && !core.IsHoveringUI
 	if shouldZoom {
 		Camera.ZoomAt(rl.GetMousePosition(), util.Tern(wheel > 0, float32(1.1), float32(0.9)))
 	}
@@ -95,18 +97,18 @@ func frame() {
 		clay.SetDebugModeEnabled(!clay.IsDebugModeEnabled())
 	}
 
-	// Update Graph Logic
+	// Update core.Graph Logic
 	topoErr := UpdateGraph()
 
 	// Reset global UI hover state for this frame.
-	IsHoveringUI = false
-	IsHoveringPanel = false
+	core.IsHoveringUI = false
+	core.IsHoveringPanel = false
 
 	clayPointerMouseDown := rl.IsMouseButtonDown(rl.MouseButtonLeft)
 	if drag.Dragging {
 		clayPointerMouseDown = false
 	}
-	UIInput.BeginFrame(clayPointerMouseDown)
+	core.UIInput.BeginFrame(clayPointerMouseDown)
 
 	// --- Layout 1: Nodes (World Space -> Screen Space Mapped) ---
 	// We map the Clay layout to the screen directly, but manually position nodes
@@ -155,10 +157,10 @@ func frame() {
 
 	processInput()
 
-	UIInput.EndFrame()
+	core.UIInput.EndFrame()
 
 	rl.BeginDrawing()
-	rl.ClearBackground(Night.RGBA())
+	rl.ClearBackground(core.Night.RGBA())
 
 	// World Space (Mapped to Screen Space)
 	renderWorldOverlays()
@@ -172,15 +174,14 @@ func frame() {
 	clay.ReleaseFrameMemory()
 
 	// Update focus tracking
-	if UIFocus != nil {
-		LastUIFocus = *UIFocus
-		LastUIFocusValid = true
+	if core.UIFocus != nil {
+		core.LastUIFocus = *core.UIFocus
+		core.LastUIFocusValid = true
 	} else {
-		LastUIFocusValid = false
+		core.LastUIFocusValid = false
 	}
 }
 
 func handleClayErrors(errorData clay.ErrorData) {
 	fmt.Printf("CLAY ERROR: %s\n", errorData.ErrorText)
 }
-

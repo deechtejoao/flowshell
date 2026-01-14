@@ -1,0 +1,489 @@
+package core
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/bvisness/flowshell/clay"
+	"github.com/bvisness/flowshell/util"
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
+
+// Helpers and styles are in styles.go
+
+// PushHistoryFunc should be set by app
+var PushHistoryFunc func()
+
+func PushHistory() {
+	if PushHistoryFunc != nil {
+		PushHistoryFunc()
+	}
+}
+
+// Focus tracking
+var UIFocus *clay.ElementID
+var LastUIFocus clay.ElementID
+var LastUIFocusValid bool
+
+func IsFocused(id clay.ElementID) bool {
+	return UIFocus != nil && id.ID == UIFocus.ID
+}
+
+// ---------------------------
+// Widgets
+
+type UIButtonConfig struct {
+	El       clay.ElementDeclaration
+	Disabled bool
+
+	OnHover         clay.OnHoverFunc
+	OnHoverUserData any
+
+	OnClick         clay.OnHoverFunc
+	OnClickUserData any
+
+	ZIndex int16
+}
+
+func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
+	clay.CLAY_LATE(id, func() clay.ElementDeclaration {
+		config.El.CornerRadius = RA1
+		config.El.BackgroundColor = util.Tern(clay.Hovered() && !config.Disabled, HoverWhite, clay.Color{})
+
+		return config.El
+	}, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+			IsHoveringUI = true
+
+			if !config.Disabled {
+				UICursor = rl.MouseCursorPointingHand
+				z := config.ZIndex
+				if CurrentZIndex > z {
+					z = CurrentZIndex
+				}
+				// Bump Z-index to ensure buttons are always above their background context (e.g. Node body)
+				UIInput.RegisterPointerDown(elementID, pointerData, z+1)
+			}
+
+			if config.OnHover != nil {
+				config.OnHover(elementID, pointerData, config.OnHoverUserData)
+			}
+
+			if !config.Disabled && UIInput.IsClick(elementID, pointerData) {
+				UIFocus = nil
+				if config.OnClick != nil {
+					config.OnClick(elementID, pointerData, config.OnClickUserData)
+				}
+			}
+		}, nil)
+
+		for _, f := range children {
+			f()
+		}
+	})
+}
+
+type UITextBoxConfig struct {
+	El       clay.EL
+	Disabled bool
+
+	OnSubmit func(val string)
+
+	ZIndex int16
+}
+
+func UITextBox(id clay.ElementID, str *string, config UITextBoxConfig, children ...func()) {
+	if IsFocused(id) {
+		if config.Disabled {
+			UIFocus = nil
+		} else {
+			if rl.IsKeyPressed(rl.KeyEnter) {
+				if config.OnSubmit != nil {
+					config.OnSubmit(*str)
+				}
+				PushHistory() // Snapshot history on Submit
+
+				UIFocus = nil
+			} else {
+				for r := rl.GetCharPressed(); r != 0; r = rl.GetCharPressed() {
+					*str = *str + string(rune(r))
+				}
+				if rl.IsKeyPressed(rl.KeyBackspace) || rl.IsKeyPressedRepeat(rl.KeyBackspace) {
+					if len(*str) > 0 {
+						*str = (*str)[:len(*str)-1]
+					}
+				}
+			}
+		}
+	}
+
+	// Detect Blur
+	if LastUIFocusValid && LastUIFocus == id && !IsFocused(id) {
+		PushHistory()
+	}
+
+	clay.CLAY_LATE(id, func() clay.EL {
+		config.El.Border = clay.B{Width: BA, Color: Gray}
+		config.El.Layout.Padding = PVH(S1, S2)
+		config.El.Layout.ChildAlignment.Y = clay.AlignYCenter
+		config.El.BackgroundColor = DarkGray
+		config.El.Clip = clay.CLIP{Horizontal: true}
+
+		if clay.Hovered() {
+			UICursor = rl.MouseCursorIBeam
+		}
+
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			IsHoveringUI = true
+			z := config.ZIndex
+			if CurrentZIndex > z {
+				z = CurrentZIndex
+			}
+			UIInput.RegisterPointerDown(elementID, pointerData, z)
+
+			if UIInput.IsClick(elementID, pointerData) {
+				UIFocus = &elementID
+			}
+		}, nil)
+
+		return config.El
+	}, func() {
+		clay.TEXT(*str, clay.T{TextColor: util.Tern(config.Disabled, LightGray, White)})
+		UISpacer(clay.AUTO_ID, WH(1, 16))
+		if IsFocused(id) {
+			clay.CLAY_AUTO_ID(clay.EL{
+				Layout:          clay.LAY{Sizing: WH(2, 16)},
+				BackgroundColor: White,
+			})
+		}
+
+		for _, f := range children {
+			f()
+		}
+	})
+}
+
+type OnChangeFunc func(before, after any)
+
+type UIDropdown struct {
+	Options  []UIDropdownOption
+	Selected int
+
+	open bool
+}
+
+type UIDropdownOption struct {
+	Name  string
+	Value any
+}
+
+func (d *UIDropdown) GetOption(i int) UIDropdownOption {
+	if len(d.Options) == 0 {
+		return UIDropdownOption{}
+	}
+	if i >= len(d.Options) {
+		return d.Options[0]
+	}
+	return d.Options[i]
+}
+
+func (d *UIDropdown) GetSelectedOption() UIDropdownOption {
+	return d.GetOption(d.Selected)
+}
+
+func (d *UIDropdown) SelectByName(name string) bool {
+	for i, opt := range d.Options {
+		if opt.Name == name {
+			d.Selected = i
+			return true
+		}
+	}
+	return false
+}
+
+func (d *UIDropdown) SelectByValue(v any) bool {
+	for i, opt := range d.Options {
+		if opt.Value == v {
+			d.Selected = i
+			return true
+		}
+	}
+	return false
+}
+
+type UIDropdownConfig struct {
+	El       clay.EL
+	OnChange OnChangeFunc
+}
+
+func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
+	config.El.Layout.Padding = clay.Padding{}
+	config.El.Layout.ChildAlignment.Y = clay.AlignYCenter
+	config.El.Border = clay.BorderElementConfig{Width: BA, Color: Gray}
+	config.El.BackgroundColor = DarkGray
+
+	clay.CLAY(id, config.El, func() {
+		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+			IsHoveringUI = true
+		}, nil)
+
+		clay.CLAY_AUTO_ID(clay.EL{
+			Layout: clay.LAY{
+				Padding: PVH(S1, S2),
+				Sizing:  GROWH,
+			},
+		}, func() {
+			clay.TEXT(d.GetSelectedOption().Name, clay.TextElementConfig{TextColor: White})
+		})
+		UIButton(clay.AUTO_ID, UIButtonConfig{
+			El: clay.EL{
+				Layout: clay.LAY{
+					ChildAlignment: ALLCENTER,
+					Sizing:         GROWV,
+					Padding:        PA2,
+				},
+				Border: clay.B{Width: clay.BW{Left: 1}, Color: Gray},
+			},
+			OnClick: func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+				d.open = !d.open
+			},
+		}, func() {
+			UIImage(clay.AUTO_ID, util.Tern(d.open, ImgDropdownUp, ImgDropdownDown), clay.EL{
+				BackgroundColor: LightGray,
+			})
+		})
+
+		if d.open {
+			WithZIndex(32767, func() { // ZTOP
+				clay.CLAY_AUTO_ID(clay.EL{
+					Layout: clay.LAY{
+						LayoutDirection: clay.TopToBottom,
+						Sizing:          GROWH,
+					},
+					Floating: clay.FLOAT{
+						AttachTo:           clay.AttachToParent,
+						AttachPoints:       clay.FloatingAttachPoints{Parent: clay.AttachPointLeftBottom},
+						ZIndex:             32767,
+						PointerCaptureMode: clay.PointercaptureModePassthrough,
+					},
+					Border: clay.B{
+						Width: clay.BW{
+							Top:  0,
+							Left: 1, Right: 1,
+							Bottom: 1,
+
+							BetweenChildren: 1,
+						},
+						Color: Gray,
+					},
+					BackgroundColor: DarkGray,
+				}, func() {
+					clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+						IsHoveringUI = true
+					}, nil)
+
+					for i, opt := range d.Options {
+						clay.CLAY_AUTO_ID_LATE(func() clay.EL {
+							return clay.EL{
+								Layout: clay.LAY{
+									Padding: PVH(S1, S2),
+									Sizing:  GROWH,
+								},
+								BackgroundColor: util.Tern(clay.Hovered(), HoverWhite, clay.Color{}),
+							}
+						}, func() {
+							clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, userData any) {
+								IsHoveringUI = true
+								UIInput.RegisterPointerDown(elementID, pointerData, 32767)
+
+								if UIInput.IsClick(elementID, pointerData) {
+									selectedBefore := d.Selected
+									d.Selected = userData.(int)
+									d.open = false
+									if d.Selected != selectedBefore {
+										PushHistory()
+									}
+									if config.OnChange != nil {
+										config.OnChange(d.GetOption(selectedBefore).Value, d.GetOption(d.Selected).Value)
+									}
+								}
+							}, i)
+							clay.TEXT(opt.Name, clay.T{TextColor: White})
+						})
+					}
+				})
+			})
+		}
+	})
+}
+
+func UISpacer(id clay.ElementID, sizing clay.Sizing) {
+	clay.CLAY(id, clay.EL{Layout: clay.LAY{Sizing: sizing}})
+}
+
+func UIImage(id clay.ElementID, img rl.Texture2D, decl clay.EL) {
+	decl.Layout.Sizing = WH(float32(img.Width), float32(img.Height))
+	decl.Image = clay.ImageElementConfig{ImageData: img}
+	clay.CLAY(id, decl)
+}
+
+func UITooltip(msg string) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Floating: clay.FloatingElementConfig{
+			AttachTo: clay.AttachToRoot,
+			Offset:   clay.V2(rl.GetMousePosition()).Plus(clay.V2{X: 0, Y: 28}),
+			ZIndex:   32767,
+		},
+		Layout:          clay.LAY{Padding: PA1},
+		BackgroundColor: DarkGray,
+		Border:          clay.BorderElementConfig{Color: Gray, Width: BA},
+	}, func() {
+		clay.TEXT(msg, clay.TextElementConfig{TextColor: White})
+	})
+}
+
+func UICheckbox(id clay.ElementID, checked *bool, label string) {
+	clay.CLAY_AUTO_ID(clay.EL{
+		Layout: clay.LAY{ChildGap: S1, ChildAlignment: YCENTER},
+	}, func() {
+		UIButton(id, UIButtonConfig{
+			OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
+				*checked = !*checked
+				PushHistory()
+			},
+		}, func() {
+			UIImage(clay.AUTO_ID, util.Tern(*checked, ImgToggleDown, ImgToggleRight), clay.EL{})
+		})
+		clay.TEXT(label, clay.TextElementConfig{TextColor: White})
+	})
+}
+
+// PortAnchorID is in node.go
+
+func PortAnchor(node *Node, isOutput bool, port int) {
+	// Give it a small non-zero size to ensure it has a valid bounding box for layout calculations
+	// 12x12 ensures easy clicking
+	clay.CLAY(PortAnchorID(node, isOutput, port), clay.EL{
+		Layout:          clay.LAY{Sizing: WH(12, 12)},
+		BackgroundColor: LightGray,
+		CornerRadius:    RA(6),
+	})
+}
+
+func UIInputPort(n *Node, port int) {
+	clay.CLAY(clay.IDI(fmt.Sprintf("InputPort%d", port), n.ID), clay.EL{
+		Layout: clay.LAY{ChildAlignment: YCENTER},
+	}, func() {
+		PortAnchor(n, false, port)
+		clay.TEXT(n.InputPorts[port].Name, clay.TextElementConfig{TextColor: White})
+	})
+}
+
+func UIOutputPort(n *Node, port int) {
+	clay.CLAY(clay.IDI(fmt.Sprintf("OutputPort%d", port), n.ID), clay.EL{
+		Layout: clay.LAY{ChildAlignment: YCENTER},
+	}, func() {
+		clay.TEXT(n.OutputPorts[port].Name, clay.TextElementConfig{TextColor: White})
+		PortAnchor(n, true, port)
+	})
+}
+
+func FormatBytes(n int64) string {
+	if n < 1_000 {
+		return fmt.Sprintf("%d B", n)
+	} else if n < 1_000_000 {
+		return fmt.Sprintf("%.1f KB", float32(n)/1_000)
+	} else if n < 1_000_000_000 {
+		return fmt.Sprintf("%.1f MB", float32(n)/1_000_000)
+	} else if n < 1_000_000_000_000 {
+		return fmt.Sprintf("%.1f GB", float32(n)/1_000_000_000)
+	} else {
+		return fmt.Sprintf("%.1f TB", float32(n)/1_000_000_000_000)
+	}
+}
+
+func UIFlowValue(v FlowValue) {
+	clay.CLAY(clay.AUTO_ID, clay.EL{}, func() {
+		// Drag logic requires defining drag struct which used to be in app/ui.go.
+		// If we want to support dragging, we need access to drag package or define a Drag interface.
+		// For now, I will omit the drag interaction or assume drag is available.
+		// drag is in "github.com/bvisness/flowshell/app" which is a cycle.
+		// We shouldn't drag from 
+		// But UIFlowValue is used in nodes, and they might want to drag values.
+		// If dragging is app-specific logic, then UIFlowValue must be in app?
+		// But nodes use it.
+		// Maybe strict dragging logic stays in app, and we just render?
+
+		// For now, I'll comment out the drag handler in core moving it here.
+		/*
+			clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+				if data, ok := clay.GetElementData(elementID); ok {
+					drag.TryStartDrag(FlowValueDrag{Value: v}, rl.Rectangle(data.BoundingBox), V2{})
+				}
+			}, nil)
+		*/
+
+		switch v.Type.Kind {
+		case FSKindBytes:
+			if len(v.BytesValue) == 0 {
+				clay.TEXT("<no data>", clay.TextElementConfig{FontID: JetBrainsMono, TextColor: LightGray})
+			} else {
+				clay.TEXT(string(v.BytesValue), clay.TextElementConfig{FontID: JetBrainsMono, TextColor: White})
+			}
+		case FSKindInt64:
+			var str string
+			if v.Type.WellKnownType == FSWKTTimestamp {
+				str = time.Unix(v.Int64Value, 0).Format(time.RFC1123)
+			} else if v.Type.Unit == FSUnitBytes {
+				str = FormatBytes(v.Int64Value)
+			} else {
+				str = fmt.Sprintf("%d", v.Int64Value)
+			}
+			clay.TEXT(str, clay.TextElementConfig{TextColor: White})
+		case FSKindFloat64:
+			var str string
+			str = fmt.Sprintf("%v", v.Float64Value)
+			clay.TEXT(str, clay.TextElementConfig{TextColor: White})
+		case FSKindList:
+			clay.CLAY_AUTO_ID(clay.EL{ // list items
+				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
+			}, func() {
+				for i, item := range v.ListValue {
+					clay.CLAY_AUTO_ID(clay.EL{ // list item
+						Layout: clay.LAY{ChildGap: S2},
+					}, func() {
+						clay.TEXT(fmt.Sprintf("%d", i), clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
+						UIFlowValue(item)
+					})
+				}
+			})
+		case FSKindTable:
+			clay.CLAY_AUTO_ID(clay.EL{ // Table
+				Border: clay.B{Width: BA_BTW, Color: Gray},
+			}, func() {
+				for col, field := range v.Type.ContainedType.Fields {
+					clay.CLAY_AUTO_ID(clay.EL{ // Table col
+						Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
+						Border: clay.B{Width: BTW, Color: Gray},
+					}, func() {
+						clay.CLAY_AUTO_ID(clay.EL{ // Header cell
+							Layout: clay.LAY{Padding: PVH(S2, S3)},
+						}, func() {
+							clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
+						})
+
+						for _, val := range v.ColumnValues(col) {
+							clay.CLAY_AUTO_ID(clay.EL{
+								Layout: clay.LAY{Padding: PVH(S2, S3)},
+							}, func() {
+								UIFlowValue(val)
+							})
+						}
+					})
+				}
+			})
+		default:
+			clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
+		}
+	})
+}

@@ -1,6 +1,8 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/nodes"
+	
 	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/util"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -92,8 +94,8 @@ func renderClayCommands(commands []clay.RenderCommand) {
 			if data, ok := config.CustomData.(*MinimapRenderData); ok {
 				RenderMinimap(bbox, data)
 			}
-			if data, ok := config.CustomData.(*ChartRenderData); ok {
-				RenderChart(bbox, data)
+			if data, ok := config.CustomData.(*nodes.ChartRenderData); ok {
+				nodes.RenderChart(bbox, data)
 			}
 		}
 	}

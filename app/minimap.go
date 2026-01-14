@@ -3,6 +3,8 @@
 import (
 	"math"
 
+	"github.com/bvisness/flowshell/app/core"
+
 	"github.com/bvisness/flowshell/clay"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -15,7 +17,7 @@ func UIMinimap() {
 		return
 	}
 
-	// 1. Calculate Graph Bounds
+	// 1. Calculate core.Graph Bounds
 	minX, minY := float32(math.Inf(1)), float32(math.Inf(1))
 	maxX, maxY := float32(math.Inf(-1)), float32(math.Inf(-1))
 
@@ -91,8 +93,8 @@ func UIMinimap() {
 			},
 		},
 		BackgroundColor: clay.Color{R: 20, G: 22, B: 25, A: 200}, // Charcoal transparent
-		Border:          clay.B{Color: Gray, Width: BA},
-		CornerRadius:    RA2,
+		Border:          clay.B{Color: core.Gray, Width: core.BA},
+		CornerRadius:    core.RA2,
 	}, func() {
 		// Render Nodes
 		// Since we can't use immediate mode Raylib drawing EASILY inside Clay structure (Clay renders later),
@@ -102,14 +104,14 @@ func UIMinimap() {
 		// Use clay.Custom!
 
 		clay.CLAY(clay.ID("MinimapContent"), clay.EL{
-			Layout: clay.LAY{Sizing: GROWALL},
+			Layout: clay.LAY{Sizing: core.GROWALL},
 			Custom: clay.CustomElementConfig{
 				CustomData: &MinimapRenderData{
 					Nodes: CurrentGraph.Nodes,
 					MinX:  minX, MinY: minY,
-					Scale:  scale,
-					Graph:  CurrentGraph,
-					ViewTL: viewTL, ViewBR: viewBR,
+					Scale:      scale,
+					Graph: CurrentGraph,
+					ViewTL:     viewTL, ViewBR: viewBR,
 				},
 			},
 		}, func() {
@@ -176,8 +178,8 @@ func UIMinimap() {
 }
 
 type MinimapRenderData struct {
-	Nodes          []*Node
-	Graph          *Graph
+	Nodes          []*core.Node
+	Graph          *core.Graph
 	MinX, MinY     float32
 	Scale          float32
 	ViewTL, ViewBR rl.Vector2
@@ -214,4 +216,3 @@ func RenderMinimap(bbox clay.BoundingBox, data *MinimapRenderData) {
 
 	rl.DrawRectangleLinesEx(rl.Rectangle{X: vx, Y: vy, Width: vw, Height: vh}, 1, rl.White)
 }
-

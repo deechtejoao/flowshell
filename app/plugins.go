@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bvisness/flowshell/app/core"
+
 	"github.com/bvisness/flowshell/clay"
 )
 
@@ -25,34 +27,34 @@ type PluginPort struct {
 	Type string `json:"type"` // "string", "bytes", "int", "float", "any"
 }
 
-// GEN:NodeAction
+// GEN:core.NodeAction
 type PluginAction struct {
 	Path string
 	Meta PluginMetadata
 }
 
-func (a *PluginAction) UpdateAndValidate(n *Node) {
+func (a *PluginAction) UpdateAndValidate(n *core.Node) {
 	n.Valid = true
 }
 
-func (a *PluginAction) UI(n *Node) {
+func (a *PluginAction) UI(n *core.Node) {
 	// Standard UI for input/output ports
 	clay.CLAY(clay.IDI("PluginNode", n.ID), clay.EL{
-		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: GROWH, ChildGap: S2},
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: core.GROWH, ChildGap: core.S2},
 	}, func() {
 		// Inputs
 		for i := range n.InputPorts {
-			UIInputPort(n, i)
+			core.UIInputPort(n, i)
 		}
 		// Outputs
 		for i := range n.OutputPorts {
-			UIOutputPort(n, i)
+			core.UIOutputPort(n, i)
 		}
 	})
 }
 
-func (a *PluginAction) Run(n *Node) <-chan NodeActionResult {
-	done := make(chan NodeActionResult, 1)
+func (a *PluginAction) Run(n *core.Node) <-chan core.NodeActionResult {
+	done := make(chan core.NodeActionResult, 1)
 	go func() {
 		// Collect inputs
 		inputMap := make(map[string]interface{})
@@ -62,8 +64,8 @@ func (a *PluginAction) Run(n *Node) <-chan NodeActionResult {
 				// Skipping optional? For now assume all required or nil
 				continue
 			}
-			// Convert FlowValue to native Go type for JSON marshaling
-			inputMap[port.Name] = FlowValueToNative(val)
+			// Convert core.FlowValue to native Go type for JSON marshaling
+			inputMap[port.Name] = core.FlowValueToNative(val)
 		}
 
 		// Prepare Request
@@ -83,9 +85,9 @@ func (a *PluginAction) Run(n *Node) <-chan NodeActionResult {
 		output, err := cmd.Output()
 		if err != nil {
 			if ee, ok := err.(*exec.ExitError); ok {
-				done <- NodeActionResult{Err: fmt.Errorf("plugin error: %s\nStderr: %s", err, string(ee.Stderr))}
+				done <- core.NodeActionResult{Err: fmt.Errorf("plugin error: %s\nStderr: %s", err, string(ee.Stderr))}
 			} else {
-				done <- NodeActionResult{Err: fmt.Errorf("plugin execution failed: %v", err)}
+				done <- core.NodeActionResult{Err: fmt.Errorf("plugin execution failed: %v", err)}
 			}
 			return
 		}
@@ -96,46 +98,46 @@ func (a *PluginAction) Run(n *Node) <-chan NodeActionResult {
 			Error  string                 `json:"error"`
 		}
 		if err := json.Unmarshal(output, &resp); err != nil {
-			done <- NodeActionResult{Err: fmt.Errorf("invalid plugin output: %v\nOutput: %s", err, string(output))}
+			done <- core.NodeActionResult{Err: fmt.Errorf("invalid plugin output: %v\nOutput: %s", err, string(output))}
 			return
 		}
 
 		if resp.Error != "" {
-			done <- NodeActionResult{Err: fmt.Errorf("plugin reported error: %s", resp.Error)}
+			done <- core.NodeActionResult{Err: fmt.Errorf("plugin reported error: %s", resp.Error)}
 			return
 		}
 
 		// Map results to outputs
-		var outputs []FlowValue
+		var outputs []core.FlowValue
 		for _, port := range n.OutputPorts {
 			if val, ok := resp.Result[port.Name]; ok {
-				fv, err := NativeToFlowValue(val)
+				fv, err := core.NativeToFlowValue(val)
 				if err != nil {
 					// Fallback
-					outputs = append(outputs, NewStringValue(fmt.Sprintf("error converting: %v", err)))
+					outputs = append(outputs, core.NewStringValue(fmt.Sprintf("error converting: %v", err)))
 				} else {
 					outputs = append(outputs, fv)
 				}
 			} else {
 				// Default/Zero value for type? Or just empty string/nil?
-				// NativeToFlowValue(nil) returns empty string value.
+				// core.NativeToFlowValue(nil) returns empty string value.
 				// But we should probably try to match the port type if possible?
 				// For now, empty string is safe-ish.
-				outputs = append(outputs, NewStringValue(""))
+				outputs = append(outputs, core.NewStringValue(""))
 			}
 		}
 
-		done <- NodeActionResult{Outputs: outputs}
+		done <- core.NodeActionResult{Outputs: outputs}
 	}()
 	return done
 }
 
-func (a *PluginAction) RunContext(ctx context.Context, n *Node) <-chan NodeActionResult {
+func (a *PluginAction) RunContext(ctx context.Context, n *core.Node) <-chan core.NodeActionResult {
 	return a.Run(n)
 }
 
-func (a *PluginAction) Serialize(s *Serializer) bool {
-	SStr(s, &a.Path)
+func (a *PluginAction) Serialize(s *core.Serializer) bool {
+	core.SStr(s, &a.Path)
 	// We might store metadata too or reload it?
 	// For now, assume Path is enough to reload (we'd need to re-load metadata from disk/cache)
 	// But `a.Meta` needs to be populated on load.
@@ -200,8 +202,8 @@ func LoadPlugins(dir string) ([]NodeType, error) {
 		// Create NodeType
 		nt := NodeType{
 			Name: meta.Name,
-			Create: func() *Node {
-				n := &Node{
+			Create: func() *core.Node {
+				n := &core.Node{
 					Name: meta.Name,
 					Action: &PluginAction{
 						Path: path,
@@ -210,13 +212,13 @@ func LoadPlugins(dir string) ([]NodeType, error) {
 				}
 				// Populate ports
 				for _, p := range meta.Inputs {
-					n.InputPorts = append(n.InputPorts, NodePort{
+					n.InputPorts = append(n.InputPorts, core.NodePort{
 						Name: p.Name,
 						Type: parsePluginType(p.Type),
 					})
 				}
 				for _, p := range meta.Outputs {
-					n.OutputPorts = append(n.OutputPorts, NodePort{
+					n.OutputPorts = append(n.OutputPorts, core.NodePort{
 						Name: p.Name,
 						Type: parsePluginType(p.Type),
 					})
@@ -229,18 +231,27 @@ func LoadPlugins(dir string) ([]NodeType, error) {
 	return nodes, nil
 }
 
-func parsePluginType(t string) FlowType {
+func parsePluginType(t string) core.FlowType {
 	switch t {
 	case "string":
-		return FlowType{Kind: FSKindBytes}
+		return core.FlowType{Kind: core.FSKindBytes}
 	case "bytes":
-		return FlowType{Kind: FSKindBytes}
+		return core.FlowType{Kind: core.FSKindBytes}
 	case "int":
-		return FlowType{Kind: FSKindInt64, Unit: 0}
+		return core.FlowType{Kind: core.FSKindInt64, Unit: 0}
 	case "float":
-		return FlowType{Kind: FSKindFloat64, Unit: 0}
+		return core.FlowType{Kind: core.FSKindFloat64, Unit: 0}
 	default:
-		return FlowType{Kind: FSKindAny}
+		return core.FlowType{Kind: core.FSKindAny}
 	}
 }
 
+func (a *PluginAction) Tag() string {
+	return "PluginAction"
+}
+
+func init() {
+	core.RegisterNodeAction("PluginAction", func() core.NodeAction {
+		return &PluginAction{}
+	})
+}

@@ -1,6 +1,7 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/core"
 	"context"
 	"fmt"
 	"os"
@@ -13,7 +14,7 @@ func HeadlessRun(path string) {
 	fmt.Printf("Starting Flowshell HEADLESS mode...\n")
 	fmt.Printf("Loading graph: %s\n", path)
 
-	g, err := LoadGraph(path)
+	g, err := core.LoadGraph(path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading graph: %v\n", err)
 		os.Exit(1)
@@ -47,12 +48,12 @@ func HeadlessRun(path string) {
 			// unless we want to log errors from it.
 			// Ideally specific nodes should log to stdout/stderr or a file.
 			// For now, let's just let them run.
-			go func(node *Node) {
+			go func(node *core.Node) {
 				// We call n.Run which internally handles context and calls Run/RunContext
 				done := node.Run(ctx, false)
 				<-done
 				if res, ok := node.GetResult(); ok && res.Err != nil {
-					fmt.Fprintf(os.Stderr, "[Node %d %s] Error: %v\n", node.ID, node.Name, res.Err)
+					fmt.Fprintf(os.Stderr, "[core.Node %d %s] Error: %v\n", node.ID, node.Name, res.Err)
 				}
 			}(n)
 		}

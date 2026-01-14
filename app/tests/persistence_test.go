@@ -1,20 +1,22 @@
 package tests
 
 import (
+	"github.com/bvisness/flowshell/app/nodes"
 	"os"
 	"testing"
 
-	"github.com/bvisness/flowshell/app"
+	
+	"github.com/bvisness/flowshell/app/core"
 )
 
 func TestSaveLoadGraph(t *testing.T) {
 	// Setup some nodes and wires
-	g := app.NewGraph()
-	n1 := &app.Node{ID: 1, Name: "Node 1", Pos: app.V2{X: 10, Y: 10}, Action: &app.TrimSpacesAction{}}
-	n2 := &app.Node{ID: 2, Name: "Node 2", Pos: app.V2{X: 100, Y: 100}, Action: &app.TrimSpacesAction{}}
+	g := core.NewGraph()
+	n1 := &core.Node{ID: 1, Name: "Node 1", Pos: core.V2{X: 10, Y: 10}, Action: &nodes.TrimSpacesAction{}}
+	n2 := &core.Node{ID: 2, Name: "Node 2", Pos: core.V2{X: 100, Y: 100}, Action: &nodes.TrimSpacesAction{}}
 	// Manually adding to ensure IDs are preserved for the test
 	g.Nodes = append(g.Nodes, n1, n2)
-	g.Wires = []*app.Wire{
+	g.Wires = []*core.Wire{
 		{StartNode: n1, StartPort: 0, EndNode: n2, EndPort: 0},
 	}
 
@@ -22,13 +24,13 @@ func TestSaveLoadGraph(t *testing.T) {
 	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Save
-	err := app.SaveGraph(tmpFile, g)
+	err := core.SaveGraph(tmpFile, g)
 	if err != nil {
 		t.Fatalf("SaveGraph failed: %v", err)
 	}
 
 	// Load
-	loadedG, err := app.LoadGraph(tmpFile)
+	loadedG, err := core.LoadGraph(tmpFile)
 	if err != nil {
 		t.Fatalf("LoadGraph failed: %v", err)
 	}
@@ -42,7 +44,7 @@ func TestSaveLoadGraph(t *testing.T) {
 	}
 
 	// Helper to find node by ID
-	findNode := func(id int) *app.Node {
+	findNode := func(id int) *core.Node {
 		for _, n := range loadedG.Nodes {
 			if n.ID == id {
 				return n
@@ -65,14 +67,14 @@ func TestSaveLoadGraph(t *testing.T) {
 
 func TestSaveLoadGraphComplex(t *testing.T) {
 	// Setup
-	g := app.NewGraph()
-	n1 := &app.Node{
-		ID: 1, Name: "Lines", Pos: app.V2{X: 10, Y: 10},
-		Action: &app.LinesAction{IncludeCarriageReturns: true},
+	g := core.NewGraph()
+	n1 := &core.Node{
+		ID: 1, Name: "Lines", Pos: core.V2{X: 10, Y: 10},
+		Action: &nodes.LinesAction{IncludeCarriageReturns: true},
 	}
-	n2 := &app.Node{
-		ID: 2, Name: "Extract", Pos: app.V2{X: 100, Y: 100},
-		Action: &app.ExtractColumnAction{Column: "MyCol"},
+	n2 := &core.Node{
+		ID: 2, Name: "Extract", Pos: core.V2{X: 100, Y: 100},
+		Action: &nodes.ExtractColumnAction{Column: "MyCol"},
 	}
 	g.Nodes = append(g.Nodes, n1, n2)
 	// No wires needed for this test, just testing node state serialization
@@ -81,12 +83,12 @@ func TestSaveLoadGraphComplex(t *testing.T) {
 	defer func() { _ = os.Remove(tmpFile) }()
 
 	// Save
-	if err := app.SaveGraph(tmpFile, g); err != nil {
+	if err := core.SaveGraph(tmpFile, g); err != nil {
 		t.Fatalf("SaveGraph failed: %v", err)
 	}
 
 	// Load
-	loadedG, err := app.LoadGraph(tmpFile)
+	loadedG, err := core.LoadGraph(tmpFile)
 	if err != nil {
 		t.Fatalf("LoadGraph failed: %v", err)
 	}
@@ -97,7 +99,7 @@ func TestSaveLoadGraphComplex(t *testing.T) {
 	}
 
 	// Find nodes by ID (order might not be guaranteed, though slice usually preserves it)
-	var linesNode, extractNode *app.Node
+	var linesNode, extractNode *core.Node
 	for _, n := range loadedG.Nodes {
 		if n.ID == 1 {
 			linesNode = n
@@ -115,7 +117,7 @@ func TestSaveLoadGraphComplex(t *testing.T) {
 	}
 
 	// Check LinesAction state
-	linesAction, ok := linesNode.Action.(*app.LinesAction)
+	linesAction, ok := linesNode.Action.(*nodes.LinesAction)
 	if !ok {
 		t.Fatalf("Expected LinesAction, got %T", linesNode.Action)
 	}
@@ -124,7 +126,7 @@ func TestSaveLoadGraphComplex(t *testing.T) {
 	}
 
 	// Check ExtractColumnAction state
-	extractAction, ok := extractNode.Action.(*app.ExtractColumnAction)
+	extractAction, ok := extractNode.Action.(*nodes.ExtractColumnAction)
 	if !ok {
 		t.Fatalf("Expected ExtractColumnAction, got %T", extractNode.Action)
 	}

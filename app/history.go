@@ -3,6 +3,8 @@
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/bvisness/flowshell/app/core"
 )
 
 // HistoryManager handles Undo/Redo by storing serialized snapshots of the graph.
@@ -13,7 +15,7 @@ type HistoryManager struct {
 
 // NewHistoryManager creates a new history manager.
 // initialGraph is the starting state.
-func NewHistoryManager(initialGraph *Graph) *HistoryManager {
+func NewHistoryManager(initialGraph *core.Graph) *HistoryManager {
 	hm := &HistoryManager{
 		snapshots: make([][]byte, 0),
 		pointer:   -1,
@@ -24,8 +26,8 @@ func NewHistoryManager(initialGraph *Graph) *HistoryManager {
 
 // Push adds a new snapshot to the history.
 // It truncates any redo history.
-func (hm *HistoryManager) Push(g *Graph) {
-	data, err := SerializeGraph(g)
+func (hm *HistoryManager) Push(g *core.Graph) {
+	data, err := core.SerializeGraph(g)
 	if err != nil {
 		fmt.Printf("History Push failed: %v\n", err)
 		return
@@ -55,7 +57,7 @@ func (hm *HistoryManager) Push(g *Graph) {
 
 // Undo reverts to the previous snapshot.
 // Returns the new graph state, or nil if cannot undo.
-func (hm *HistoryManager) Undo() *Graph {
+func (hm *HistoryManager) Undo() *core.Graph {
 	if hm.pointer <= 0 {
 		return nil
 	}
@@ -63,7 +65,7 @@ func (hm *HistoryManager) Undo() *Graph {
 	hm.pointer--
 	data := hm.snapshots[hm.pointer]
 
-	g, err := DeserializeGraph(data)
+	g, err := core.DeserializeGraph(data)
 	if err != nil {
 		fmt.Printf("History Undo failed: %v\n", err)
 		return nil
@@ -73,7 +75,7 @@ func (hm *HistoryManager) Undo() *Graph {
 
 // Redo advances to the next snapshot.
 // Returns the new graph state, or nil if cannot redo.
-func (hm *HistoryManager) Redo() *Graph {
+func (hm *HistoryManager) Redo() *core.Graph {
 	if hm.pointer >= len(hm.snapshots)-1 {
 		return nil
 	}
@@ -81,7 +83,7 @@ func (hm *HistoryManager) Redo() *Graph {
 	hm.pointer++
 	data := hm.snapshots[hm.pointer]
 
-	g, err := DeserializeGraph(data)
+	g, err := core.DeserializeGraph(data)
 	if err != nil {
 		fmt.Printf("History Redo failed: %v\n", err)
 		return nil
@@ -98,4 +100,3 @@ func (hm *HistoryManager) CanUndo() bool {
 func (hm *HistoryManager) CanRedo() bool {
 	return hm.pointer < len(hm.snapshots)-1
 }
-

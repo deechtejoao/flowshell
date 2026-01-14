@@ -1,6 +1,7 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/core"
 	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -47,8 +48,8 @@ type DragState struct {
 	Thing any
 	Key   string
 
-	MouseStart V2
-	ObjStart   V2
+	MouseStart core.V2
+	ObjStart   core.V2
 }
 
 // Call once per frame at the start of the frame.

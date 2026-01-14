@@ -1,13 +1,14 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/core"
 	"sort"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 // LayoutGraph applies a naive Sugiyama-like hierarchical layout to the graph.
-func LayoutGraph(g *Graph) {
+func LayoutGraph(g *core.Graph) {
 	if len(g.Nodes) == 0 {
 		return
 	}
@@ -65,8 +66,8 @@ func LayoutGraph(g *Graph) {
 		}
 	}
 
-	// 3. Group Nodes by Layer
-	layers := make(map[int][]*Node)
+	// 3. core.Group Nodes by Layer
+	layers := make(map[int][]*core.Node)
 	maxRank := 0
 	for _, n := range g.Nodes {
 		r := ranks[n.ID]

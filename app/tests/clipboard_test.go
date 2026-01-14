@@ -1,20 +1,22 @@
 package tests
 
 import (
+	"github.com/bvisness/flowshell/app/nodes"
 	"testing"
 
 	"github.com/bvisness/flowshell/app"
+	"github.com/bvisness/flowshell/app/core"
 )
 
 func TestCopyPaste(t *testing.T) {
 	// Setup graph
-	app.CurrentGraph = app.NewGraph()
-	n1 := &app.Node{ID: 1, Name: "Node 1", Pos: app.V2{X: 10, Y: 10}, Action: &app.TrimSpacesAction{}}
-	n2 := &app.Node{ID: 2, Name: "Node 2", Pos: app.V2{X: 100, Y: 100}, Action: &app.TrimSpacesAction{}}
+	app.CurrentGraph = core.NewGraph()
+	n1 := &core.Node{ID: 1, Name: "Node 1", Pos: core.V2{X: 10, Y: 10}, Action: &nodes.TrimSpacesAction{}}
+	n2 := &core.Node{ID: 2, Name: "Node 2", Pos: core.V2{X: 100, Y: 100}, Action: &nodes.TrimSpacesAction{}}
 	// Manually add
 	app.CurrentGraph.AddNode(n1)
 	app.CurrentGraph.AddNode(n2)
-	app.CurrentGraph.Wires = []*app.Wire{
+	app.CurrentGraph.Wires = []*core.Wire{
 		{StartNode: n1, StartPort: 0, EndNode: n2, EndPort: 0},
 	}
 

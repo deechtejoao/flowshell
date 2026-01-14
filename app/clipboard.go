@@ -1,6 +1,7 @@
 ﻿package app
 
 import (
+	"github.com/bvisness/flowshell/app/core"
 	"encoding/base64"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -13,41 +14,41 @@ type ClipboardWire struct {
 	EndPort     int
 }
 
-var _ Serializable = &ClipboardWire{}
+var _ core.Serializable = &ClipboardWire{}
 
-func (w *ClipboardWire) Serialize(s *Serializer) bool {
-	SInt(s, &w.StartNodeID)
-	SInt(s, &w.StartPort)
-	SInt(s, &w.EndNodeID)
-	SInt(s, &w.EndPort)
+func (w *ClipboardWire) Serialize(s *core.Serializer) bool {
+	core.SInt(s, &w.StartNodeID)
+	core.SInt(s, &w.StartPort)
+	core.SInt(s, &w.EndNodeID)
+	core.SInt(s, &w.EndPort)
 	return s.Ok()
 }
 
 type ClipboardData struct {
-	Nodes []*Node
+	Nodes []*core.Node
 	Wires []*ClipboardWire
-	// Groups []*Group // Future: support group copying
+	// Groups []*core.Group // Future: support group copying
 }
 
-var _ Serializable = &ClipboardData{}
+var _ core.Serializable = &ClipboardData{}
 
-func (c *ClipboardData) Serialize(s *Serializer) bool {
+func (c *ClipboardData) Serialize(s *core.Serializer) bool {
 	// Nodes
 	nodeCount := len(c.Nodes)
-	SInt(s, &nodeCount)
+	core.SInt(s, &nodeCount)
 	if !s.Encode {
-		c.Nodes = make([]*Node, nodeCount)
+		c.Nodes = make([]*core.Node, nodeCount)
 	}
 	for i := range nodeCount {
 		if !s.Encode {
-			c.Nodes[i] = &Node{}
+			c.Nodes[i] = &core.Node{}
 		}
-		SThing(s, c.Nodes[i])
+		core.SThing(s, c.Nodes[i])
 	}
 
 	// Wires
 	wireCount := len(c.Wires)
-	SInt(s, &wireCount)
+	core.SInt(s, &wireCount)
 	if !s.Encode {
 		c.Wires = make([]*ClipboardWire, wireCount)
 	}
@@ -55,7 +56,7 @@ func (c *ClipboardData) Serialize(s *Serializer) bool {
 		if !s.Encode {
 			c.Wires[i] = &ClipboardWire{}
 		}
-		SThing(s, c.Wires[i])
+		core.SThing(s, c.Wires[i])
 	}
 
 	return s.Ok()
@@ -69,8 +70,8 @@ func Copy() {
 	data := CopyToData()
 
 	// Serialize
-	s := NewEncoder(3)
-	if SThing(s, data) {
+	s := core.NewEncoder(3)
+	if core.SThing(s, data) {
 		str := base64.StdEncoding.EncodeToString(s.Bytes())
 		rl.SetClipboardText(str)
 	}
@@ -78,7 +79,7 @@ func Copy() {
 
 func CopyToData() *ClipboardData {
 	data := &ClipboardData{
-		Nodes: []*Node{},
+		Nodes: []*core.Node{},
 		Wires: []*ClipboardWire{},
 	}
 
@@ -118,9 +119,9 @@ func Paste() {
 		return
 	}
 
-	s := NewDecoder(bytes)
+	s := core.NewDecoder(bytes)
 	var data ClipboardData
-	if !SThing(s, &data) {
+	if !core.SThing(s, &data) {
 		// Failed to deserialize
 		return
 	}
@@ -135,7 +136,7 @@ func PasteFromData(data *ClipboardData) {
 
 	// 1. Prepare ID mapping and offset
 	idMap := make(map[int]int)
-	offset := V2{X: 20, Y: 20}
+	offset := core.V2{X: 20, Y: 20}
 
 	// Clear selection so we can select pasted nodes
 	for k := range SelectedNodes {
@@ -164,7 +165,7 @@ func PasteFromData(data *ClipboardData) {
 			startNode, ok1 := CurrentGraph.GetNode(startID)
 			endNode, ok2 := CurrentGraph.GetNode(endID)
 			if ok1 && ok2 {
-				CurrentGraph.Wires = append(CurrentGraph.Wires, &Wire{
+				CurrentGraph.Wires = append(CurrentGraph.Wires, &core.Wire{
 					StartNode: startNode,
 					StartPort: w.StartPort,
 					EndNode:   endNode,
