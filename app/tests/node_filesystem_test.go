@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	
 	"github.com/bvisness/flowshell/app/core"
 	"github.com/bvisness/flowshell/app/nodes"
 )
@@ -150,6 +149,75 @@ func TestFilesystemNodes(t *testing.T) {
 
 		if _, err := os.Stat(delPath); !os.IsNotExist(err) {
 			t.Errorf("File should have been deleted")
+		}
+	})
+
+	t.Run("List Files", func(t *testing.T) {
+		listDir := filepath.Join(tmpDir, "list_test")
+		if err := os.Mkdir(listDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(listDir, "file1.txt"), []byte("content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		node := nodes.NewListFilesNode(listDir)
+		action := node.Action.(*nodes.ListFilesAction)
+
+		setupGraph(node) // No input wire, use internal Dir
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		done := action.RunContext(ctx, node)
+		res := <-done
+
+		if res.Err != nil {
+			t.Fatalf("Execution failed: %v", res.Err)
+		}
+
+		if len(res.Outputs) == 0 || len(res.Outputs[0].TableValue) != 1 {
+			t.Fatalf("Expected 1 file, got %v", res.Outputs)
+		}
+		// simple check
+		found := false
+		for _, row := range res.Outputs[0].TableValue {
+			if string(row[0].Value.BytesValue) == "file1.txt" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("file1.txt not found in list")
+		}
+	})
+
+	t.Run("Save File", func(t *testing.T) {
+		savePath := filepath.Join(tmpDir, "saved.txt")
+
+		node := nodes.NewSaveFileNode()
+		action := node.Action.(*nodes.SaveFileAction)
+		action.Path = savePath
+		action.Format = "raw"
+
+		setupGraph(node, core.NewStringValue("saved content"))
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		done := action.RunContext(ctx, node)
+		res := <-done
+
+		if res.Err != nil {
+			t.Fatalf("Execution failed: %v", res.Err)
+		}
+
+		content, err := os.ReadFile(savePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(content) != "saved content" {
+			t.Errorf("Content mismatch: %s", string(content))
 		}
 	})
 }
