@@ -418,7 +418,7 @@ func processInput() {
 
 	// Save Graph
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
-		filename, ok, err := SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+		filename, ok, err := core.SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
 		if err != nil {
 			fmt.Printf("Save error: %v\n", err)
 		} else if ok {
@@ -435,7 +435,7 @@ func processInput() {
 
 	// Load Graph
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
-		filename, ok, err := OpenFileDialog("Open Flow", map[string]string{"flow": "Flow Files"})
+		filename, ok, err := core.OpenFileDialog("Open Flow", map[string]string{"flow": "Flow Files"})
 		if err != nil {
 			fmt.Printf("Load error: %v\n", err)
 		} else if ok {
