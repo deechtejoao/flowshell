@@ -48,7 +48,23 @@ type UIButtonConfig struct {
 func UIButton(id clay.ElementID, config UIButtonConfig, children ...func()) {
 	clay.CLAY_LATE(id, func() clay.ElementDeclaration {
 		config.El.CornerRadius = RA1
-		config.El.BackgroundColor = util.Tern(clay.Hovered() && !config.Disabled, HoverWhite, clay.Color{})
+
+		// Handle hover state
+		if clay.Hovered() && !config.Disabled {
+			// If background is transparent, apply default hover effect
+			if config.El.BackgroundColor.A == 0 {
+				config.El.BackgroundColor = HoverWhite
+			} else {
+				// If background is colored, lighten it slightly for hover feedback
+				c := config.El.BackgroundColor
+				config.El.BackgroundColor = clay.Color{
+					R: uint8(min(int(c.R)+20, 255)),
+					G: uint8(min(int(c.G)+20, 255)),
+					B: uint8(min(int(c.B)+20, 255)),
+					A: c.A,
+				}
+			}
+		}
 
 		return config.El
 	}, func() {
