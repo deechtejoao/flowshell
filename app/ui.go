@@ -416,12 +416,37 @@ func processInput() {
 		}
 	}
 
+	// Save Graph
 	if rl.IsKeyPressed(rl.KeyS) && rl.IsKeyDown(rl.KeyLeftControl) {
-		_ = core.SaveGraph("saved.flow", CurrentGraph)
+		filename, ok, err := SaveFileDialog("Save Flow", map[string]string{"flow": "Flow Files"})
+		if err != nil {
+			fmt.Printf("Save error: %v\n", err)
+		} else if ok {
+			// Ensure extension
+			if filepath.Ext(filename) != ".flow" {
+				filename += ".flow"
+			}
+			err := core.SaveGraph(filename, CurrentGraph)
+			if err != nil {
+				fmt.Printf("Failed to save: %v\n", err)
+			}
+		}
 	}
+
+	// Load Graph
 	if rl.IsKeyPressed(rl.KeyL) && rl.IsKeyDown(rl.KeyLeftControl) {
-		if g, err := core.LoadGraph("saved.flow"); err == nil {
-			CurrentGraph = g
+		filename, ok, err := OpenFileDialog("Open Flow", map[string]string{"flow": "Flow Files"})
+		if err != nil {
+			fmt.Printf("Load error: %v\n", err)
+		} else if ok {
+			core.PushHistory()
+			if g, err := core.LoadGraph(filename); err == nil {
+				CurrentGraph = g
+				clear(SelectedNodes)
+				selectedNodeID = 0
+			} else {
+				fmt.Printf("Failed to load: %v\n", err)
+			}
 		}
 	}
 
