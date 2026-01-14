@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bvisness/flowshell/clay"
 	"github.com/bvisness/flowshell/app/core"
+	"github.com/bvisness/flowshell/clay"
 )
 
 // GEN:NodeAction
@@ -68,7 +68,7 @@ func (c *FilterEmptyAction) UI(n *core.Node) {
 			core.UIOutputPort(n, 0)
 		})
 
-		if wired && input.Type().Kind == core.FSKindTable {
+		if wired && input.Type().Kind == core.FSKindTable && input.Type().ContainedType != nil {
 			var options []core.UIDropdownOption
 			for _, field := range input.Type().ContainedType.Fields {
 				options = append(options, core.UIDropdownOption{
@@ -138,6 +138,11 @@ func (c *FilterEmptyAction) RunContext(ctx context.Context, n *core.Node) <-chan
 
 		if input.Type.Kind != core.FSKindTable {
 			res.Err = errors.New("input must be a table")
+			return
+		}
+		if input.Type.ContainedType == nil {
+			// No schema, can't filter by column
+			res.Err = errors.New("input table has no schema")
 			return
 		}
 

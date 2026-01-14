@@ -890,7 +890,9 @@ func UIOverlay(topoErr error) {
 			PointerCaptureMode: clay.PointercaptureModePassthrough, // Important: let clicks pass through to nodes if not hitting UI
 		},
 	}, func() {
-		UIMenuBar()
+		if ShowMenuBar {
+			UIMenuBar()
+		}
 		UIMinimap()
 
 		if topoErr != nil {

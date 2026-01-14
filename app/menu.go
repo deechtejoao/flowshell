@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	ActiveMenu string // Name of the currently open menu ("" if none)
+	ActiveMenu  string // Name of the currently open menu ("" if none)
+	ShowMenuBar = false
 )
 
 func UIMenuBar() {
