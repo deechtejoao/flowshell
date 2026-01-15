@@ -27,19 +27,20 @@ func TestGenerateCSVProcessingFlow(t *testing.T) {
 	b := core.NewGraphBuilder()
 
 	// 1. Load CSV
-	load := b.Add(nodes.NewLoadFileNode("data.csv")).SetPosition(100, 100)
+	load := b.Add(nodes.NewLoadFileNode("corpus/flute1.csv")).SetPosition(100, 100)
 
-	// 2. Filter Empty (assuming "id" column)
+	// 2. Filter Empty (assuming "Avg build (us)" column)
 	filter := b.Add(nodes.NewFilterEmptyNode()).SetPosition(400, 100)
-	filter.Node.Action.(*nodes.FilterEmptyAction).Column = "id"
+	filter.Node.Action.(*nodes.FilterEmptyAction).Column = "Avg build (us)"
 
 	// 3. Select Columns
 	selectCols := b.Add(nodes.NewSelectColumnsNode()).SetPosition(700, 100)
-	selectCols.Node.Action.(*nodes.SelectColumnsAction).SelectedColumns = []string{"id", "name"}
+	selectCols.Node.Action.(*nodes.SelectColumnsAction).SelectedColumns = []string{"Avg build (us)", "Avg frame (us)"}
 
 	// 4. Save
 	save := b.Add(nodes.NewSaveFileNode()).SetPosition(1000, 100)
 	save.Node.Action.(*nodes.SaveFileAction).Path = "cleaned_data.csv"
+	save.Node.Action.(*nodes.SaveFileAction).Format = "csv"
 
 	// Connect: Load -> Filter -> Select -> Save
 	load.To(filter).To(selectCols).To(save)

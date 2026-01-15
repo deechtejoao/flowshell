@@ -49,7 +49,7 @@ func (c *ValueAction) UI(n *core.Node) {
 		},
 	}, func() {
 		// Just show the value
-		core.UIFlowValue(c.Value)
+		core.UIFlowValue(clay.IDI("FlowValue", n.ID), c.Value)
 		core.UISpacer(clay.IDI("ValueSpacer", n.ID), core.GROWH)
 		core.UIOutputPort(n, 0)
 	})

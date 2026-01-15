@@ -370,6 +370,10 @@ func (c *LoadFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 					res.Err = fmt.Errorf("failed to read CSV header %s: %w", path, err)
 					return
 				}
+				// Trim spaces from headers
+				for i := range header {
+					header[i] = strings.TrimSpace(header[i])
+				}
 				header = append([]string(nil), header...)
 
 				if i == 0 {

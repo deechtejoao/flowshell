@@ -421,8 +421,8 @@ func FormatBytes(n int64) string {
 	}
 }
 
-func UIFlowValue(v FlowValue) {
-	clay.CLAY(clay.AUTO_ID, clay.EL{}, func() {
+func UIFlowValue(seed clay.ElementID, v FlowValue) {
+	clay.CLAY(seed, clay.EL{}, func() {
 		clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
 			if data, ok := clay.GetElementData(elementID); ok {
 				Drag.TryStartDrag(FlowValueDrag{Value: v}, rl.Rectangle(data.BoundingBox), V2{})
@@ -455,11 +455,12 @@ func UIFlowValue(v FlowValue) {
 				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
 			}, func() {
 				for i, item := range v.ListValue {
-					clay.CLAY(clay.IDI("ListItem", i), clay.EL{ // list item
+					itemSeed := clay.ID(fmt.Sprintf("%d-Item-%d", seed.ID, i))
+					clay.CLAY(itemSeed, clay.EL{ // list item
 						Layout: clay.LAY{ChildGap: S2},
 					}, func() {
 						clay.TEXT(fmt.Sprintf("%d", i), clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
-						UIFlowValue(item)
+						UIFlowValue(clay.ID(fmt.Sprintf("%d-Val", itemSeed.ID)), item)
 					})
 				}
 			})
@@ -479,10 +480,11 @@ func UIFlowValue(v FlowValue) {
 						})
 
 						for row, val := range v.ColumnValues(col) {
-							clay.CLAY(clay.IDI("Cell", row), clay.EL{
+							cellSeed := clay.ID(fmt.Sprintf("%d-Cell-%d-%d", seed.ID, col, row))
+							clay.CLAY(cellSeed, clay.EL{
 								Layout: clay.LAY{Padding: PVH(S2, S3)},
 							}, func() {
-								UIFlowValue(val)
+								UIFlowValue(clay.ID(fmt.Sprintf("%d-Val", cellSeed.ID)), val)
 							})
 						}
 					})

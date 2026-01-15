@@ -80,6 +80,9 @@ func (c *SaveFileAction) UI(n *core.Node) {
 			// Simple dropdown or toggle for now.
 			// Let's use a simple cycle button for MVP.
 			core.UIButton(clay.IDI("SaveFileFormatBtn", n.ID), core.UIButtonConfig{
+				El: clay.EL{
+					Layout: clay.LAY{Padding: core.PVH(core.S1, core.S2)},
+				},
 				OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 					switch c.Format {
 					case "raw":
@@ -94,6 +97,17 @@ func (c *SaveFileAction) UI(n *core.Node) {
 				clay.TEXT(c.Format, clay.TextElementConfig{TextColor: core.White})
 			})
 		})
+
+		// Status
+		if res, ok := n.GetResult(); ok {
+			clay.CLAY(clay.IDI("SaveStatus", n.ID), clay.EL{Layout: clay.LAY{Padding: core.PVH(core.S1, 0)}}, func() {
+				if res.Err != nil {
+					clay.TEXT(fmt.Sprintf("Error: %v", res.Err), clay.TextElementConfig{TextColor: core.Red})
+				} else {
+					clay.TEXT("File saved.", clay.TextElementConfig{TextColor: core.Green})
+				}
+			})
+		}
 	})
 }
 
@@ -133,6 +147,11 @@ func (c *SaveFileAction) RunContext(ctx context.Context, n *core.Node) <-chan co
 			return
 		}
 		defer func() { _ = f.Close() }()
+
+		// Auto-detect format from extension if raw
+		if c.Format == "raw" && (len(c.Path) > 4 && c.Path[len(c.Path)-4:] == ".csv") {
+			c.Format = "csv"
+		}
 
 		switch c.Format {
 		case "raw":

@@ -1747,7 +1747,7 @@ func UIOverlay(topoErr error) {
 												Border: clay.B{Color: core.Gray, Width: core.BR},
 											})
 										})
-										core.UIFlowValue(output)
+										core.UIFlowValue(clay.ID(fmt.Sprintf("%d-OutputVal-%d", selectedNode.ID, outputIndex)), output)
 									})
 								}
 							}
