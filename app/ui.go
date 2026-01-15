@@ -1077,7 +1077,7 @@ func UIOverlay(topoErr error) {
 						for _, k := range keys {
 							v := CurrentGraph.Variables[k]
 							key := k
-							clay.CLAY(clay.ID("VarRow"+key), clay.EL{
+							clay.CLAY(clay.ID("VarRow-"+key), clay.EL{
 								Layout:          clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400)}, ChildAlignment: core.YCENTER, ChildGap: core.S2, Padding: core.PA1},
 								BackgroundColor: clay.Color{R: 60, G: 60, B: 60, A: 255},
 								CornerRadius:    core.RA1,
@@ -1086,7 +1086,7 @@ func UIOverlay(topoErr error) {
 								clay.TEXT("=", clay.TextElementConfig{TextColor: core.Gray})
 								clay.TEXT(v, clay.TextElementConfig{TextColor: core.White})
 								clay.CLAY(clay.AUTO_ID, clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Spacer
-								core.UIButton(clay.ID("DeleteVar"+key), core.UIButtonConfig{
+								core.UIButton(clay.ID("DeleteVar-"+key), core.UIButtonConfig{
 									El: clay.EL{Layout: clay.LAY{Padding: core.PA1}, BackgroundColor: core.Red, CornerRadius: core.RA1},
 									OnClick: func(_ clay.ElementID, _ clay.PointerData, _ any) {
 										core.PushHistory()
@@ -1505,7 +1505,7 @@ func UIOverlay(topoErr error) {
 													}, func() {
 														for i, nt := range matches {
 															if nt.Category == SelectedNodeCategory {
-																core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
+																core.UIButton(clay.IDI("MatchButton_Cat", i), core.UIButtonConfig{
 																	El: clay.EL{
 																		Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
 																		BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),
@@ -1548,7 +1548,7 @@ func UIOverlay(topoErr error) {
 												// Original Flat List (Search Results)
 												for i := 0; i < len(matches); i++ {
 													nt := matches[i]
-													core.UIButton(clay.IDI("MatchButton", i), core.UIButtonConfig{
+													core.UIButton(clay.IDI("MatchButton_Flat", i), core.UIButtonConfig{
 														El: clay.EL{
 															Layout:          clay.LAY{Padding: core.PVH(core.S2, core.S3), Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}},
 															BackgroundColor: util.Tern(clay.Hovered(), core.HoverWhite, clay.Color{}),

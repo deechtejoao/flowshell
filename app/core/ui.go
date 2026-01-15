@@ -313,7 +313,7 @@ func (d *UIDropdown) Do(id clay.ElementID, config UIDropdownConfig) {
 						idx := i
 						val := opt.Value
 
-						UIButton(clay.IDI("DropdownOpt", i), UIButtonConfig{
+						UIButton(clay.IDI("DropdownOpt", i+int(id.ID)), UIButtonConfig{
 							El: clay.EL{
 								Layout: clay.LAY{
 									Padding: PVH(S1, S2),
