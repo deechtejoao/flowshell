@@ -87,6 +87,11 @@ func ExtractChartData(n *core.Node, xCol, yCol string, chartType ChartType) *Cha
 
 		if xIdx != -1 && xIdx < len(row) {
 			x, err = toFloat(row[xIdx].Value)
+			if err != nil {
+				// Fallback: use index as X if value is not numeric (e.g. categorical)
+				x = float64(i)
+				err = nil
+			}
 		} else {
 			x = float64(i)
 		}
