@@ -187,6 +187,7 @@ func (c *LoadFileAction) UI(n *core.Node) {
 					}
 				},
 				Disabled: n.InputIsWired(0),
+				ZIndex:   core.Z_NODE_BUTTON,
 			}, func() {
 				clay.TEXT("Browse...", clay.TextElementConfig{TextColor: core.White})
 			})

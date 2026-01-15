@@ -69,8 +69,18 @@ func ExtractChartData(n *core.Node, xCol, yCol string, chartType ChartType) *Cha
 	}
 
 	if yIdx == -1 {
-		if val.Type.ContainedType != nil && len(val.Type.ContainedType.Fields) > 0 {
-			yIdx = 0
+		if val.Type.ContainedType != nil {
+			// First pass: look for numeric
+			for i, f := range val.Type.ContainedType.Fields {
+				if f.Type.Kind == core.FSKindInt64 || f.Type.Kind == core.FSKindFloat64 {
+					yIdx = i
+					break
+				}
+			}
+			// Fallback to 0 if no numeric column found
+			if yIdx == -1 && len(val.Type.ContainedType.Fields) > 0 {
+				yIdx = 0
+			}
 		}
 	}
 
@@ -163,13 +173,23 @@ func toFloat(v interface{}) (float64, error) {
 	return 0, fmt.Errorf("not a number")
 }
 
+// ResizeDrag identifies a resize operation on a specific node
+type ResizeDrag struct {
+	NodeID int
+}
+
+func (d ResizeDrag) DragKey() string {
+	return fmt.Sprintf("Resize-%d", d.NodeID)
+}
+
 // --- Line Chart ---
 
 // GEN:NodeAction
 type LineChartAction struct {
 	XColumn string
 	YColumn string
-	// UI State
+	Width   float32
+	Height  float32
 }
 
 func NewLineChartNode() *core.Node {
@@ -177,7 +197,7 @@ func NewLineChartNode() *core.Node {
 		Name:        "Line Chart",
 		InputPorts:  []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
 		OutputPorts: []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
-		Action:      &LineChartAction{},
+		Action:      &LineChartAction{Width: 400, Height: 200},
 	}
 }
 
@@ -186,6 +206,22 @@ var _ core.NodeAction = &LineChartAction{}
 func (c *LineChartAction) Serialize(s *core.Serializer) bool {
 	core.SStr(s, &c.XColumn)
 	core.SStr(s, &c.YColumn)
+
+	if s.Encode {
+		core.SFloat(s, &c.Width)
+		core.SFloat(s, &c.Height)
+	} else {
+		// safeCheck: Need 8 bytes for 2 float32s.
+		// Actually SFloat uses binary.Read which might be Fixed size. float32 is 4 bytes.
+		// If we don't have enough bytes, assume old save.
+		if s.Buf.Len() >= 8 {
+			core.SFloat(s, &c.Width)
+			core.SFloat(s, &c.Height)
+		} else {
+			c.Width = 400
+			c.Height = 200
+		}
+	}
 	return s.Ok()
 }
 
@@ -201,8 +237,23 @@ func (c *LineChartAction) UpdateAndValidate(n *core.Node) {
 func (c *LineChartAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeLine)
 
+	// Handle Drag
+	dragKey := ResizeDrag{NodeID: n.ID}
+	matches, _, _ := core.Drag.State(dragKey)
+	if matches && core.Drag.Dragging {
+		delta := core.Drag.Offset()
+		c.Width = core.Drag.ObjStart.X + float32(delta.X)
+		c.Height = core.Drag.ObjStart.Y + float32(delta.Y)
+		if c.Width < 100 {
+			c.Width = 100
+		}
+		if c.Height < 100 {
+			c.Height = 100
+		}
+	}
+
 	clay.CLAY(n.ClayID(), clay.EL{
-		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(c.Width)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
 			clay.TEXT("X:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
@@ -210,15 +261,48 @@ func (c *LineChartAction) UI(n *core.Node) {
 			clay.TEXT("Y:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
 			core.UITextBox(clay.IDI("YCol", n.ID), &c.YColumn, core.UITextBoxConfig{El: clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingFixed(80)}}}, OnSubmit: func(s string) { c.YColumn = s }})
 		})
-		clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
-			Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400), Height: clay.SizingFixed(200)}},
-			BackgroundColor: core.Black,
-			Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
-			Custom:          clay.CustomElementConfig{CustomData: renderData},
-		}, func() {})
+
+		clay.CLAY(clay.IDI("ChartWrapper", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: core.GROWH},
+		}, func() {
+			clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, c.Width), Height: clay.SizingFixed(c.Height)}},
+				BackgroundColor: core.Black,
+				Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
+				Custom:          clay.CustomElementConfig{CustomData: renderData},
+			}, func() {})
+
+			// Resize Handle
+			clay.CLAY(clay.IDI("ResizeHandle", n.ID), clay.EL{
+				Layout: clay.LAY{Sizing: core.WH(12, 12)},
+				Floating: clay.FloatingElementConfig{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Parent:  clay.AttachPointRightBottom,
+						Element: clay.AttachPointRightBottom,
+					},
+					ZIndex: core.Z_NODE_BUTTON,
+				},
+				BackgroundColor: core.Gray,
+				CornerRadius:    core.RA(2),
+			}, func() {
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+					core.UICursor = rl.MouseCursorResizeNWSE
+					if data, ok := clay.GetElementData(elementID); ok {
+						core.Drag.TryStartDrag(dragKey, rl.Rectangle(data.BoundingBox), rl.Vector2{X: float32(c.Width), Y: float32(c.Height)})
+					}
+				}, nil)
+			})
+		})
+
+		clay.CLAY(clay.IDI("Ports", n.ID), clay.EL{
+			Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: core.GROWH, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}, ChildGap: core.S3},
+		}, func() {
+			core.UIInputPort(n, 0)
+			clay.CLAY(clay.IDI("Spacer", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH}})
+			core.UIOutputPort(n, 0)
+		})
 	})
-	core.UIInputPort(n, 0)
-	core.UIOutputPort(n, 0)
 }
 
 func (c *LineChartAction) Run(n *core.Node) <-chan core.NodeActionResult {
@@ -241,6 +325,8 @@ func (c *LineChartAction) Run(n *core.Node) <-chan core.NodeActionResult {
 type BarChartAction struct {
 	XColumn string
 	YColumn string
+	Width   float32
+	Height  float32
 }
 
 func NewBarChartNode() *core.Node {
@@ -248,7 +334,7 @@ func NewBarChartNode() *core.Node {
 		Name:        "Bar Chart",
 		InputPorts:  []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
 		OutputPorts: []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
-		Action:      &BarChartAction{},
+		Action:      &BarChartAction{Width: 400, Height: 200},
 	}
 }
 
@@ -257,6 +343,19 @@ var _ core.NodeAction = &BarChartAction{}
 func (c *BarChartAction) Serialize(s *core.Serializer) bool {
 	core.SStr(s, &c.XColumn)
 	core.SStr(s, &c.YColumn)
+
+	if s.Encode {
+		core.SFloat(s, &c.Width)
+		core.SFloat(s, &c.Height)
+	} else {
+		if s.Buf.Len() >= 8 {
+			core.SFloat(s, &c.Width)
+			core.SFloat(s, &c.Height)
+		} else {
+			c.Width = 400
+			c.Height = 200
+		}
+	}
 	return s.Ok()
 }
 
@@ -272,8 +371,23 @@ func (c *BarChartAction) UpdateAndValidate(n *core.Node) {
 func (c *BarChartAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeBar)
 
+	// Handle Drag
+	dragKey := ResizeDrag{NodeID: n.ID}
+	matches, _, _ := core.Drag.State(dragKey)
+	if matches && core.Drag.Dragging {
+		delta := core.Drag.Offset()
+		c.Width = core.Drag.ObjStart.X + float32(delta.X)
+		c.Height = core.Drag.ObjStart.Y + float32(delta.Y)
+		if c.Width < 100 {
+			c.Width = 100
+		}
+		if c.Height < 100 {
+			c.Height = 100
+		}
+	}
+
 	clay.CLAY(n.ClayID(), clay.EL{
-		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(c.Width)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
 			clay.TEXT("X:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
@@ -281,15 +395,48 @@ func (c *BarChartAction) UI(n *core.Node) {
 			clay.TEXT("Y:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
 			core.UITextBox(clay.IDI("YCol", n.ID), &c.YColumn, core.UITextBoxConfig{El: clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingFixed(80)}}}, OnSubmit: func(s string) { c.YColumn = s }})
 		})
-		clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
-			Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400), Height: clay.SizingFixed(200)}},
-			BackgroundColor: core.Black,
-			Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
-			Custom:          clay.CustomElementConfig{CustomData: renderData},
-		}, func() {})
+
+		clay.CLAY(clay.IDI("ChartWrapper", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: core.GROWH},
+		}, func() {
+			clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, c.Width), Height: clay.SizingFixed(c.Height)}},
+				BackgroundColor: core.Black,
+				Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
+				Custom:          clay.CustomElementConfig{CustomData: renderData},
+			}, func() {})
+
+			// Resize Handle
+			clay.CLAY(clay.IDI("ResizeHandle", n.ID), clay.EL{
+				Layout: clay.LAY{Sizing: core.WH(12, 12)},
+				Floating: clay.FloatingElementConfig{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Parent:  clay.AttachPointRightBottom,
+						Element: clay.AttachPointRightBottom,
+					},
+					ZIndex: core.Z_NODE_BUTTON,
+				},
+				BackgroundColor: core.Gray,
+				CornerRadius:    core.RA(2),
+			}, func() {
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+					core.UICursor = rl.MouseCursorResizeNWSE
+					if data, ok := clay.GetElementData(elementID); ok {
+						core.Drag.TryStartDrag(dragKey, rl.Rectangle(data.BoundingBox), rl.Vector2{X: float32(c.Width), Y: float32(c.Height)})
+					}
+				}, nil)
+			})
+		})
+
+		clay.CLAY(clay.IDI("Ports", n.ID), clay.EL{
+			Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: core.GROWH, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}, ChildGap: core.S3},
+		}, func() {
+			core.UIInputPort(n, 0)
+			clay.CLAY(clay.IDI("Spacer", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH}})
+			core.UIOutputPort(n, 0)
+		})
 	})
-	core.UIInputPort(n, 0)
-	core.UIOutputPort(n, 0)
 }
 
 func (c *BarChartAction) Run(n *core.Node) <-chan core.NodeActionResult {
@@ -312,6 +459,8 @@ func (c *BarChartAction) Run(n *core.Node) <-chan core.NodeActionResult {
 type ScatterPlotAction struct {
 	XColumn string
 	YColumn string
+	Width   float32
+	Height  float32
 }
 
 func NewScatterPlotNode() *core.Node {
@@ -319,7 +468,7 @@ func NewScatterPlotNode() *core.Node {
 		Name:        "Scatter Plot",
 		InputPorts:  []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
 		OutputPorts: []core.NodePort{{Name: "Data", Type: core.FlowType{Kind: core.FSKindTable}}},
-		Action:      &ScatterPlotAction{},
+		Action:      &ScatterPlotAction{Width: 400, Height: 200},
 	}
 }
 
@@ -328,6 +477,19 @@ var _ core.NodeAction = &ScatterPlotAction{}
 func (c *ScatterPlotAction) Serialize(s *core.Serializer) bool {
 	core.SStr(s, &c.XColumn)
 	core.SStr(s, &c.YColumn)
+
+	if s.Encode {
+		core.SFloat(s, &c.Width)
+		core.SFloat(s, &c.Height)
+	} else {
+		if s.Buf.Len() >= 8 {
+			core.SFloat(s, &c.Width)
+			core.SFloat(s, &c.Height)
+		} else {
+			c.Width = 400
+			c.Height = 200
+		}
+	}
 	return s.Ok()
 }
 
@@ -343,8 +505,23 @@ func (c *ScatterPlotAction) UpdateAndValidate(n *core.Node) {
 func (c *ScatterPlotAction) UI(n *core.Node) {
 	renderData := ExtractChartData(n, c.XColumn, c.YColumn, ChartTypeScatter)
 
+	// Handle Drag
+	dragKey := ResizeDrag{NodeID: n.ID}
+	matches, _, _ := core.Drag.State(dragKey)
+	if matches && core.Drag.Dragging {
+		delta := core.Drag.Offset()
+		c.Width = core.Drag.ObjStart.X + float32(delta.X)
+		c.Height = core.Drag.ObjStart.Y + float32(delta.Y)
+		if c.Width < 100 {
+			c.Width = 100
+		}
+		if c.Height < 100 {
+			c.Height = 100
+		}
+	}
+
 	clay.CLAY(n.ClayID(), clay.EL{
-		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(400)}, ChildGap: core.S2},
+		Layout: clay.LAY{LayoutDirection: clay.TopToBottom, Sizing: clay.Sizing{Width: clay.SizingFixed(c.Width)}, ChildGap: core.S2},
 	}, func() {
 		clay.CLAY(clay.IDI("Settings", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH, ChildGap: core.S2, ChildAlignment: core.YCENTER}}, func() {
 			clay.TEXT("X:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
@@ -352,15 +529,48 @@ func (c *ScatterPlotAction) UI(n *core.Node) {
 			clay.TEXT("Y:", clay.TextElementConfig{TextColor: core.LightGray, FontID: core.InterRegular})
 			core.UITextBox(clay.IDI("YCol", n.ID), &c.YColumn, core.UITextBoxConfig{El: clay.EL{Layout: clay.LAY{Sizing: clay.Sizing{Width: clay.SizingFixed(80)}}}, OnSubmit: func(s string) { c.YColumn = s }})
 		})
-		clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
-			Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, 400), Height: clay.SizingFixed(200)}},
-			BackgroundColor: core.Black,
-			Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
-			Custom:          clay.CustomElementConfig{CustomData: renderData},
-		}, func() {})
+		clay.CLAY(clay.IDI("ChartWrapper", n.ID), clay.EL{
+			Layout: clay.LAY{Sizing: core.GROWH},
+		}, func() {
+			clay.CLAY(clay.IDI("ChartArea", n.ID), clay.EL{
+				Layout:          clay.LAY{Sizing: clay.Sizing{Width: clay.SizingGrow(0, c.Width), Height: clay.SizingFixed(c.Height)}},
+				BackgroundColor: core.Black,
+				Border:          clay.B{Color: core.Gray, Width: clay.BorderWidth{Left: 1, Right: 1, Top: 1, Bottom: 1}},
+				Custom:          clay.CustomElementConfig{CustomData: renderData},
+			}, func() {})
+
+			// Resize Handle
+			clay.CLAY(clay.IDI("ResizeHandle", n.ID), clay.EL{
+				Layout: clay.LAY{Sizing: core.WH(12, 12)},
+				Floating: clay.FloatingElementConfig{
+					AttachTo: clay.AttachToParent,
+					AttachPoints: clay.FloatingAttachPoints{
+						Parent:  clay.AttachPointRightBottom,
+						Element: clay.AttachPointRightBottom,
+					},
+					ZIndex: core.Z_NODE_BUTTON,
+				},
+				BackgroundColor: core.Gray,
+				CornerRadius:    core.RA(2),
+			}, func() {
+				clay.OnHover(func(elementID clay.ElementID, pointerData clay.PointerData, _ any) {
+					core.UICursor = rl.MouseCursorResizeNWSE
+					if data, ok := clay.GetElementData(elementID); ok {
+						core.Drag.TryStartDrag(dragKey, rl.Rectangle(data.BoundingBox), rl.Vector2{X: float32(c.Width), Y: float32(c.Height)})
+					}
+				}, nil)
+			})
+		})
+
+		// Move ports inside (at bottom or top as appropriate, usually simple stacking)
+		clay.CLAY(clay.IDI("Ports", n.ID), clay.EL{
+			Layout: clay.LAY{LayoutDirection: clay.LeftToRight, Sizing: core.GROWH, ChildAlignment: clay.ChildAlignment{Y: clay.AlignYCenter}, ChildGap: core.S3},
+		}, func() {
+			core.UIInputPort(n, 0)
+			clay.CLAY(clay.IDI("Spacer", n.ID), clay.EL{Layout: clay.LAY{Sizing: core.GROWH}}) // Push output to right
+			core.UIOutputPort(n, 0)
+		})
 	})
-	core.UIInputPort(n, 0)
-	core.UIOutputPort(n, 0)
 }
 
 func (c *ScatterPlotAction) Run(n *core.Node) <-chan core.NodeActionResult {
@@ -404,6 +614,10 @@ func RenderChart(bbox clay.BoundingBox, data *ChartRenderData) {
 		}
 	}
 
+	// Clip to bounding box
+	rl.BeginScissorMode(int32(bbox.X), int32(bbox.Y), int32(width), int32(height))
+	defer rl.EndScissorMode()
+
 	// Draw Grid/Axes
 	rl.DrawRectangleLinesEx(rl.Rectangle{X: bbox.X, Y: bbox.Y, Width: width, Height: height}, 1, rl.DarkGray)
 
@@ -415,10 +629,15 @@ func RenderChart(bbox clay.BoundingBox, data *ChartRenderData) {
 
 	switch data.Type {
 	case ChartTypeLine:
-		for i := 0; i < len(data.Points)-1; i++ {
-			p1 := mapPt(data.Points[i])
-			p2 := mapPt(data.Points[i+1])
-			rl.DrawLineEx(p1, p2, 2, rl.Green)
+		if len(data.Points) == 1 {
+			p := mapPt(data.Points[0])
+			rl.DrawCircleV(p, 3, rl.Green)
+		} else {
+			for i := 0; i < len(data.Points)-1; i++ {
+				p1 := mapPt(data.Points[i])
+				p2 := mapPt(data.Points[i+1])
+				rl.DrawLineEx(p1, p2, 2, rl.Green)
+			}
 		}
 	case ChartTypeBar:
 		barWidth := width / float32(len(data.Points)) * 0.8
