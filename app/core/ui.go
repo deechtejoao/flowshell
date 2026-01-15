@@ -451,7 +451,7 @@ func UIFlowValue(seed clay.ElementID, v FlowValue) {
 			str = fmt.Sprintf("%v", v.Float64Value)
 			clay.TEXT(str, clay.TextElementConfig{TextColor: White})
 		case FSKindList:
-			clay.CLAY_AUTO_ID(clay.EL{ // list items
+			clay.CLAY(clay.ID(fmt.Sprintf("%d-ListGen", seed.ID)), clay.EL{ // list items
 				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
 			}, func() {
 				for i, item := range v.ListValue {
@@ -465,15 +465,17 @@ func UIFlowValue(seed clay.ElementID, v FlowValue) {
 				}
 			})
 		case FSKindTable:
-			clay.CLAY_AUTO_ID(clay.EL{ // Table
+			clay.CLAY(clay.ID(fmt.Sprintf("%d-TableGen", seed.ID)), clay.EL{ // Table
 				Border: clay.B{Width: BA_BTW, Color: Gray},
 			}, func() {
 				for col, field := range v.Type.ContainedType.Fields {
-					clay.CLAY(clay.IDI("Col", col), clay.EL{ // Table col
+					// Use proper seeding for column to avoid global collisions
+					colSeed := clay.ID(fmt.Sprintf("%d-Col-%d", seed.ID, col))
+					clay.CLAY(colSeed, clay.EL{ // Table col
 						Layout: clay.LAY{LayoutDirection: clay.TopToBottom},
 						Border: clay.B{Width: BTW, Color: Gray},
 					}, func() {
-						clay.CLAY_AUTO_ID(clay.EL{ // Header cell
+						clay.CLAY(clay.ID(fmt.Sprintf("%d-HeaderGen-%d", seed.ID, col)), clay.EL{ // Header cell
 							Layout: clay.LAY{Padding: PVH(S2, S3)},
 						}, func() {
 							clay.TEXT(field.Name, clay.TextElementConfig{FontID: InterSemibold, TextColor: White})
@@ -490,8 +492,24 @@ func UIFlowValue(seed clay.ElementID, v FlowValue) {
 					})
 				}
 			})
+		case FSKindRecord:
+			clay.CLAY(clay.ID(fmt.Sprintf("%d-RecordGen", seed.ID)), clay.EL{
+				Layout: clay.LAY{LayoutDirection: clay.TopToBottom, ChildGap: S1},
+			}, func() {
+				for i, field := range v.RecordValue {
+					fieldSeed := clay.ID(fmt.Sprintf("%d-Field-%d", seed.ID, i))
+					clay.CLAY(fieldSeed, clay.EL{
+						Layout: clay.LAY{ChildGap: S2, ChildAlignment: YCENTER},
+					}, func() {
+						clay.TEXT(field.Name+":", clay.TextElementConfig{FontID: InterSemibold, TextColor: LightGray})
+						UIFlowValue(clay.ID(fmt.Sprintf("%d-Val", fieldSeed.ID)), field.Value)
+					})
+				}
+			})
+		case FSKindStream:
+			clay.TEXT("<stream>", clay.TextElementConfig{FontID: JetBrainsMono, TextColor: LightGray})
 		default:
-			clay.TEXT("Unknown data type", clay.TextElementConfig{TextColor: White})
+			clay.TEXT(fmt.Sprintf("Unknown data type: %v", v.Type.Kind), clay.TextElementConfig{TextColor: White})
 		}
 	})
 }

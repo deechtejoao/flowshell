@@ -197,11 +197,17 @@ func SMaybeThing[T any, PT PSerializable[T]](s *Serializer, v **T) bool {
 		return false
 	}
 	if exists {
-		var newThing T
-		if ok := SThing(s, PT(&newThing)); !ok {
-			return false
+		if s.Encode {
+			if ok := SThing(s, PT(*v)); !ok {
+				return false
+			}
+		} else {
+			var newThing T
+			if ok := SThing(s, PT(&newThing)); !ok {
+				return false
+			}
+			*v = &newThing
 		}
-		*v = &newThing
 	}
 	return true
 }
